@@ -1,5 +1,6 @@
-import { cssBundleHref } from "@remix-run/css-bundle";
-import type { LinksFunction } from "@remix-run/node";
+import { getClientSB } from "@client-lib/supabase"
+import type { LinksFunction, MetaFunction } from "@remix-run/node"
+import { json } from "@remix-run/node"
 import {
   Links,
   LiveReload,
@@ -7,13 +8,31 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-} from "@remix-run/react";
+  useLoaderData
+} from "@remix-run/react"
+import { loadEnv } from "@server-lib/loaders/loadEnv"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import type { Database } from "@typings/Database"
+import { createContext, useContext, useState } from "react"
 
-export const links: LinksFunction = () => [
-  ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
-];
+import style from "@/tailwind.css"
 
+export const links: LinksFunction = () => [{ rel: "stylesheet", href: style }]
+
+export const meta: MetaFunction = () => {
+  return [{ title: "Bobby" }, { name: "Bobby official site" }]
+}
+
+const SupabaseContext = createContext<SupabaseClient<Database> | null>(null)
+
+export const loader = () => {
+  return json(loadEnv())
+}
 export default function App() {
+  const env = useLoaderData<typeof loader>()
+
+  const [supabase] = useState(() => getClientSB(env))
+
   return (
     <html lang="en">
       <head>
@@ -23,11 +42,22 @@ export default function App() {
         <Links />
       </head>
       <body>
-        <Outlet />
+        <SupabaseContext.Provider value={supabase}>
+          <Outlet />
+        </SupabaseContext.Provider>
         <ScrollRestoration />
         <Scripts />
         <LiveReload />
       </body>
     </html>
-  );
+  )
+}
+
+export const useSupabase = (): SupabaseClient<Database> => {
+  const context = useContext(SupabaseContext)
+  if (!context) {
+    throw new Error("Database Error")
+  }
+
+  return context
 }

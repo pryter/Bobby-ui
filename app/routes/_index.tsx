@@ -1,41 +1,21 @@
-import type { MetaFunction } from "@remix-run/node";
-
-export const meta: MetaFunction = () => {
-  return [
-    { title: "New Remix App" },
-    { name: "description", content: "Welcome to Remix!" },
-  ];
-};
+import { useNavigate } from "@remix-run/react"
 
 export default function Index() {
+  const navigate = useNavigate()
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.8" }}>
-      <h1>Welcome to Remix</h1>
-      <ul>
-        <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/blog"
-            rel="noreferrer"
-          >
-            15m Quickstart Blog Tutorial
-          </a>
-        </li>
-        <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/jokes"
-            rel="noreferrer"
-          >
-            Deep Dive Jokes App Tutorial
-          </a>
-        </li>
-        <li>
-          <a target="_blank" href="https://remix.run/docs" rel="noreferrer">
-            Remix Docs
-          </a>
-        </li>
-      </ul>
+    <div className="flex min-h-screen w-full flex-col items-center justify-center text-gray-900">
+      <h1 className="text-2xl font-medium tracking-wide">Hi, I&apos;m Bobby</h1>
+      <p className="mt-2 text-center font-light tracking-wide text-gray-600">
+        Your personal project builder.
+      </p>
+      <button
+        onClick={() => {
+          navigate("/account")
+        }}
+        className="mt-6 rounded-lg bg-gray-900 px-8 py-2 text-sm font-medium tracking-wide text-white"
+      >
+        Get inside
+      </button>
     </div>
-  );
+  )
 }
