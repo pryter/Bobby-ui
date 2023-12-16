@@ -4,6 +4,7 @@ import { getServerSB } from "@server-lib/supabase"
 
 export const getCallbackURL = (): string => {
   const base = window.location.origin
+
   return new URL("/auth/callback", base).toString()
 }
 export const loader = async ({ request }: LoaderFunctionArgs) => {

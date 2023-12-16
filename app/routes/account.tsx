@@ -22,9 +22,7 @@ export default function Account() {
 
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center text-gray-800">
-      {loading && (
-        <div className="curtain fixed left-0 top-0 z-10 min-h-screen w-full bg-black bg-opacity-30 transition-all duration-1000" />
-      )}
+      {loading && <div className="curtain" />}
       <div className="relative flex w-full max-w-[360px] rounded-2xl border border-gray-900 bg-white">
         <Outlet context={{ setLoading }} />
       </div>
