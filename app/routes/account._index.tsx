@@ -2,29 +2,28 @@ import { Link, useOutletContext } from "@remix-run/react"
 import type { Dispatch } from "react"
 
 import { useSupabase } from "@/root"
+import { getCallbackURL } from "@/routes/auth.callback"
 
 export default function AccountSignin() {
   const { setLoading } = useOutletContext<{ setLoading: Dispatch<boolean> }>()
   const supabase = useSupabase()
 
   const handleGitHubLogin = async () => {
-    const url = new URL(window.location.href)
     setLoading(true)
     await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
-        redirectTo: url.toString().replace(url.pathname, "/auth/callback")
+        redirectTo: getCallbackURL()
       }
     })
   }
 
   const handleGoogleLogin = async () => {
     setLoading(true)
-    const url = new URL(window.location.href)
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: url.toString().replace(url.pathname, "/auth/callback")
+        redirectTo: getCallbackURL()
       }
     })
   }
