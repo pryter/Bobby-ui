@@ -57,7 +57,7 @@ export const TextButton: FC<TextButtonProps> = ({
         <button
           onClick={onClick}
           style={{ backgroundColor: bgColor, color: fgColor }}
-          className="mt-4 flex w-full items-center space-x-2 rounded-lg bg-gray-900 px-14 py-2 font-medium text-white shadow-sm"
+          className="mt-4 flex w-full justify-center items-center space-x-2 rounded-lg bg-gray-900 px-14 py-2 font-medium text-white shadow-sm"
         >
           <h2>{content.text}</h2>
           <Icon className="h-5 w-5" />
@@ -68,7 +68,7 @@ export const TextButton: FC<TextButtonProps> = ({
         <button
           onClick={onClick}
           style={{ backgroundColor: bgColor, color: fgColor }}
-          className="mt-4 flex w-full items-center space-x-2 rounded-lg bg-gray-900 px-14 py-2 font-medium text-white shadow-sm"
+          className="mt-4 flex w-full justify-center items-center space-x-2 rounded-lg bg-gray-900 px-14 py-2 font-medium text-white shadow-sm"
         >
           <Icon className="h-5 w-5" />
           <h2>{content.text}</h2>
