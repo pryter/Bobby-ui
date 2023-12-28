@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./app/**/*.{js,jsx,ts,tsx}'],
+  content: ["./app/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
       colors: {
@@ -10,8 +10,7 @@ export default {
         "t-pink-2": "#ffc8dd",
         "t-purple": "#cdb4db"
       }
-    },
+    }
   },
-  plugins: [],
+  plugins: []
 }
-
