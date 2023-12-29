@@ -19,6 +19,7 @@ import { useEffect } from "react"
 
 import { useCurtain } from "@/hooks/useCurtain"
 import { useSupabase } from "@/root"
+import {TierBadge} from "@/components/Badge/TierBadge";
 
 interface DashboardUserData {
   email: string
@@ -96,9 +97,7 @@ export default function Dashboard() {
         <div className="absolute left-0 top-0 z-[0] h-full w-full bg-white bg-opacity-90" />
         <div className="z-[1] flex flex-row items-center">
           <h1 className="relative text-xl font-bold text-gray-800">Bobby</h1>
-          <span className="ml-2 mt-0.5 rounded-full border border-cyan-100 bg-cyan-600 bg-opacity-90 px-2.5 py-0.5 text-center text-[10px] font-medium leading-[12px] text-white">
-            Pro
-          </span>
+          <TierBadge variant={"pro"}/>
         </div>
         <div className="relative z-[1] mt-6 flex h-full w-[240px] grow flex-col justify-between">
           <div>
