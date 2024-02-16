@@ -11,15 +11,22 @@ import {
 } from "@heroicons/react/24/outline"
 import type { LoaderFunctionArgs } from "@remix-run/node"
 import { json, redirect } from "@remix-run/node"
-import { Outlet, useLoaderData, useNavigate } from "@remix-run/react"
+import {
+  Link,
+  Outlet,
+  useLoaderData,
+  useLocation,
+  useNavigate
+} from "@remix-run/react"
 import { getServerSB } from "@server-lib/supabase"
 import classnames from "classnames"
+import { motion } from "framer-motion"
 import type { FC, ForwardRefExoticComponent, SVGProps } from "react"
 import { useEffect } from "react"
 
+import { TierBadge } from "@/components/Badge/TierBadge"
 import { useCurtain } from "@/hooks/useCurtain"
 import { useSupabase } from "@/root"
-import {TierBadge} from "@/components/Badge/TierBadge";
 
 interface DashboardUserData {
   email: string
@@ -55,26 +62,45 @@ interface MenuItemProps {
   selected?: boolean
   id: string
 }
-const MenuItem: FC<MenuItemProps> = ({ Icon, title, id, selected = false }) => {
+const MenuItem: FC<MenuItemProps> = ({ Icon, title, id }) => {
+  const location = useLocation()
+
+  const isHighlighted = (ids: string) => {
+    if (ids !== "") {
+      return location.pathname.includes(ids)
+    }
+
+    return location.pathname === "/dashboard"
+  }
+
   return (
-    <div
-      className={classnames(
-        "mt-2 flex w-full cursor-pointer items-center space-x-4 rounded-full px-4 py-2 transition-colors",
-        selected
-          ? "bg-gray-900 text-white shadow-lg"
-          : "hover:bg-gray-600 hover:bg-opacity-20"
-      )}
-    >
-      <Icon stroke="currentColor" strokeWidth={2.3} className="h-6 w-6" />
-      <h2 className="font-medium">{title}</h2>
-    </div>
+    <Link to={id}>
+      <motion.div
+        className={classnames(
+          "mt-2 flex w-full cursor-pointer items-center space-x-4 rounded-full px-4 py-2 transition-colors",
+          isHighlighted(id)
+            ? "bg-gray-900 text-white shadow-lg"
+            : "hover:bg-gray-600 hover:bg-opacity-20"
+        )}
+      >
+        <Icon
+          stroke="currentColor"
+          strokeWidth={2.3}
+          className="h-6 w-6 shrink-0"
+        />
+        <h2 className="h-[24px] overflow-hidden font-medium">{title}</h2>
+      </motion.div>
+    </Link>
   )
 }
 export default function Dashboard() {
   const supabase = useSupabase()
   const navigate = useNavigate()
+  const location = useLocation()
   const [l, curtain] = useCurtain()
   const { userData } = useLoaderData<typeof loader>()
+
+  const shrink = location.pathname.includes("/dashboard/project/")
 
   useEffect(() => {
     const {
@@ -93,33 +119,51 @@ export default function Dashboard() {
   return (
     <div className="relative flex min-h-screen flex-row items-start text-gray-800">
       {curtain}
-      <div className="relative flex min-h-screen flex-col bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-pink-300 via-purple-300 to-indigo-400 px-8 py-6">
+      <motion.div
+        initial={{ padding: "1.5rem 2rem" }}
+        animate={
+          shrink ? { padding: "1.5rem 1rem" } : { padding: "1.5rem 2rem" }
+        }
+        transition={{ delay: 0.2 }}
+        className="relative flex min-h-screen flex-col bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-pink-300 via-purple-300 to-indigo-400"
+      >
         <div className="absolute left-0 top-0 z-[0] h-full w-full bg-white bg-opacity-90" />
-        <div className="z-[1] flex flex-row items-center">
+        <motion.div
+          animate={shrink ? { width: "0px" } : { width: "100%" }}
+          transition={{ delay: 0.2 }}
+          className="z-[1] flex flex-row items-center overflow-hidden"
+        >
           <h1 className="relative text-xl font-bold text-gray-800">Bobby</h1>
-          <TierBadge variant={"pro"}/>
-        </div>
-        <div className="relative z-[1] mt-6 flex h-full w-[240px] grow flex-col justify-between">
+          <TierBadge variant={"pro"} />
+        </motion.div>
+        <motion.div
+          animate={!shrink ? { width: "240px" } : { width: "56px" }}
+          transition={{ delay: 0.2 }}
+          className="relative z-[1] mt-6 flex h-full grow flex-col justify-between"
+        >
           <div>
-            <MenuItem
-              Icon={HomeIcon}
-              title={"Home"}
-              id={"home"}
-              selected={true}
-            />
+            <MenuItem Icon={HomeIcon} title={"Home"} id={""} />
             <MenuItem Icon={FolderIcon} title={"Projects"} id={"project"} />
-            <h2 className="mt-6 text-sm font-medium text-gray-500">
+            <motion.h2
+              animate={shrink ? { width: "0px" } : { width: "100%" }}
+              transition={{ delay: 0.2 }}
+              className="mt-6 h-[20px] overflow-hidden text-sm font-medium text-gray-500"
+            >
               Monitoring
-            </h2>
+            </motion.h2>
             <MenuItem Icon={CommandLineIcon} title={"Log Manager"} id={"log"} />
             <MenuItem
               Icon={ArchiveBoxIcon}
               title={"Artifacts"}
               id={"artifacts"}
             />
-            <h2 className="mt-6 text-sm font-medium text-gray-500">
+            <motion.h2
+              animate={shrink ? { width: "0px" } : { width: "100%" }}
+              transition={{ delay: 0.2 }}
+              className="mt-6 h-[20px] overflow-hidden text-sm font-medium text-gray-500"
+            >
               Build settings
-            </h2>
+            </motion.h2>
             <MenuItem Icon={KeyIcon} title={"Secrets"} id={"secrets"} />
             <MenuItem Icon={ServerStackIcon} title={"Workers"} id={"workers"} />
           </div>
@@ -134,8 +178,22 @@ export default function Dashboard() {
               title={"Preferences"}
               id={"setting"}
             />
-            <div className="relative mt-4 flex flex-row rounded-xl bg-gray-900 pl-4 text-white">
-              <div className="flex h-full flex-row items-center py-3">
+            <motion.div
+              initial={{ paddingLeft: "1rem" }}
+              animate={
+                shrink ? { paddingLeft: "0.55rem" } : { paddingLeft: "1rem" }
+              }
+              transition={{ delay: 0.2 }}
+              className="relative mt-4 flex flex-row rounded-xl bg-gray-900 text-white"
+            >
+              <motion.div
+                initial={{ padding: "0.75rem 0" }}
+                animate={
+                  shrink ? { padding: "0.4rem 0" } : { padding: "0.75rem 0" }
+                }
+                transition={{ delay: 0.2 }}
+                className="flex h-full flex-row items-center"
+              >
                 <div
                   style={{
                     backgroundImage: `url('${userData.avatarUrl}')`,
@@ -143,7 +201,11 @@ export default function Dashboard() {
                   }}
                   className="h-10 w-10 shrink-0 rounded-full bg-white"
                 />
-                <div className="ml-2 h-full w-[146px]">
+                <motion.div
+                  animate={shrink ? { width: "0px" } : { width: "146px" }}
+                  transition={{ delay: 0.2 }}
+                  className="ml-2 h-full w-[146px]"
+                >
                   <div className="flex flex-row items-center">
                     <h3 className="truncate text-sm font-medium">
                       {userData.fullName}
@@ -152,9 +214,11 @@ export default function Dashboard() {
                   <h4 className="truncate text-xs text-gray-300">
                     {userData.email}
                   </h4>
-                </div>
-              </div>
-              <button
+                </motion.div>
+              </motion.div>
+              <motion.button
+                animate={shrink ? { width: "0px" } : { width: "100%" }}
+                transition={{ delay: 0.2 }}
                 onClick={() => {
                   supabase.auth.signOut()
                   l(true)
@@ -166,11 +230,11 @@ export default function Dashboard() {
                   strokeWidth={2.8}
                   className="h-4 w-4"
                 />
-              </button>
-            </div>
+              </motion.button>
+            </motion.div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
       <Outlet />
     </div>
   )

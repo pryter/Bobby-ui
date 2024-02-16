@@ -9,6 +9,7 @@
     "dist": "remix build && bun bundle && cd ./dist/cache/ && bestzip ../build-result.zip *",
     "bundle": "echo 'transferring build output..' && copyfiles -a './build/**/*' ./dist/cache/ && copyfiles -a './public/**/*' ./dist/cache/ && copyfiles -a './package.json' ./dist/cache/ && copyfiles -a './start-config.hcl' ./dist/cache/",
     "dev": "vault agent -config=dev-config.hcl -log-level=error",
+    "ldev": "remix dev --manual",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "start": "remix-serve ./build/index.js",
     "typecheck": "tsc",

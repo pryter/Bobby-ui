@@ -1,11 +1,11 @@
 import { Link, useOutletContext } from "@remix-run/react"
 import type { Dispatch } from "react"
 
+import { OAuthButton } from "@/components/Button/OAuthButton"
+import { TextButton } from "@/components/Button/TextButton"
+import { TextInput } from "@/components/Forms/TextInput"
 import { useSupabase } from "@/root"
 import { getCallbackURL } from "@/routes/auth.callback"
-import {TextInput} from "@/components/Forms/TextInput";
-import {OAuthButton} from "@/components/Button/OAuthButton";
-import {TextButton} from "@/components/Button/TextButton";
 
 export default function AccountSignin() {
   const { setLoading } = useOutletContext<{ setLoading: Dispatch<boolean> }>()
@@ -38,14 +38,18 @@ export default function AccountSignin() {
         Sign-in email and password or other options below.
       </p>
       <div className="flex space-x-2">
-          <OAuthButton onClick={handleGoogleLogin} provider={"google"}/>
-          <OAuthButton onClick={handleGitHubLogin} provider={"github"}/>
+        <OAuthButton onClick={handleGoogleLogin} provider={"google"} />
+        <OAuthButton onClick={handleGitHubLogin} provider={"github"} />
       </div>
-      <div className="mt-2 mb-6 space-y-4 w-full">
-        <TextInput placeholder={"email"} title={"Email"} type={"email"}/>
-        <TextInput placeholder={"password"} title={"Password"} type={"password"}/>
+      <div className="mb-10 mt-2 w-full space-y-4">
+        <TextInput placeholder={"email"} title={"Email"} type={"email"} />
+        <TextInput
+          placeholder={"password"}
+          title={"Password"}
+          type={"password"}
+        />
       </div>
-        <TextButton content={{text: "Sign-in"}} onClick={() => {}}/>
+      <TextButton content={{ text: "Sign-in" }} onClick={() => {}} />
       <Link
         to={"forgot"}
         className="mb-2 mt-2.5 text-xs font-medium tracking-wide"

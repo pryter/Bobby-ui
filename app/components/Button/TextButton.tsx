@@ -31,7 +31,7 @@ export const TextButton: FC<TextButtonProps> = ({
         <button
           onClick={onClick}
           style={{ backgroundColor: bgColor, color: fgColor }}
-          className="relative mt-4 w-full items-center space-x-3 rounded-lg bg-gray-900 px-14 py-2 font-medium text-white shadow-sm"
+          className="relative w-full items-center space-x-3 rounded-lg bg-gray-900 px-14 py-2 font-medium text-white shadow-sm"
         >
           <div className="absolute left-3 top-0 flex h-full items-center">
             <Icon className="h-5 w-5" />
@@ -44,7 +44,7 @@ export const TextButton: FC<TextButtonProps> = ({
         <button
           onClick={onClick}
           style={{ backgroundColor: bgColor, color: fgColor }}
-          className="relative mt-4 w-full items-center rounded-lg bg-gray-900 px-14 py-2 font-medium text-white shadow-sm"
+          className="relative w-full items-center rounded-lg bg-gray-900 px-14 py-2 font-medium text-white shadow-sm"
         >
           <h2 className="mr-3">{content.text}</h2>
           <div className="absolute right-3 top-0 flex h-full items-center">
@@ -57,7 +57,7 @@ export const TextButton: FC<TextButtonProps> = ({
         <button
           onClick={onClick}
           style={{ backgroundColor: bgColor, color: fgColor }}
-          className="mt-4 flex w-full justify-center items-center space-x-2 rounded-lg bg-gray-900 px-14 py-2 font-medium text-white shadow-sm"
+          className="flex w-full items-center justify-center space-x-2 rounded-lg bg-gray-900 px-14 py-2 font-medium text-white shadow-sm"
         >
           <h2>{content.text}</h2>
           <Icon className="h-5 w-5" />
@@ -68,7 +68,7 @@ export const TextButton: FC<TextButtonProps> = ({
         <button
           onClick={onClick}
           style={{ backgroundColor: bgColor, color: fgColor }}
-          className="mt-4 flex w-full justify-center items-center space-x-2 rounded-lg bg-gray-900 px-14 py-2 font-medium text-white shadow-sm"
+          className="flex w-full items-center justify-center space-x-2 rounded-lg bg-gray-900 px-14 py-2 font-medium text-white shadow-sm"
         >
           <Icon className="h-5 w-5" />
           <h2>{content.text}</h2>
