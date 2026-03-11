@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.curtain {
+  @apply fixed inset-0 z-50 bg-white bg-opacity-80;
+}
