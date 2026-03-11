@@ -33,15 +33,10 @@ function PhaseSection({
   const [open, setOpen] = useState(
     phase.status === "running" || phase.status === "failure" || (isLast && active)
   )
-  const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (phase.status === "running" || (isLast && active)) setOpen(true)
   }, [phase.status, isLast, active])
-
-  useEffect(() => {
-    if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [phase.logs.length, open])
 
   const labelColor =
     phase.status === "success"
@@ -84,7 +79,6 @@ function PhaseSection({
               </div>
             ))
           )}
-          <div ref={bottomRef} />
         </div>
       )}
     </div>
@@ -97,6 +91,16 @@ interface BuildConsoleProps {
 }
 
 export default function BuildConsole({ phases, active }: BuildConsoleProps) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Scroll within the container on each new log line — no page scroll
+  const totalLines = phases.reduce((sum, p) => sum + p.logs.length, 0)
+  useEffect(() => {
+    if (active && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [totalLines, active])
+
   if (!active && phases.length === 0) return null
 
   return (
@@ -111,7 +115,10 @@ export default function BuildConsole({ phases, active }: BuildConsoleProps) {
         )}
       </div>
 
-      <div className="max-h-[28rem] overflow-y-auto rounded-xl bg-gray-900 divide-y divide-gray-800">
+      <div
+        ref={scrollRef}
+        className="h-[28rem] overflow-y-auto rounded-xl bg-gray-900 divide-y divide-gray-800"
+      >
         {phases.length === 0 ? (
           <div className="px-4 py-3 text-xs font-mono italic text-gray-500">
             Waiting for build output…

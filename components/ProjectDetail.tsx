@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline"
 import {
@@ -113,6 +113,13 @@ export default function ProjectDetail({
 
   const latestBuild = buildList[0] ?? null
   const previousBuilds = buildList.slice(1)
+
+  // ── Latest build console expand/collapse ──────────────────────────────────
+  const [showLatestConsole, setShowLatestConsole] = useState(false)
+  // Auto-expand when a live build starts streaming phases
+  useEffect(() => {
+    if (phases.length > 0) setShowLatestConsole(true)
+  }, [phases.length > 0])
 
   // ── Past build log expansion ──────────────────────────────────────────────
   const [expandedBuildId, setExpandedBuildId] = useState<string | null>(null)
@@ -324,7 +331,10 @@ export default function ProjectDetail({
         <div className="mt-6 sm:mt-8">
           <h2 className="text-lg font-semibold mb-3">Latest Build</h2>
           <div className="rounded-2xl bg-white shadow-md overflow-hidden">
-            <div className="flex flex-wrap items-start justify-between gap-y-2 px-4 py-4 sm:px-6">
+            <button
+              onClick={() => setShowLatestConsole((v) => !v)}
+              className="flex w-full flex-wrap items-start justify-between gap-y-2 px-4 py-4 text-left sm:px-6"
+            >
               <div className="min-w-0 flex-1">
                 <h3 className="font-medium truncate">{latestBuild.repo_name || `repo #${latestBuild.repo_id}`}</h3>
                 <p className="mt-0.5 font-mono text-xs text-gray-400">
@@ -338,16 +348,28 @@ export default function ProjectDetail({
                     href={getArtifactDownloadURL(latestBuild.artifact_url)!}
                     className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
                     download
+                    onClick={(e) => e.stopPropagation()}
                   >
                     Download
                   </a>
                 )}
+                {showLatestConsole ? (
+                  <ChevronDownIcon className="h-4 w-4 text-gray-400" />
+                ) : (
+                  <ChevronRightIcon className="h-4 w-4 text-gray-400" />
+                )}
               </div>
-            </div>
-            {/* Live phased console */}
-            {(phases.length > 0 || activeBuild) && (
+            </button>
+            {/* Phased console — shown when expanded */}
+            {showLatestConsole && (
               <div className="border-t border-gray-100 px-4 pb-4 sm:px-6">
-                <BuildConsole phases={phases} active={!latestBuild.conclusion} />
+                {phases.length > 0 ? (
+                  <BuildConsole phases={phases} active={!latestBuild.conclusion} />
+                ) : (
+                  <p className="pt-3 text-xs text-gray-400">
+                    {activeBuild ? "Waiting for build output…" : "No log recorded for this build."}
+                  </p>
+                )}
               </div>
             )}
           </div>
