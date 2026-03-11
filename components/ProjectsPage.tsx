@@ -67,7 +67,7 @@ export default function ProjectsPage({
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-8 py-10">
+    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-8 sm:py-10">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Projects</h1>

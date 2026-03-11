@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { MonitoredRepo, Build, updateRepoPreset } from "@/lib/api"
+import { MonitoredRepo, Build, updateRepoPreset, getArtifactDownloadURL } from "@/lib/api"
 import { useWorkerStream } from "@/lib/useWorkerStream"
 import BuildConsole from "@/components/BuildConsole"
 
@@ -75,19 +75,19 @@ export default function ProjectDetail({ project, builds: initialBuilds, token }:
   const previousBuilds = buildList.slice(1)
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-8 py-10">
+    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-8 sm:py-10">
       <Link href="/dashboard/project" className="text-sm text-gray-500 hover:text-gray-900">
         ← Back to projects
       </Link>
 
       {/* Header */}
       <div className="mt-4">
-        <h1 className="text-2xl font-semibold">{project.repo_full_name}</h1>
+        <h1 className="text-xl font-semibold sm:text-2xl">{project.repo_full_name}</h1>
         <p className="mt-1 font-mono text-sm text-gray-400">{project.repo_name}</p>
       </div>
 
       {/* Build Preset */}
-      <div className="mt-8 rounded-2xl bg-white px-6 py-5 shadow-md">
+      <div className="mt-6 rounded-2xl bg-white px-4 py-5 shadow-md sm:mt-8 sm:px-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold">Build Preset</h2>
           {!editingPreset && (
@@ -103,25 +103,25 @@ export default function ProjectDetail({ project, builds: initialBuilds, token }:
         {!editingPreset ? (
           <div className="space-y-2 text-sm">
             <div className="flex gap-3">
-              <span className="text-gray-500 w-24">Preset</span>
+              <span className="text-gray-500 w-20 shrink-0">Preset</span>
               <span className="font-medium capitalize">{project.preset || "node"}</span>
             </div>
             {project.custom_init && (
               <div className="flex gap-3">
-                <span className="text-gray-500 w-24">Init</span>
-                <code className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">{project.custom_init}</code>
+                <span className="text-gray-500 w-20 shrink-0">Init</span>
+                <code className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded break-all">{project.custom_init}</code>
               </div>
             )}
             {project.custom_build && (
               <div className="flex gap-3">
-                <span className="text-gray-500 w-24">Build</span>
-                <code className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">{project.custom_build}</code>
+                <span className="text-gray-500 w-20 shrink-0">Build</span>
+                <code className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded break-all">{project.custom_build}</code>
               </div>
             )}
             {project.artifact_path && (
               <div className="flex gap-3">
-                <span className="text-gray-500 w-24">Artifact dir</span>
-                <code className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">{project.artifact_path}</code>
+                <span className="text-gray-500 w-20 shrink-0">Artifact</span>
+                <code className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded break-all">{project.artifact_path}</code>
               </div>
             )}
           </div>
@@ -224,32 +224,32 @@ export default function ProjectDetail({ project, builds: initialBuilds, token }:
 
       {/* Latest Build */}
       {latestBuild && (
-        <div className="mt-8">
+        <div className="mt-6 sm:mt-8">
           <h2 className="text-lg font-semibold mb-3">Latest Build</h2>
           <div className="rounded-2xl bg-white shadow-md overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4">
-              <div>
-                <h3 className="font-medium">{latestBuild.repo_name || `repo #${latestBuild.repo_id}`}</h3>
+            <div className="flex flex-wrap items-start justify-between gap-y-2 px-4 py-4 sm:px-6">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-medium truncate">{latestBuild.repo_name || `repo #${latestBuild.repo_id}`}</h3>
                 <p className="mt-0.5 font-mono text-xs text-gray-400">
                   {latestBuild.head_sha?.slice(0, 7)} · {new Date(latestBuild.started_at).toLocaleString()}
                 </p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 shrink-0 ml-2">
                 <StatusBadge status={latestBuild.status} conclusion={latestBuild.conclusion} />
                 {latestBuild.artifact_url && (
                   <a
-                    href={latestBuild.artifact_url}
+                    href={getArtifactDownloadURL(latestBuild.artifact_url)!}
                     className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
                     download
                   >
-                    Download artifact
+                    Download
                   </a>
                 )}
               </div>
             </div>
-            {/* Inline live console */}
-            {latestBuild.isLive && logs.length > 0 && (
-              <div className="border-t border-gray-100 px-6 pb-4">
+            {/* Live console — show whenever logs are streaming */}
+            {logs.length > 0 && (
+              <div className="border-t border-gray-100 px-4 pb-4 sm:px-6">
                 <BuildConsole logs={logs} active={!latestBuild.conclusion} />
               </div>
             )}
@@ -259,21 +259,19 @@ export default function ProjectDetail({ project, builds: initialBuilds, token }:
 
       {/* Previous Builds */}
       {previousBuilds.length > 0 && (
-        <div className="mt-8">
+        <div className="mt-6 sm:mt-8">
           <h2 className="text-lg font-semibold mb-3">Previous Builds</h2>
           <div className="space-y-3">
             {previousBuilds.map((b) => (
-              <div key={b.id} className="flex items-center justify-between rounded-2xl bg-white px-6 py-4 shadow-md">
-                <div>
-                  <p className="font-mono text-xs text-gray-400">
-                    {b.head_sha?.slice(0, 7)} · {new Date(b.started_at).toLocaleString()}
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
+              <div key={b.id} className="flex flex-wrap items-start justify-between gap-y-2 rounded-2xl bg-white px-4 py-4 shadow-md sm:px-6">
+                <p className="font-mono text-xs text-gray-400">
+                  {b.head_sha?.slice(0, 7)} · {new Date(b.started_at).toLocaleString()}
+                </p>
+                <div className="flex items-center gap-3 shrink-0">
                   <StatusBadge status={b.status} conclusion={b.conclusion} />
                   {b.artifact_url && (
                     <a
-                      href={b.artifact_url}
+                      href={getArtifactDownloadURL(b.artifact_url)!}
                       className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
                       download
                     >

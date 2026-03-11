@@ -126,3 +126,16 @@ export function getWorkerStreamURL(token: string): string {
   const base = SERVICE_URL.replace(/^http/, "ws")
   return `${base}/api/ws?token=${encodeURIComponent(token)}`
 }
+
+const ARTIFACT_BASE_URL = "https://artifact-bobby.pryter.me"
+
+/** Rewrites an artifact URL to use the public artifact CDN. */
+export function getArtifactDownloadURL(url: string | null): string | null {
+  if (!url) return null
+  try {
+    const parsed = new URL(url)
+    return ARTIFACT_BASE_URL + parsed.pathname
+  } catch {
+    return url
+  }
+}

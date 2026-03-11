@@ -5,7 +5,7 @@ import { getWorkerStreamURL, Build } from "./api"
 
 interface WorkerStreamEvent {
   type: "worker_online" | "worker_offline" | "build_update" | "build_log"
-  payload: Record<string, string>
+  payload: Record<string, any>
 }
 
 interface UseWorkerStreamResult {
@@ -49,18 +49,38 @@ export function useWorkerStream(
         case "worker_offline":
           setOnline(false)
           break
-        case "build_update":
+        case "build_update": {
+          const p = evt.payload
           setActiveBuild((prev) => {
-            if (prev && prev.id !== evt.payload.buildId) return prev
-            return prev
-              ? {
-                  ...prev,
-                  status: evt.payload.status ?? prev.status,
-                  conclusion: evt.payload.conclusion ?? prev.conclusion,
-                }
-              : null
+            // Ignore updates for a different in-flight build
+            if (prev && prev.id !== p.buildId) return prev
+            if (prev) {
+              return {
+                ...prev,
+                status: p.status ?? prev.status,
+                conclusion: p.conclusion || prev.conclusion,
+                artifact_url: p.artifactUrl ?? prev.artifact_url,
+                finished_at: p.finishedAt ?? prev.finished_at,
+              }
+            }
+            // New build starting — clear previous logs
+            setLogs([])
+            return {
+              id: p.buildId,
+              setup_id: setupId,
+              repo_id: p.repoId ?? 0,
+              repo_name: p.repoName ?? "",
+              head_sha: p.headSha ?? "",
+              status: p.status ?? "in_progress",
+              conclusion: p.conclusion || null,
+              artifact_url: p.artifactUrl || null,
+              check_run_url: null,
+              started_at: p.startedAt ?? new Date().toISOString(),
+              finished_at: p.finishedAt ?? null,
+            }
           })
           break
+        }
         case "build_log":
           if (evt.payload.line) {
             setLogs((prev) => [...prev.slice(-499), evt.payload.line])

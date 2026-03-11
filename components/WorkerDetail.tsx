@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Worker, Build, updateWorkerName } from "@/lib/api"
+import { Worker, Build, updateWorkerName, getArtifactDownloadURL } from "@/lib/api"
 import { useWorkerStream } from "@/lib/useWorkerStream"
 import BuildConsole from "@/components/BuildConsole"
 
@@ -56,21 +56,21 @@ export default function WorkerDetail({ worker, builds: initialBuilds, token }: W
     : initialBuilds
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-8 py-10">
+    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-8 sm:py-10">
       <Link href="/dashboard/workers" className="text-sm text-gray-500 hover:text-gray-900">
         ← Back to workers
       </Link>
 
       {/* Header */}
-      <div className="mt-4 flex items-center gap-4">
+      <div className="mt-4 flex flex-wrap items-center gap-3">
         {editingName ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <input
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && saveName()}
-              className="rounded-lg border border-gray-300 px-3 py-1 text-2xl font-semibold outline-none focus:ring-2 focus:ring-gray-900"
+              className="rounded-lg border border-gray-300 px-3 py-1 text-xl font-semibold outline-none focus:ring-2 focus:ring-gray-900 sm:text-2xl"
             />
             <button
               disabled={savingName}
@@ -92,7 +92,7 @@ export default function WorkerDetail({ worker, builds: initialBuilds, token }: W
             className="group flex items-center gap-2"
             title="Click to rename"
           >
-            <h1 className="text-2xl font-semibold group-hover:underline">{displayName}</h1>
+            <h1 className="text-xl font-semibold group-hover:underline sm:text-2xl">{displayName}</h1>
             <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
               edit
             </span>
@@ -107,39 +107,39 @@ export default function WorkerDetail({ worker, builds: initialBuilds, token }: W
           {online ? "● Online" : "○ Offline"}
         </span>
       </div>
-      <p className="mt-1 font-mono text-sm text-gray-400">{worker.setupId}</p>
+      <p className="mt-1 font-mono text-xs text-gray-400 break-all sm:text-sm">{worker.setupId}</p>
 
       {/* Build history */}
-      <h2 className="mt-10 text-lg font-semibold">Recent Builds</h2>
+      <h2 className="mt-8 text-lg font-semibold sm:mt-10">Recent Builds</h2>
       <div className="mt-4 space-y-3">
         {buildList.length === 0 && (
           <p className="text-sm text-gray-500">No builds yet.</p>
         )}
-        {buildList.map((b) => (
+        {buildList.map((b, index) => (
           <div key={b.id} className="rounded-2xl bg-white shadow-md overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4">
-              <div>
-                <h3 className="font-medium">{b.repo_name || `repo #${b.repo_id}`}</h3>
+            <div className="flex flex-wrap items-start justify-between gap-y-2 px-4 py-4 sm:px-6">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-medium truncate">{b.repo_name || `repo #${b.repo_id}`}</h3>
                 <p className="mt-0.5 font-mono text-xs text-gray-400">
                   {b.head_sha?.slice(0, 7)} · {new Date(b.started_at).toLocaleString()}
                 </p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 shrink-0 ml-2">
                 <StatusBadge status={b.status} conclusion={b.conclusion} />
                 {b.artifact_url && (
                   <a
-                    href={b.artifact_url}
+                    href={getArtifactDownloadURL(b.artifact_url)!}
                     className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
                     download
                   >
-                    Download artifact
+                    Download
                   </a>
                 )}
               </div>
             </div>
-            {/* Inline live console for the active build */}
-            {b.isLive && logs.length > 0 && (
-              <div className="border-t border-gray-100">
+            {/* Show live console in the first (latest) build card when logs are streaming */}
+            {index === 0 && logs.length > 0 && (
+              <div className="border-t border-gray-100 px-4 pb-4 sm:px-6">
                 <BuildConsole logs={logs} active={activeBuild !== null && !b.conclusion} />
               </div>
             )}

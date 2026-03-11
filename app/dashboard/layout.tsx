@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import DashboardSidebar from "@/components/DashboardSidebar"
+import DashboardShell from "@/components/DashboardShell"
 
 export default async function DashboardLayout({
   children,
@@ -26,9 +27,8 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="relative flex min-h-screen flex-row items-start text-gray-800">
-      <DashboardSidebar userData={userData} />
+    <DashboardShell sidebar={<DashboardSidebar userData={userData} />}>
       {children}
-    </div>
+    </DashboardShell>
   )
 }
