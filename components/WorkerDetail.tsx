@@ -28,7 +28,7 @@ interface WorkerDetailProps {
 }
 
 export default function WorkerDetail({ worker, builds: initialBuilds, token }: WorkerDetailProps) {
-  const { online, activeBuild, logs } = useWorkerStream(token, worker.setupId, worker.online)
+  const { online, activeBuild, phases } = useWorkerStream(token, worker.setupId, worker.online)
 
   const [name, setName] = useState(worker.name ?? "")
   const [editingName, setEditingName] = useState(false)
@@ -47,12 +47,8 @@ export default function WorkerDetail({ worker, builds: initialBuilds, token }: W
 
   const displayName = name || worker.setupId
 
-  // Merge active build at top; filter duplicate from history
   const buildList: (Build & { isLive?: boolean })[] = activeBuild
-    ? [
-        { ...activeBuild, isLive: true },
-        ...initialBuilds.filter((b) => b.id !== activeBuild.id),
-      ]
+    ? [{ ...activeBuild, isLive: true }, ...initialBuilds.filter((b) => b.id !== activeBuild.id)]
     : initialBuilds
 
   return (
@@ -87,23 +83,12 @@ export default function WorkerDetail({ worker, builds: initialBuilds, token }: W
             </button>
           </div>
         ) : (
-          <button
-            onClick={() => setEditingName(true)}
-            className="group flex items-center gap-2"
-            title="Click to rename"
-          >
+          <button onClick={() => setEditingName(true)} className="group flex items-center gap-2" title="Click to rename">
             <h1 className="text-xl font-semibold group-hover:underline sm:text-2xl">{displayName}</h1>
-            <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-              edit
-            </span>
+            <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">edit</span>
           </button>
         )}
-
-        <span
-          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            online ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
-          }`}
-        >
+        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${online ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}`}>
           {online ? "● Online" : "○ Offline"}
         </span>
       </div>
@@ -112,9 +97,7 @@ export default function WorkerDetail({ worker, builds: initialBuilds, token }: W
       {/* Build history */}
       <h2 className="mt-8 text-lg font-semibold sm:mt-10">Recent Builds</h2>
       <div className="mt-4 space-y-3">
-        {buildList.length === 0 && (
-          <p className="text-sm text-gray-500">No builds yet.</p>
-        )}
+        {buildList.length === 0 && <p className="text-sm text-gray-500">No builds yet.</p>}
         {buildList.map((b, index) => (
           <div key={b.id} className="rounded-2xl bg-white shadow-md overflow-hidden">
             <div className="flex flex-wrap items-start justify-between gap-y-2 px-4 py-4 sm:px-6">
@@ -137,10 +120,10 @@ export default function WorkerDetail({ worker, builds: initialBuilds, token }: W
                 )}
               </div>
             </div>
-            {/* Show live console in the first (latest) build card when logs are streaming */}
-            {index === 0 && logs.length > 0 && (
+            {/* Show live phased console for the first (active) build */}
+            {index === 0 && (phases.length > 0 || activeBuild) && (
               <div className="border-t border-gray-100 px-4 pb-4 sm:px-6">
-                <BuildConsole logs={logs} active={activeBuild !== null && !b.conclusion} />
+                <BuildConsole phases={phases} active={activeBuild !== null && !b.conclusion} />
               </div>
             )}
           </div>

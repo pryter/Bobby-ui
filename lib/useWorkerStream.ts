@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { getWorkerStreamURL, Build } from "./api"
+import { BuildPhase, parseLogPhases } from "./buildPhases"
 
 interface WorkerStreamEvent {
   type: "worker_online" | "worker_offline" | "build_update" | "build_log"
@@ -12,6 +13,7 @@ interface UseWorkerStreamResult {
   online: boolean
   activeBuild: Build | null
   logs: string[]
+  phases: BuildPhase[]
 }
 
 export function useWorkerStream(
@@ -39,7 +41,6 @@ export function useWorkerStream(
         return
       }
 
-      // Only handle events for this worker
       if (evt.payload?.setupId !== setupId) return
 
       switch (evt.type) {
@@ -52,7 +53,6 @@ export function useWorkerStream(
         case "build_update": {
           const p = evt.payload
           setActiveBuild((prev) => {
-            // Ignore updates for a different in-flight build
             if (prev && prev.id !== p.buildId) return prev
             if (prev) {
               return {
@@ -63,7 +63,6 @@ export function useWorkerStream(
                 finished_at: p.finishedAt ?? prev.finished_at,
               }
             }
-            // New build starting — clear previous logs
             setLogs([])
             return {
               id: p.buildId,
@@ -83,20 +82,20 @@ export function useWorkerStream(
         }
         case "build_log":
           if (evt.payload.line) {
-            setLogs((prev) => [...prev.slice(-499), evt.payload.line])
+            setLogs((prev) => [...prev.slice(-999), evt.payload.line])
           }
           break
       }
     }
 
-    ws.onerror = () => {
-      // Silently ignore — best effort real-time
-    }
+    ws.onerror = () => {}
 
     return () => {
       ws.close()
     }
   }, [token, setupId])
 
-  return { online, activeBuild, logs }
+  const phases = useMemo(() => parseLogPhases(logs), [logs])
+
+  return { online, activeBuild, logs, phases }
 }

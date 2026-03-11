@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { getRepo, getRepoBuilds } from "@/lib/api"
+import { getRepo, getRepoBuilds, getWorkers } from "@/lib/api"
 import ProjectDetail from "@/components/ProjectDetail"
 import Link from "next/link"
 
@@ -12,9 +12,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
   if (!session) return null
 
-  const [project, builds] = await Promise.all([
+  const [project, builds, workers] = await Promise.all([
     getRepo(id, session.access_token).catch(() => null),
     getRepoBuilds(id, session.access_token).catch(() => []),
+    getWorkers(session.access_token).catch(() => []),
   ])
 
   if (!project) {
@@ -32,6 +33,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     <ProjectDetail
       project={project}
       builds={builds}
+      workers={workers}
       token={session.access_token}
     />
   )

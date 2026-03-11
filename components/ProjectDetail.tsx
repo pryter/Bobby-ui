@@ -2,8 +2,18 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { MonitoredRepo, Build, updateRepoPreset, getArtifactDownloadURL } from "@/lib/api"
+import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline"
+import {
+  MonitoredRepo,
+  Build,
+  Worker,
+  updateRepoPreset,
+  updateRepoWorker,
+  getBuildLog,
+  getArtifactDownloadURL,
+} from "@/lib/api"
 import { useWorkerStream } from "@/lib/useWorkerStream"
+import { parseLogPhases } from "@/lib/buildPhases"
 import BuildConsole from "@/components/BuildConsole"
 
 type Preset = "node" | "go" | "custom"
@@ -26,13 +36,19 @@ function StatusBadge({ status, conclusion }: { status: string; conclusion: strin
 interface ProjectDetailProps {
   project: MonitoredRepo
   builds: Build[]
+  workers: Worker[]
   token: string
 }
 
-export default function ProjectDetail({ project, builds: initialBuilds, token }: ProjectDetailProps) {
-  const { activeBuild, logs } = useWorkerStream(token, project.setup_id, false)
+export default function ProjectDetail({
+  project,
+  builds: initialBuilds,
+  workers,
+  token,
+}: ProjectDetailProps) {
+  const { activeBuild, phases } = useWorkerStream(token, project.setup_id, false)
 
-  // Preset editor state
+  // ── Preset editor ──────────────────────────────────────────────────────────
   const [preset, setPreset] = useState<Preset>((project.preset as Preset) || "node")
   const [customInit, setCustomInit] = useState(project.custom_init ?? "")
   const [customBuild, setCustomBuild] = useState(project.custom_build ?? "")
@@ -63,16 +79,53 @@ export default function ProjectDetail({ project, builds: initialBuilds, token }:
     }
   }
 
-  // Merge active build at top; filter duplicate from history
+  // ── Worker assignment ─────────────────────────────────────────────────────
+  const [currentSetupId, setCurrentSetupId] = useState(project.setup_id)
+  const [editingWorker, setEditingWorker] = useState(false)
+  const [selectedWorker, setSelectedWorker] = useState(project.setup_id)
+  const [savingWorker, setSavingWorker] = useState(false)
+  const [workerError, setWorkerError] = useState<string | null>(null)
+
+  const workerName = (id: string) => {
+    const w = workers.find((w) => w.setupId === id)
+    return w?.name || id.slice(0, 8) + "…"
+  }
+
+  async function saveWorker() {
+    if (selectedWorker === currentSetupId) { setEditingWorker(false); return }
+    setSavingWorker(true)
+    setWorkerError(null)
+    try {
+      await updateRepoWorker(project.id, selectedWorker, token)
+      setCurrentSetupId(selectedWorker)
+      setEditingWorker(false)
+    } catch (e) {
+      setWorkerError((e as Error).message)
+    } finally {
+      setSavingWorker(false)
+    }
+  }
+
+  // ── Build list with live build merged in ──────────────────────────────────
   const buildList: (Build & { isLive?: boolean })[] = activeBuild
-    ? [
-        { ...activeBuild, isLive: true },
-        ...initialBuilds.filter((b) => b.id !== activeBuild.id),
-      ]
+    ? [{ ...activeBuild, isLive: true }, ...initialBuilds.filter((b) => b.id !== activeBuild.id)]
     : initialBuilds
 
   const latestBuild = buildList[0] ?? null
   const previousBuilds = buildList.slice(1)
+
+  // ── Past build log expansion ──────────────────────────────────────────────
+  const [expandedBuildId, setExpandedBuildId] = useState<string | null>(null)
+  const [buildLogCache, setBuildLogCache] = useState<Record<string, string>>({})
+
+  async function toggleBuildLog(buildId: string) {
+    if (expandedBuildId === buildId) { setExpandedBuildId(null); return }
+    setExpandedBuildId(buildId)
+    if (!buildLogCache[buildId]) {
+      const text = await getBuildLog(buildId, token)
+      setBuildLogCache((prev) => ({ ...prev, [buildId]: text }))
+    }
+  }
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-8 sm:py-10">
@@ -86,15 +139,64 @@ export default function ProjectDetail({ project, builds: initialBuilds, token }:
         <p className="mt-1 font-mono text-sm text-gray-400">{project.repo_name}</p>
       </div>
 
-      {/* Build Preset */}
+      {/* Linked Worker */}
       <div className="mt-6 rounded-2xl bg-white px-4 py-5 shadow-md sm:mt-8 sm:px-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-semibold">Linked Worker</h2>
+          {!editingWorker && (
+            <button
+              onClick={() => { setSelectedWorker(currentSetupId); setEditingWorker(true) }}
+              className="text-sm text-gray-500 hover:text-gray-900"
+            >
+              Change
+            </button>
+          )}
+        </div>
+
+        {!editingWorker ? (
+          <p className="text-sm">
+            <span className="text-gray-500 mr-2">Worker</span>
+            <span className="font-medium">{workerName(currentSetupId)}</span>
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <select
+              value={selectedWorker}
+              onChange={(e) => setSelectedWorker(e.target.value)}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-900"
+            >
+              {workers.map((w) => (
+                <option key={w.setupId} value={w.setupId}>
+                  {w.name || w.setupId}
+                </option>
+              ))}
+            </select>
+            {workerError && <p className="text-sm text-red-600">{workerError}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={saveWorker}
+                disabled={savingWorker}
+                className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
+              >
+                {savingWorker ? "Saving…" : "Save"}
+              </button>
+              <button
+                onClick={() => { setEditingWorker(false); setWorkerError(null) }}
+                className="rounded-lg px-4 py-1.5 text-sm text-gray-500 hover:text-gray-900"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Build Preset */}
+      <div className="mt-4 rounded-2xl bg-white px-4 py-5 shadow-md sm:px-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold">Build Preset</h2>
           {!editingPreset && (
-            <button
-              onClick={() => setEditingPreset(true)}
-              className="text-sm text-gray-500 hover:text-gray-900"
-            >
+            <button onClick={() => setEditingPreset(true)} className="text-sm text-gray-500 hover:text-gray-900">
               Edit
             </button>
           )}
@@ -142,7 +244,6 @@ export default function ProjectDetail({ project, builds: initialBuilds, token }:
                 </button>
               ))}
             </div>
-
             {preset === "node" && (
               <p className="text-xs text-gray-400">
                 Runs <code className="font-mono bg-gray-100 px-1 rounded">yarn</code> then{" "}
@@ -155,7 +256,6 @@ export default function ProjectDetail({ project, builds: initialBuilds, token }:
                 <code className="font-mono bg-gray-100 px-1 rounded">go build ./...</code>
               </p>
             )}
-
             {preset === "custom" && (
               <div className="space-y-2">
                 <div>
@@ -180,7 +280,6 @@ export default function ProjectDetail({ project, builds: initialBuilds, token }:
                 </div>
               </div>
             )}
-
             <div>
               <label className="block text-xs text-gray-500 mb-1">
                 Artifact folder override <span className="text-gray-400">(optional)</span>
@@ -193,9 +292,7 @@ export default function ProjectDetail({ project, builds: initialBuilds, token }:
                 className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-mono outline-none focus:ring-2 focus:ring-gray-900"
               />
             </div>
-
             {presetError && <p className="text-sm text-red-600">{presetError}</p>}
-
             <div className="flex gap-2">
               <button
                 onClick={savePreset}
@@ -247,10 +344,10 @@ export default function ProjectDetail({ project, builds: initialBuilds, token }:
                 )}
               </div>
             </div>
-            {/* Live console — show whenever logs are streaming */}
-            {logs.length > 0 && (
+            {/* Live phased console */}
+            {(phases.length > 0 || activeBuild) && (
               <div className="border-t border-gray-100 px-4 pb-4 sm:px-6">
-                <BuildConsole logs={logs} active={!latestBuild.conclusion} />
+                <BuildConsole phases={phases} active={!latestBuild.conclusion} />
               </div>
             )}
           </div>
@@ -261,26 +358,60 @@ export default function ProjectDetail({ project, builds: initialBuilds, token }:
       {previousBuilds.length > 0 && (
         <div className="mt-6 sm:mt-8">
           <h2 className="text-lg font-semibold mb-3">Previous Builds</h2>
-          <div className="space-y-3">
-            {previousBuilds.map((b) => (
-              <div key={b.id} className="flex flex-wrap items-start justify-between gap-y-2 rounded-2xl bg-white px-4 py-4 shadow-md sm:px-6">
-                <p className="font-mono text-xs text-gray-400">
-                  {b.head_sha?.slice(0, 7)} · {new Date(b.started_at).toLocaleString()}
-                </p>
-                <div className="flex items-center gap-3 shrink-0">
-                  <StatusBadge status={b.status} conclusion={b.conclusion} />
-                  {b.artifact_url && (
-                    <a
-                      href={getArtifactDownloadURL(b.artifact_url)!}
-                      className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
-                      download
-                    >
-                      Download
-                    </a>
+          <div className="space-y-2">
+            {previousBuilds.map((b) => {
+              const isExpanded = expandedBuildId === b.id
+              const cachedLog = buildLogCache[b.id]
+              const pastPhases = cachedLog
+                ? parseLogPhases(cachedLog.split("\n").filter(Boolean))
+                : null
+
+              return (
+                <div key={b.id} className="rounded-2xl bg-white shadow-md overflow-hidden">
+                  <button
+                    onClick={() => toggleBuildLog(b.id)}
+                    className="flex w-full flex-wrap items-start justify-between gap-y-2 px-4 py-4 text-left sm:px-6"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-xs text-gray-400">
+                        {b.head_sha?.slice(0, 7)} · {new Date(b.started_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0 ml-2">
+                      <StatusBadge status={b.status} conclusion={b.conclusion} />
+                      {b.artifact_url && (
+                        <a
+                          href={getArtifactDownloadURL(b.artifact_url)!}
+                          className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+                          download
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Download
+                        </a>
+                      )}
+                      {isExpanded ? (
+                        <ChevronDownIcon className="h-4 w-4 text-gray-400" />
+                      ) : (
+                        <ChevronRightIcon className="h-4 w-4 text-gray-400" />
+                      )}
+                    </div>
+                  </button>
+                  {isExpanded && (
+                    <div className="border-t border-gray-100 px-4 pb-4 sm:px-6">
+                      {pastPhases ? (
+                        pastPhases.length > 0 ? (
+                          <BuildConsole phases={pastPhases} active={false} />
+                        ) : (
+                          <p className="pt-3 text-xs text-gray-400">No log recorded for this build.</p>
+                        )
+                      ) : (
+                        <p className="pt-3 text-xs text-gray-400 animate-pulse">Loading log…</p>
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}

@@ -139,3 +139,18 @@ export function getArtifactDownloadURL(url: string | null): string | null {
     return url
   }
 }
+
+/** Fetches the persisted build log text for a completed build. Returns empty string on 404. */
+export function getBuildLog(buildId: string, token: string): Promise<string> {
+  return fetch(`${SERVICE_URL}/api/builds/${buildId}/log`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then((res) => (res.ok ? res.text() : ""))
+}
+
+/** Reassigns a monitored repo to a different worker. */
+export function updateRepoWorker(repoId: string, setupId: string, token: string): Promise<void> {
+  return apiFetch(`/repos/${repoId}`, token, {
+    method: "PATCH",
+    body: JSON.stringify({ setupId }),
+  })
+}
