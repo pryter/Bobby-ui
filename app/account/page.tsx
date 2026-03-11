@@ -5,16 +5,12 @@ import { OAuthButton } from "@/components/Button/OAuthButton"
 import { TextButton } from "@/components/Button/TextButton"
 import { TextInput } from "@/components/Forms/TextInput"
 
-function getCallbackURL() {
-  return new URL("/auth/callback", window.location.origin).toString()
-}
-
 export default function AccountPage() {
   const handleGitHubLogin = async () => {
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: "github",
-      options: { redirectTo: getCallbackURL() },
+      options: { redirectTo: "https://bobby.pryter.me/auth/callback" },
     })
   }
 
@@ -22,7 +18,7 @@ export default function AccountPage() {
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: getCallbackURL() },
+      options: { redirectTo: "https://bobby.pryter.me/auth/callback" },
     })
   }
 
