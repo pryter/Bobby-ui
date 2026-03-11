@@ -1,11 +1,10 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState } from "react"
 import Link from "next/link"
-import { Worker, Build, MonitoredRepo, updateWorkerName, getWorkerRepos } from "@/lib/api"
+import { Worker, Build, updateWorkerName } from "@/lib/api"
 import { useWorkerStream } from "@/lib/useWorkerStream"
 import BuildConsole from "@/components/BuildConsole"
-import RepoLinker from "@/components/RepoLinker"
 
 function StatusBadge({ status, conclusion }: { status: string; conclusion: string | null }) {
   const label = conclusion || status
@@ -25,21 +24,12 @@ function StatusBadge({ status, conclusion }: { status: string; conclusion: strin
 interface WorkerDetailProps {
   worker: Worker
   builds: Build[]
-  linkedRepos: MonitoredRepo[]
   token: string
-  githubToken: string | null
 }
 
-export default function WorkerDetail({
-  worker,
-  builds: initialBuilds,
-  linkedRepos: initialRepos,
-  token,
-  githubToken,
-}: WorkerDetailProps) {
+export default function WorkerDetail({ worker, builds: initialBuilds, token }: WorkerDetailProps) {
   const { online, activeBuild, logs } = useWorkerStream(token, worker.setupId, worker.online)
 
-  // Worker name editing
   const [name, setName] = useState(worker.name ?? "")
   const [editingName, setEditingName] = useState(false)
   const [savingName, setSavingName] = useState(false)
@@ -55,19 +45,7 @@ export default function WorkerDetail({
     }
   }
 
-  // Linked repos (refreshable)
-  const [linkedRepos, setLinkedRepos] = useState(initialRepos)
-
-  const refreshRepos = useCallback(async () => {
-    try {
-      const repos = await getWorkerRepos(worker.setupId, token)
-      setLinkedRepos(repos)
-    } catch {}
-  }, [worker.setupId, token])
-
   const displayName = name || worker.setupId
-
-  // Show the active build console if a build is running
   const showConsole = activeBuild !== null || logs.length > 0
 
   return (
@@ -124,19 +102,8 @@ export default function WorkerDetail({
       </div>
       <p className="mt-1 font-mono text-sm text-gray-400">{worker.setupId}</p>
 
-      {/* Live console for active build */}
-      {showConsole && (
-        <BuildConsole logs={logs} active={activeBuild !== null} />
-      )}
-
-      {/* Repo linker */}
-      <RepoLinker
-        setupId={worker.setupId}
-        token={token}
-        githubToken={githubToken}
-        linkedRepos={linkedRepos}
-        onChanged={refreshRepos}
-      />
+      {/* Live console */}
+      {showConsole && <BuildConsole logs={logs} active={activeBuild !== null} />}
 
       {/* Build history */}
       <h2 className="mt-10 text-lg font-semibold">Recent Builds</h2>

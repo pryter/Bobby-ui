@@ -86,6 +86,10 @@ export function removeWorkerRepo(setupId: string, repoId: number, token: string)
   return apiFetch(`/workers/${setupId}/repos/${repoId}`, token, { method: "DELETE" })
 }
 
+export function getAllRepos(token: string): Promise<MonitoredRepo[]> {
+  return apiFetch("/repos", token)
+}
+
 /** Returns the WebSocket URL for real-time events. */
 export function getWorkerStreamURL(token: string): string {
   const base = SERVICE_URL.replace(/^http/, "ws")

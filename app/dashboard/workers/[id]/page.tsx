@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { getWorker, getBuilds, getWorkerRepos } from "@/lib/api"
+import { getWorker, getBuilds } from "@/lib/api"
 import WorkerDetail from "@/components/WorkerDetail"
 import Link from "next/link"
 
@@ -12,10 +12,9 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
 
   if (!session) return null
 
-  const [worker, builds, linkedRepos] = await Promise.all([
+  const [worker, builds] = await Promise.all([
     getWorker(id, session.access_token).catch(() => null),
     getBuilds(id, session.access_token).catch(() => []),
-    getWorkerRepos(id, session.access_token).catch(() => []),
   ])
 
   if (!worker) {
@@ -29,16 +28,11 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
     )
   }
 
-  // provider_token is the GitHub OAuth token (null if user logged in via Google)
-  const githubToken = session.provider_token ?? null
-
   return (
     <WorkerDetail
       worker={worker}
       builds={builds}
-      linkedRepos={linkedRepos}
       token={session.access_token}
-      githubToken={githubToken}
     />
   )
 }
