@@ -28,9 +28,10 @@ interface MenuItemProps {
   Icon: ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref">>
   title: string
   id: string
+  disabled?: boolean
 }
 
-const MenuItem: FC<MenuItemProps> = ({ Icon, title, id }) => {
+const MenuItem: FC<MenuItemProps> = ({ Icon, title, id, disabled }) => {
   const pathname = usePathname()
   const href = useMemo(() => {
     return id === "" ? "/dashboard" : `/dashboard/${id}`
@@ -39,6 +40,20 @@ const MenuItem: FC<MenuItemProps> = ({ Icon, title, id }) => {
   const isHighlighted = useMemo(() => {
     return id === "" ? pathname === "/dashboard" : pathname.startsWith(`/dashboard/${id}`)
   }, [id, pathname])
+
+  if (disabled) {
+    return   <motion.div
+      className={classnames(
+        "mt-2 flex w-full cursor-pointer items-center space-x-4 rounded-full px-4 py-2 transition-colors",
+        isHighlighted
+          ? "bg-gray-900 text-white shadow-lg"
+          : "hover:bg-gray-600 hover:bg-opacity-20"
+      )}
+    >
+      <Icon stroke="currentColor" strokeWidth={2.3} className="h-6 w-6 shrink-0" />
+      <h2 className="h-[24px] overflow-hidden font-medium">{title}</h2>
+    </motion.div>
+  }
 
   return (
     <Link href={href}>
@@ -82,15 +97,15 @@ export default function DashboardSidebar({ userData }: { userData: UserData }) {
           <MenuItem Icon={HomeIcon} title="Home" id="" />
           <MenuItem Icon={FolderIcon} title="Projects" id="project" />
           <h2 className="mt-6 text-sm font-medium text-gray-500">Monitoring</h2>
-          <MenuItem Icon={CommandLineIcon} title="Log Manager" id="log" />
-          <MenuItem Icon={ArchiveBoxIcon} title="Artifacts" id="artifacts" />
+          <MenuItem Icon={CommandLineIcon} title="Log Manager" id="log" disabled />
+          <MenuItem Icon={ArchiveBoxIcon} title="Artifacts" id="artifacts" disabled />
           <h2 className="mt-6 text-sm font-medium text-gray-500">Build settings</h2>
-          <MenuItem Icon={KeyIcon} title="Secrets" id="secrets" />
+          <MenuItem Icon={KeyIcon} title="Secrets" id="secrets" disabled />
           <MenuItem Icon={ServerStackIcon} title="Workers" id="workers" />
         </div>
         <div>
-          <MenuItem Icon={DocumentTextIcon} title="Account" id="account" />
-          <MenuItem Icon={Cog6ToothIcon} title="Preferences" id="setting" />
+          <MenuItem Icon={DocumentTextIcon} title="Account" id="account" disabled />
+          <MenuItem Icon={Cog6ToothIcon} title="Preferences" id="setting" disabled />
           <div className="relative mt-4 flex flex-row rounded-xl bg-gray-900 pl-4 text-white">
             <div className="flex h-full flex-row items-center py-3">
               <div
