@@ -31,12 +31,13 @@ function PhaseSection({
   active: boolean
 }) {
   const [open, setOpen] = useState(
-    phase.status === "running" || phase.status === "failure" || (isLast && active)
+    phase.status === "running" || phase.status === "failure"
   )
 
   useEffect(() => {
-    if (phase.status === "running" || (isLast && active)) setOpen(true)
-  }, [phase.status, isLast, active])
+    if (phase.status === "running") setOpen(true)
+    if (phase.status === "success") setOpen(false)
+  }, [phase.status])
 
   const labelColor =
     phase.status === "success"
