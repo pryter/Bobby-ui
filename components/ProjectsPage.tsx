@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
+import Link from "next/link"
 import { MonitoredRepo, Worker, getAllRepos, removeWorkerRepo } from "@/lib/api"
 import AddProjectModal from "@/components/AddProjectModal"
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline"
@@ -96,16 +97,19 @@ export default function ProjectsPage({
             key={p.id}
             className="flex items-center justify-between rounded-2xl bg-white px-6 py-4 shadow-md"
           >
-            <div>
-              <p className="font-semibold">{p.repo_full_name}</p>
+            <Link href={`/dashboard/project/${p.id}`} className="flex-1 min-w-0">
+              <p className="font-semibold hover:underline">{p.repo_full_name}</p>
               <p className="mt-0.5 text-xs text-gray-400">
                 Worker: <span className="font-mono">{workerName(p.setup_id)}</span>
+                {p.preset && p.preset !== "node" && (
+                  <span className="ml-2 capitalize">{p.preset}</span>
+                )}
               </p>
-            </div>
+            </Link>
             <button
               disabled={removing === p.repo_id}
               onClick={() => removeProject(p)}
-              className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40"
+              className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40 ml-4"
               title="Remove project"
             >
               <TrashIcon className="h-4 w-4" />

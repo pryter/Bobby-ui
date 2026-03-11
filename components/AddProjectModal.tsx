@@ -13,6 +13,8 @@ interface GitHubRepo {
   description: string | null
 }
 
+type Preset = "node" | "go" | "custom"
+
 interface AddProjectModalProps {
   open: boolean
   onClose: () => void
@@ -37,6 +39,10 @@ export default function AddProjectModal({
   const [search, setSearch] = useState("")
   const [selectedRepo, setSelectedRepo] = useState<GitHubRepo | null>(null)
   const [selectedWorkerId, setSelectedWorkerId] = useState(workers[0]?.setupId ?? "")
+  const [preset, setPreset] = useState<Preset>("node")
+  const [customInit, setCustomInit] = useState("")
+  const [customBuild, setCustomBuild] = useState("")
+  const [artifactPath, setArtifactPath] = useState("")
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
 
@@ -71,6 +77,10 @@ export default function AddProjectModal({
       setSelectedRepo(null)
       setAddError(null)
       setRepoError(null)
+      setPreset("node")
+      setCustomInit("")
+      setCustomBuild("")
+      setArtifactPath("")
     }
   }, [open])
 
@@ -100,6 +110,10 @@ export default function AddProjectModal({
           repoId: selectedRepo.id,
           repoName: selectedRepo.name,
           repoFullName: selectedRepo.full_name,
+          preset,
+          customInit: preset === "custom" ? customInit : undefined,
+          customBuild: preset === "custom" ? customBuild : undefined,
+          artifactPath: artifactPath || undefined,
         },
         token
       )
@@ -124,7 +138,7 @@ export default function AddProjectModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl p-6 mx-4">
+      <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl p-6 mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold">Add project</h2>
@@ -161,7 +175,7 @@ export default function AddProjectModal({
           </div>
         )}
 
-        {/* Step 2: Select repo + worker */}
+        {/* Step 2: Select repo + worker + preset */}
         {githubLinked && (
           <>
             {/* Worker selector (only shown when multiple workers) */}
@@ -211,7 +225,7 @@ export default function AddProjectModal({
             />
 
             {/* Repo list */}
-            <div className="mt-2 max-h-64 overflow-y-auto rounded-xl border border-gray-100">
+            <div className="mt-2 max-h-48 overflow-y-auto rounded-xl border border-gray-100">
               {loadingRepos && (
                 <div className="px-4 py-8 text-center text-sm text-gray-400">
                   Loading repositories…
@@ -253,6 +267,80 @@ export default function AddProjectModal({
                   </button>
                 )
               })}
+            </div>
+
+            {/* Build preset */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Build preset
+              </label>
+              <div className="flex gap-2">
+                {(["node", "go", "custom"] as Preset[]).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPreset(p)}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                      preset === p
+                        ? "border-gray-900 bg-gray-900 text-white"
+                        : "border-gray-200 text-gray-600 hover:border-gray-400"
+                    }`}
+                  >
+                    {p === "node" ? "Node" : p === "go" ? "Go" : "Custom"}
+                  </button>
+                ))}
+              </div>
+
+              {preset === "node" && (
+                <p className="mt-2 text-xs text-gray-400">
+                  Runs <code className="font-mono bg-gray-100 px-1 rounded">yarn</code> then{" "}
+                  <code className="font-mono bg-gray-100 px-1 rounded">yarn build</code>. Artifact: <code className="font-mono bg-gray-100 px-1 rounded">.next/</code>
+                </p>
+              )}
+              {preset === "go" && (
+                <p className="mt-2 text-xs text-gray-400">
+                  Runs <code className="font-mono bg-gray-100 px-1 rounded">go mod download</code> then{" "}
+                  <code className="font-mono bg-gray-100 px-1 rounded">go build ./...</code>
+                </p>
+              )}
+
+              {preset === "custom" && (
+                <div className="mt-3 space-y-2">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Init command</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. npm install"
+                      value={customInit}
+                      onChange={(e) => setCustomInit(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-mono outline-none focus:ring-2 focus:ring-gray-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Build command</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. npm run build"
+                      value={customBuild}
+                      onChange={(e) => setCustomBuild(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-mono outline-none focus:ring-2 focus:ring-gray-900"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Artifact path override (optional for all presets) */}
+              <div className="mt-3">
+                <label className="block text-xs text-gray-500 mb-1">
+                  Artifact folder override <span className="text-gray-400">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. dist or out"
+                  value={artifactPath}
+                  onChange={(e) => setArtifactPath(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-mono outline-none focus:ring-2 focus:ring-gray-900"
+                />
+              </div>
             </div>
 
             {addError && (

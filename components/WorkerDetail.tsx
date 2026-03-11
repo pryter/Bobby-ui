@@ -46,7 +46,14 @@ export default function WorkerDetail({ worker, builds: initialBuilds, token }: W
   }
 
   const displayName = name || worker.setupId
-  const showConsole = activeBuild !== null || logs.length > 0
+
+  // Merge active build at top; filter duplicate from history
+  const buildList: (Build & { isLive?: boolean })[] = activeBuild
+    ? [
+        { ...activeBuild, isLive: true },
+        ...initialBuilds.filter((b) => b.id !== activeBuild.id),
+      ]
+    : initialBuilds
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-8 py-10">
@@ -102,35 +109,40 @@ export default function WorkerDetail({ worker, builds: initialBuilds, token }: W
       </div>
       <p className="mt-1 font-mono text-sm text-gray-400">{worker.setupId}</p>
 
-      {/* Live console */}
-      {showConsole && <BuildConsole logs={logs} active={activeBuild !== null} />}
-
       {/* Build history */}
       <h2 className="mt-10 text-lg font-semibold">Recent Builds</h2>
       <div className="mt-4 space-y-3">
-        {initialBuilds.length === 0 && (
+        {buildList.length === 0 && (
           <p className="text-sm text-gray-500">No builds yet.</p>
         )}
-        {initialBuilds.map((b) => (
-          <div key={b.id} className="flex items-center justify-between rounded-2xl bg-white px-6 py-4 shadow-md">
-            <div>
-              <h3 className="font-medium">{b.repo_name || `repo #${b.repo_id}`}</h3>
-              <p className="mt-0.5 font-mono text-xs text-gray-400">
-                {b.head_sha?.slice(0, 7)} · {new Date(b.started_at).toLocaleString()}
-              </p>
+        {buildList.map((b) => (
+          <div key={b.id} className="rounded-2xl bg-white shadow-md overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4">
+              <div>
+                <h3 className="font-medium">{b.repo_name || `repo #${b.repo_id}`}</h3>
+                <p className="mt-0.5 font-mono text-xs text-gray-400">
+                  {b.head_sha?.slice(0, 7)} · {new Date(b.started_at).toLocaleString()}
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <StatusBadge status={b.status} conclusion={b.conclusion} />
+                {b.artifact_url && (
+                  <a
+                    href={b.artifact_url}
+                    className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+                    download
+                  >
+                    Download artifact
+                  </a>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-4">
-              <StatusBadge status={b.status} conclusion={b.conclusion} />
-              {b.artifact_url && (
-                <a
-                  href={b.artifact_url}
-                  className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
-                  download
-                >
-                  Download artifact
-                </a>
-              )}
-            </div>
+            {/* Inline live console for the active build */}
+            {b.isLive && logs.length > 0 && (
+              <div className="border-t border-gray-100">
+                <BuildConsole logs={logs} active={activeBuild !== null && !b.conclusion} />
+              </div>
+            )}
           </div>
         ))}
       </div>

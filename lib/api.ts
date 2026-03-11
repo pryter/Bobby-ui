@@ -41,6 +41,10 @@ export interface MonitoredRepo {
   repo_id: number
   repo_name: string
   repo_full_name: string
+  preset: string
+  custom_init: string | null
+  custom_build: string | null
+  artifact_path: string | null
   created_at: string
 }
 
@@ -73,7 +77,15 @@ export function getWorkerRepos(setupId: string, token: string): Promise<Monitore
 
 export function addWorkerRepo(
   setupId: string,
-  repo: { repoId: number; repoName: string; repoFullName: string },
+  repo: {
+    repoId: number
+    repoName: string
+    repoFullName: string
+    preset?: string
+    customInit?: string
+    customBuild?: string
+    artifactPath?: string
+  },
   token: string
 ): Promise<void> {
   return apiFetch(`/workers/${setupId}/repos`, token, {
@@ -88,6 +100,25 @@ export function removeWorkerRepo(setupId: string, repoId: number, token: string)
 
 export function getAllRepos(token: string): Promise<MonitoredRepo[]> {
   return apiFetch("/repos", token)
+}
+
+export function getRepo(id: string, token: string): Promise<MonitoredRepo> {
+  return apiFetch(`/repos/${id}`, token)
+}
+
+export function updateRepoPreset(
+  id: string,
+  config: { preset: string; customInit?: string; customBuild?: string; artifactPath?: string },
+  token: string
+): Promise<void> {
+  return apiFetch(`/repos/${id}`, token, {
+    method: "PATCH",
+    body: JSON.stringify(config),
+  })
+}
+
+export function getRepoBuilds(id: string, token: string): Promise<Build[]> {
+  return apiFetch(`/repos/${id}/builds`, token)
 }
 
 /** Returns the WebSocket URL for real-time events. */
