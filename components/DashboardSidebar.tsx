@@ -14,7 +14,7 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import classnames from "classnames"
-import type { FC, ForwardRefExoticComponent, SVGProps } from "react"
+import { useMemo, type FC, type ForwardRefExoticComponent, type SVGProps } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { TierBadge } from "@/components/Badge/TierBadge"
 
@@ -32,10 +32,13 @@ interface MenuItemProps {
 
 const MenuItem: FC<MenuItemProps> = ({ Icon, title, id }) => {
   const pathname = usePathname()
-  const href = id === "" ? "/dashboard" : `/dashboard/${id}`
+  const href = useMemo(() => {
+    return id === "" ? "/dashboard" : `/dashboard/${id}`
+  }, [id])
 
-  const isHighlighted =
-    id === "" ? pathname === "/dashboard" : pathname.startsWith(`/dashboard/${id}`)
+  const isHighlighted = useMemo(() => {
+    return id === "" ? pathname === "/dashboard" : pathname.startsWith(`/dashboard/${id}`)
+  }, [id, pathname])
 
   return (
     <Link href={href}>
