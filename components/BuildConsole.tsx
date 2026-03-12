@@ -2,33 +2,65 @@
 
 import { useState, useEffect, useRef } from "react"
 import { BuildPhase } from "@/lib/buildPhases"
-import {
-  CheckCircleIcon,
-  XCircleIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-} from "@heroicons/react/24/outline"
+import { CheckIcon, XMarkIcon } from "@heroicons/react/24/solid"
+import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline"
 
-function PhaseIcon({ status }: { status: BuildPhase["status"] }) {
-  if (status === "success")
-    return <CheckCircleIcon className="h-4 w-4 shrink-0 text-green-400" />
-  if (status === "failure")
-    return <XCircleIcon className="h-4 w-4 shrink-0 text-red-400" />
-  if (status === "running")
+/* ── Step indicator dot ──────────────────────────────────────────────────── */
+function StepDot({ status, index }: { status: BuildPhase["status"]; index: number }) {
+  if (status === "success") {
     return (
-      <span className="inline-block h-4 w-4 shrink-0 rounded-full border-2 border-yellow-400 border-t-transparent animate-spin" />
+      <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-500 z-10 shadow-sm">
+        <CheckIcon className="h-4 w-4 text-white" />
+      </div>
     )
-  return <span className="inline-block h-4 w-4 shrink-0 rounded-full border-2 border-gray-600" />
+  }
+  if (status === "failure") {
+    return (
+      <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500 z-10 shadow-sm">
+        <XMarkIcon className="h-4 w-4 text-white" />
+      </div>
+    )
+  }
+  if (status === "running") {
+    return (
+      <div className="relative flex h-8 w-8 shrink-0 items-center justify-center z-10">
+        {/* Outer spinning ring */}
+        <span className="absolute inset-0 rounded-full border-2 border-green-400 border-t-transparent animate-spin" />
+        {/* Inner fill */}
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-50 border border-green-200">
+          <span className="text-[10px] font-bold text-green-600">{index + 1}</span>
+        </span>
+      </div>
+    )
+  }
+  // pending
+  return (
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-gray-200 bg-white z-10">
+      <span className="text-[11px] font-semibold text-gray-400">{index + 1}</span>
+    </div>
+  )
 }
 
-function PhaseSection({
+/* ── Connector line between steps ────────────────────────────────────────── */
+function Connector({ status }: { status: BuildPhase["status"] }) {
+  const color =
+    status === "success"
+      ? "bg-green-400"
+      : status === "running"
+      ? "bg-gradient-to-b from-green-400 to-gray-200"
+      : "bg-gray-200"
+  return <div className={`w-0.5 min-h-[1.5rem] flex-1 ${color} transition-colors duration-500 mx-auto`} />
+}
+
+/* ── Single phase step ───────────────────────────────────────────────────── */
+function PhaseStep({
   phase,
+  index,
   isLast,
-  active,
 }: {
   phase: BuildPhase
+  index: number
   isLast: boolean
-  active: boolean
 }) {
   const [open, setOpen] = useState(
     phase.status === "running" || phase.status === "failure"
@@ -39,53 +71,90 @@ function PhaseSection({
     if (phase.status === "success") setOpen(false)
   }, [phase.status])
 
-  const labelColor =
+  const titleColor =
     phase.status === "success"
-      ? "text-green-400"
+      ? "text-gray-800"
       : phase.status === "failure"
-      ? "text-red-400"
+      ? "text-red-600"
       : phase.status === "running"
-      ? "text-yellow-400"
+      ? "text-gray-900"
       : "text-gray-400"
 
-  return (
-    <div>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-2 px-4 py-2 text-left hover:bg-gray-800 transition-colors"
-      >
-        <PhaseIcon status={phase.status} />
-        <span className={`flex-1 text-xs font-semibold tracking-wide ${labelColor}`}>
-          {phase.label}
-        </span>
-        <span className="mr-2 text-xs text-gray-600">{phase.logs.length} lines</span>
-        {open ? (
-          <ChevronDownIcon className="h-3 w-3 shrink-0 text-gray-500" />
-        ) : (
-          <ChevronRightIcon className="h-3 w-3 shrink-0 text-gray-500" />
-        )}
-      </button>
+  const subtitleText =
+    phase.status === "running"
+      ? "In progress…"
+      : phase.status === "success"
+      ? `${phase.logs.length} lines`
+      : phase.status === "failure"
+      ? "Failed"
+      : "Pending"
 
-      {open && (
-        <div className="bg-gray-950 px-8 py-2">
-          {phase.logs.length === 0 ? (
-            <span className="text-gray-500 text-xs font-mono italic">Waiting for output…</span>
-          ) : (
-            phase.logs.map((line, i) => (
-              <div
-                key={i}
-                className="text-green-400 text-xs font-mono leading-5 whitespace-pre-wrap break-all"
-              >
-                {line}
-              </div>
-            ))
-          )}
-        </div>
-      )}
+  const subtitleColor =
+    phase.status === "running"
+      ? "text-yellow-600"
+      : phase.status === "success"
+      ? "text-gray-400"
+      : phase.status === "failure"
+      ? "text-red-400"
+      : "text-gray-300"
+
+  return (
+    <div className="flex gap-4">
+      {/* Left: dot + connecting line */}
+      <div className="flex flex-col items-center">
+        <StepDot status={phase.status} index={index} />
+        {!isLast && <Connector status={phase.status} />}
+      </div>
+
+      {/* Right: step content */}
+      <div className="flex-1 pb-5 min-w-0">
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="flex w-full items-center justify-between gap-3 py-1 text-left group"
+        >
+          <div className="min-w-0">
+            <p className={`text-sm font-semibold leading-tight ${titleColor}`}>{phase.label}</p>
+            <p className={`mt-0.5 text-xs ${subtitleColor}`}>{subtitleText}</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {phase.status === "running" && (
+              <span className="flex items-center gap-1 rounded-full bg-yellow-50 border border-yellow-200 px-2 py-0.5 text-[10px] font-semibold text-yellow-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-yellow-500 animate-pulse" />
+                Live
+              </span>
+            )}
+            {(phase.logs.length > 0 || phase.status !== "pending") && (
+              open
+                ? <ChevronDownIcon className="h-3.5 w-3.5 text-gray-400 group-hover:text-gray-600" />
+                : <ChevronRightIcon className="h-3.5 w-3.5 text-gray-400 group-hover:text-gray-600" />
+            )}
+          </div>
+        </button>
+
+        {open && (
+          <div className="mt-2 rounded-xl bg-gray-950 border border-gray-800 px-4 py-3 overflow-x-auto">
+            {phase.logs.length === 0 ? (
+              <span className="text-gray-500 text-xs font-mono italic">
+                Waiting for output…
+              </span>
+            ) : (
+              phase.logs.map((line, i) => (
+                <div
+                  key={i}
+                  className="text-green-400 text-xs font-mono leading-5 whitespace-pre-wrap break-all"
+                >
+                  {line}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
+/* ── Main export ─────────────────────────────────────────────────────────── */
 interface BuildConsoleProps {
   phases: BuildPhase[]
   active: boolean
@@ -94,7 +163,6 @@ interface BuildConsoleProps {
 export default function BuildConsole({ phases, active }: BuildConsoleProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Scroll within the container on each new log line — no page scroll
   const totalLines = phases.reduce((sum, p) => sum + p.logs.length, 0)
   useEffect(() => {
     if (active && scrollRef.current) {
@@ -104,33 +172,45 @@ export default function BuildConsole({ phases, active }: BuildConsoleProps) {
 
   if (!active && phases.length === 0) return null
 
+  const completedCount = phases.filter((p) => p.status === "success").length
+
   return (
     <div className="mt-4">
-      <div className="mb-2 flex items-center gap-2">
-        <h3 className="text-sm font-semibold text-gray-700">Build Console</h3>
-        {active && (
-          <span className="flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">
-            <span className="h-1.5 w-1.5 rounded-full bg-yellow-500 animate-pulse" />
-            Live
+      {/* Header row */}
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <h3 className="text-sm font-semibold text-gray-700">Build Log</h3>
+          {active && (
+            <span className="flex items-center gap-1.5 rounded-full bg-green-50 border border-green-200 px-2.5 py-0.5 text-[11px] font-semibold text-green-700">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+              Live
+            </span>
+          )}
+        </div>
+        {phases.length > 0 && (
+          <span className="text-xs text-gray-400">
+            {completedCount} / {phases.length} steps
           </span>
         )}
       </div>
 
+      {/* Stepper card */}
       <div
         ref={scrollRef}
-        className="h-[28rem] overflow-y-auto rounded-xl bg-gray-900 divide-y divide-gray-800"
+        className="max-h-[32rem] overflow-y-auto rounded-2xl bg-white border border-gray-100 shadow-sm px-5 pt-5 pb-1"
       >
         {phases.length === 0 ? (
-          <div className="px-4 py-3 text-xs font-mono italic text-gray-500">
-            Waiting for build output…
+          <div className="flex items-center gap-4 pb-5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-gray-200 bg-gray-50 animate-pulse" />
+            <p className="text-sm text-gray-400 italic">Waiting for build output…</p>
           </div>
         ) : (
           phases.map((phase, i) => (
-            <PhaseSection
+            <PhaseStep
               key={phase.id + i}
               phase={phase}
+              index={i}
               isLast={i === phases.length - 1}
-              active={active}
             />
           ))
         )}
