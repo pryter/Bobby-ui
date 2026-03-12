@@ -10,7 +10,7 @@ export default function AccountPage() {
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: "github",
-      options: { redirectTo: "https://bobby.pryter.me/auth/callback" },
+      options: { redirectTo: new URL("/auth/callback", window.location.origin).toString() },
     })
   }
 
@@ -18,7 +18,7 @@ export default function AccountPage() {
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: "https://bobby.pryter.me/auth/callback" },
+      options: { redirectTo: new URL("/auth/callback", window.location.origin).toString() },
     })
   }
 

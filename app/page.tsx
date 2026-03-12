@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation"
 
 export default function Index() {
   const router = useRouter()
+
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center text-gray-900">
       <h1 className="text-2xl font-medium tracking-wide">Hi, I&apos;m Bobby</h1>
