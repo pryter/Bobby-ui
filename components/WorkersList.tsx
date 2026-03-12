@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Worker, getWorkerStreamURL } from "@/lib/api"
+import { Worker } from "@/lib/api"
+import { useWorkerStreamContext } from "@/components/WorkerStreamProvider"
 
 interface WorkersListProps {
   workers: Worker[]
@@ -24,32 +25,21 @@ function OnlineBadge({ online }: { online: boolean }) {
   )
 }
 
-export default function WorkersList({ workers, token }: WorkersListProps) {
+export default function WorkersList({ workers }: Omit<WorkersListProps, "token">) {
+  const { subscribe } = useWorkerStreamContext()
   const [onlineMap, setOnlineMap] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(workers.map((w) => [w.setupId, w.online]))
   )
 
   useEffect(() => {
-    if (!token) return
-    const url = getWorkerStreamURL(token)
-    const ws = new WebSocket(url)
-
-    ws.onmessage = (e) => {
-      let evt: { type: string; payload: { setupId: string } }
-      try {
-        evt = JSON.parse(e.data)
-      } catch {
-        return
-      }
+    return subscribe((evt) => {
       if (evt.type === "worker_online") {
-        setOnlineMap((prev) => ({ ...prev, [evt.payload.setupId]: true }))
+        setOnlineMap((prev) => ({ ...prev, [evt.payload.setupId as string]: true }))
       } else if (evt.type === "worker_offline") {
-        setOnlineMap((prev) => ({ ...prev, [evt.payload.setupId]: false }))
+        setOnlineMap((prev) => ({ ...prev, [evt.payload.setupId as string]: false }))
       }
-    }
-
-    return () => ws.close()
-  }, [token])
+    })
+  }, [subscribe])
 
   return (
     <div className="mt-6 space-y-4">

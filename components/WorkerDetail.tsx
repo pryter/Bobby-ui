@@ -28,7 +28,7 @@ interface WorkerDetailProps {
 }
 
 export default function WorkerDetail({ worker, builds: initialBuilds, token }: WorkerDetailProps) {
-  const { online, activeBuild, phases } = useWorkerStream(token, worker.setupId, worker.online)
+  const { online, activeBuild, phases } = useWorkerStream(worker.setupId, worker.online)
 
   const [name, setName] = useState(worker.name ?? "")
   const [editingName, setEditingName] = useState(false)

@@ -1,5 +1,12 @@
 const SERVICE_URL = process.env.NEXT_PUBLIC_SERVICE_URL || "http://localhost:4244"
 
+// Separate WebSocket URL — allows the WS server to live on a different host/port
+// (e.g. a dedicated ws:// server or a load balancer with sticky sessions).
+// Falls back to deriving from SERVICE_URL for zero-config local development.
+const WS_URL =
+  process.env.NEXT_PUBLIC_WS_URL ||
+  SERVICE_URL.replace(/^http/, "ws")
+
 async function apiFetch(path: string, token: string, options?: RequestInit) {
   const res = await fetch(`${SERVICE_URL}/api${path}`, {
     ...options,
@@ -123,8 +130,7 @@ export function getRepoBuilds(id: string, token: string): Promise<Build[]> {
 
 /** Returns the WebSocket URL for real-time events. */
 export function getWorkerStreamURL(token: string): string {
-  const base = SERVICE_URL.replace(/^http/, "ws")
-  return `${base}/api/ws?token=${encodeURIComponent(token)}`
+  return `${WS_URL}/api/ws?token=${encodeURIComponent(token)}`
 }
 
 const ARTIFACT_BASE_URL = "https://artifact-bobby.pryter.me"

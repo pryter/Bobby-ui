@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { getServerAuth } from "@/lib/auth"
 import { AuthProvider } from "@/components/AuthProvider"
+import { WorkerStreamProvider } from "@/components/WorkerStreamProvider"
 import DashboardSidebar from "@/components/DashboardSidebar"
 import DashboardShell from "@/components/DashboardShell"
 
@@ -17,9 +18,11 @@ export default async function DashboardLayout({
 
   return (
     <AuthProvider initialToken={auth.token} initialUser={auth.user}>
-      <DashboardShell sidebar={<DashboardSidebar userData={auth.user} />}>
-        {children}
-      </DashboardShell>
+      <WorkerStreamProvider>
+        <DashboardShell sidebar={<DashboardSidebar userData={auth.user} />}>
+          {children}
+        </DashboardShell>
+      </WorkerStreamProvider>
     </AuthProvider>
   )
 }
