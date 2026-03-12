@@ -29,7 +29,7 @@ export default async function WorkersPage() {
         </div>
       )}
 
-      <WorkersList workers={workers} token={auth!.token} />
+      <WorkersList workers={workers} />
     </div>
   )
 }
