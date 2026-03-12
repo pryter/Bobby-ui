@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
+import { getServerSession, getServerUserIdentities } from "@/lib/auth"
 import DashboardSidebar from "@/components/DashboardSidebar"
 import DashboardShell from "@/components/DashboardShell"
 
@@ -8,16 +8,15 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  const [session, identities] = await Promise.all([
+    getServerSession(),
+    getServerUserIdentities(),
+  ])
 
   if (!session) {
     redirect("/account")
   }
 
-  const { data: identities } = await supabase.auth.getUserIdentities()
   const identityData = identities?.identities?.[0]?.identity_data
 
   const userData = {

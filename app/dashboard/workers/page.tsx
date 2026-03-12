@@ -1,12 +1,9 @@
-import { createClient } from "@/lib/supabase/server"
+import { getServerSession } from "@/lib/auth"
 import { getWorkers } from "@/lib/api"
 import WorkersList from "@/components/WorkersList"
 
 export default async function WorkersPage() {
-  const supabase = await createClient()
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  const session = await getServerSession()
 
   let workers: Awaited<ReturnType<typeof getWorkers>> = []
   let error: string | null = null
