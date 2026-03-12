@@ -46,7 +46,7 @@ export default function ProjectDetail({
   workers,
   token,
 }: ProjectDetailProps) {
-  const { activeBuild, phases } = useWorkerStream(token, project.setup_id, false)
+  const { activeBuild, phases } = useWorkerStream(project.setup_id, false)
 
   // ── Preset editor ──────────────────────────────────────────────────────────
   const [preset, setPreset] = useState<Preset>((project.preset as Preset) || "node")
