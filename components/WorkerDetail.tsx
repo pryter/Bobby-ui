@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Worker, Build, updateWorkerName, getArtifactDownloadURL } from "@/lib/api"
+import { Worker, Build, getWorker, getBuilds, updateWorkerName, getArtifactDownloadURL } from "@/lib/api"
 import { useWorkerStream } from "@/lib/useWorkerStream"
 import BuildConsole from "@/components/BuildConsole"
+import { useAuth } from "@/components/AuthProvider"
 
 function StatusBadge({ status, conclusion }: { status: string; conclusion: string | null }) {
   const label = conclusion || status
@@ -21,35 +22,86 @@ function StatusBadge({ status, conclusion }: { status: string; conclusion: strin
   )
 }
 
-interface WorkerDetailProps {
-  worker: Worker
-  builds: Build[]
-  token: string
+function WorkerDetailSkeleton() {
+  return (
+    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-8 sm:py-10 animate-pulse">
+      <div className="h-4 w-24 bg-gray-200 rounded" />
+      <div className="mt-4 flex items-center gap-3">
+        <div className="h-8 w-40 bg-gray-200 rounded-lg" />
+        <div className="h-6 w-16 bg-gray-100 rounded-full" />
+      </div>
+      <div className="mt-1 h-3 w-64 bg-gray-100 rounded" />
+      <div className="mt-10">
+        <div className="h-6 w-32 bg-gray-200 rounded mb-4" />
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="rounded-2xl bg-white shadow-md h-16" />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 }
 
-export default function WorkerDetail({ worker, builds: initialBuilds, token }: WorkerDetailProps) {
-  const { online, activeBuild, phases } = useWorkerStream(worker.setupId, worker.online)
+export default function WorkerDetail({ id }: { id: string }) {
+  const { token } = useAuth()
 
-  const [name, setName] = useState(worker.name ?? "")
+  const [worker, setWorker] = useState<Worker | null>(null)
+  const [builds, setBuilds] = useState<Build[]>([])
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+
+  useEffect(() => {
+    Promise.all([
+      getWorker(id, token).catch(() => null),
+      getBuilds(id, token).catch(() => [] as Build[]),
+    ]).then(([w, blds]) => {
+      if (!w) { setNotFound(true); setLoading(false); return }
+      setWorker(w)
+      setBuilds(blds)
+      setLoading(false)
+    })
+  }, [id, token])
+
+  const { online, activeBuild, phases } = useWorkerStream(id, worker?.online ?? false)
+
+  const [name, setName] = useState("")
   const [editingName, setEditingName] = useState(false)
   const [savingName, setSavingName] = useState(false)
+
+  useEffect(() => {
+    if (worker) setName(worker.name ?? "")
+  }, [worker])
 
   async function saveName() {
     if (!name.trim()) return
     setSavingName(true)
     try {
-      await updateWorkerName(worker.setupId, name.trim(), token)
+      await updateWorkerName(id, name.trim(), token)
       setEditingName(false)
     } finally {
       setSavingName(false)
     }
   }
 
-  const displayName = name || worker.setupId
-
   const buildList: (Build & { isLive?: boolean })[] = activeBuild
-    ? [{ ...activeBuild, isLive: true }, ...initialBuilds.filter((b) => b.id !== activeBuild.id)]
-    : initialBuilds
+    ? [{ ...activeBuild, isLive: true }, ...builds.filter((b) => b.id !== activeBuild.id)]
+    : builds
+
+  if (loading) return <WorkerDetailSkeleton />
+
+  if (notFound || !worker) {
+    return (
+      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-8 py-10">
+        <Link href="/dashboard/workers" className="text-sm text-gray-500 hover:text-gray-900">
+          ← Back to workers
+        </Link>
+        <p className="mt-8 text-gray-500">Worker not found.</p>
+      </div>
+    )
+  }
+
+  const displayName = name || worker.setupId
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-8 sm:py-10">
@@ -120,7 +172,6 @@ export default function WorkerDetail({ worker, builds: initialBuilds, token }: W
                 )}
               </div>
             </div>
-            {/* Show live phased console for the first (active) build */}
             {index === 0 && (phases.length > 0 || activeBuild) && (
               <div className="border-t border-gray-100 px-4 pb-4 sm:px-6">
                 <BuildConsole phases={phases} active={activeBuild !== null && !b.conclusion} />

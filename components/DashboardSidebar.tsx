@@ -17,12 +17,7 @@ import classnames from "classnames"
 import { useMemo, type FC, type ForwardRefExoticComponent, type SVGProps } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { TierBadge } from "@/components/Badge/TierBadge"
-
-interface UserData {
-  email: string
-  fullName: string
-  avatarUrl: string
-}
+import { useAuth } from "@/components/AuthProvider"
 
 interface MenuItemProps {
   Icon: ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref">>
@@ -72,7 +67,8 @@ const MenuItem: FC<MenuItemProps> = ({ Icon, title, id, disabled }) => {
   )
 }
 
-export default function DashboardSidebar({ userData }: { userData: UserData }) {
+export default function DashboardSidebar() {
+  const { user: userData } = useAuth()
   const router = useRouter()
   const supabase = createClient()
 

@@ -7,6 +7,9 @@ import {
   MonitoredRepo,
   Build,
   Worker,
+  getRepo,
+  getRepoBuilds,
+  getWorkers,
   updateRepoPreset,
   updateRepoWorker,
   getBuildLog,
@@ -15,6 +18,7 @@ import {
 import { useWorkerStream } from "@/lib/useWorkerStream"
 import { parseLogPhases } from "@/lib/buildPhases"
 import BuildConsole from "@/components/BuildConsole"
+import { useAuth } from "@/components/AuthProvider"
 
 type Preset = "node" | "go" | "custom"
 
@@ -33,31 +37,74 @@ function StatusBadge({ status, conclusion }: { status: string; conclusion: strin
   )
 }
 
-interface ProjectDetailProps {
-  project: MonitoredRepo
-  builds: Build[]
-  workers: Worker[]
-  token: string
+function ProjectDetailSkeleton() {
+  return (
+    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-8 sm:py-10 animate-pulse">
+      <div className="h-4 w-24 bg-gray-200 rounded" />
+      <div className="mt-4">
+        <div className="h-7 w-56 bg-gray-200 rounded-lg" />
+        <div className="mt-2 h-4 w-32 bg-gray-100 rounded" />
+      </div>
+      <div className="mt-8 rounded-2xl bg-white px-6 py-5 shadow-md">
+        <div className="h-5 w-32 bg-gray-200 rounded mb-4" />
+        <div className="h-4 w-48 bg-gray-100 rounded" />
+      </div>
+      <div className="mt-4 rounded-2xl bg-white px-6 py-5 shadow-md">
+        <div className="h-5 w-28 bg-gray-200 rounded mb-4" />
+        <div className="h-4 w-24 bg-gray-100 rounded" />
+      </div>
+      <div className="mt-8">
+        <div className="h-6 w-32 bg-gray-200 rounded mb-3" />
+        <div className="rounded-2xl bg-white shadow-md h-16" />
+      </div>
+    </div>
+  )
 }
 
-export default function ProjectDetail({
-  project,
-  builds: initialBuilds,
-  workers,
-  token,
-}: ProjectDetailProps) {
-  const { activeBuild, phases } = useWorkerStream(project.setup_id, false)
+export default function ProjectDetail({ id }: { id: string }) {
+  const { token } = useAuth()
+
+  const [project, setProject] = useState<MonitoredRepo | null>(null)
+  const [builds, setBuilds] = useState<Build[]>([])
+  const [workers, setWorkers] = useState<Worker[]>([])
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+
+  useEffect(() => {
+    Promise.all([
+      getRepo(id, token).catch(() => null),
+      getRepoBuilds(id, token).catch(() => [] as Build[]),
+      getWorkers(token).catch(() => [] as Worker[]),
+    ]).then(([proj, blds, ws]) => {
+      if (!proj) { setNotFound(true); setLoading(false); return }
+      setProject(proj)
+      setBuilds(blds)
+      setWorkers(ws)
+      setLoading(false)
+    })
+  }, [id, token])
+
+  const { activeBuild, phases } = useWorkerStream(project?.setup_id ?? "", false)
 
   // ── Preset editor ──────────────────────────────────────────────────────────
-  const [preset, setPreset] = useState<Preset>((project.preset as Preset) || "node")
-  const [customInit, setCustomInit] = useState(project.custom_init ?? "")
-  const [customBuild, setCustomBuild] = useState(project.custom_build ?? "")
-  const [artifactPath, setArtifactPath] = useState(project.artifact_path ?? "")
+  const [preset, setPreset] = useState<Preset>("node")
+  const [customInit, setCustomInit] = useState("")
+  const [customBuild, setCustomBuild] = useState("")
+  const [artifactPath, setArtifactPath] = useState("")
   const [editingPreset, setEditingPreset] = useState(false)
   const [savingPreset, setSavingPreset] = useState(false)
   const [presetError, setPresetError] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (!project) return
+    setPreset((project.preset as Preset) || "node")
+    setCustomInit(project.custom_init ?? "")
+    setCustomBuild(project.custom_build ?? "")
+    setArtifactPath(project.artifact_path ?? "")
+  }, [project])
+
   async function savePreset() {
+    if (!project) return
     setSavingPreset(true)
     setPresetError(null)
     try {
@@ -80,18 +127,25 @@ export default function ProjectDetail({
   }
 
   // ── Worker assignment ─────────────────────────────────────────────────────
-  const [currentSetupId, setCurrentSetupId] = useState(project.setup_id)
+  const [currentSetupId, setCurrentSetupId] = useState("")
   const [editingWorker, setEditingWorker] = useState(false)
-  const [selectedWorker, setSelectedWorker] = useState(project.setup_id)
+  const [selectedWorker, setSelectedWorker] = useState("")
   const [savingWorker, setSavingWorker] = useState(false)
   const [workerError, setWorkerError] = useState<string | null>(null)
 
-  const workerName = (id: string) => {
-    const w = workers.find((w) => w.setupId === id)
-    return w?.name || id.slice(0, 8) + "…"
+  useEffect(() => {
+    if (!project) return
+    setCurrentSetupId(project.setup_id)
+    setSelectedWorker(project.setup_id)
+  }, [project])
+
+  const workerName = (wid: string) => {
+    const w = workers.find((w) => w.setupId === wid)
+    return w?.name || wid.slice(0, 8) + "…"
   }
 
   async function saveWorker() {
+    if (!project) return
     if (selectedWorker === currentSetupId) { setEditingWorker(false); return }
     setSavingWorker(true)
     setWorkerError(null)
@@ -108,15 +162,14 @@ export default function ProjectDetail({
 
   // ── Build list with live build merged in ──────────────────────────────────
   const buildList: (Build & { isLive?: boolean })[] = activeBuild
-    ? [{ ...activeBuild, isLive: true }, ...initialBuilds.filter((b) => b.id !== activeBuild.id)]
-    : initialBuilds
+    ? [{ ...activeBuild, isLive: true }, ...builds.filter((b) => b.id !== activeBuild.id)]
+    : builds
 
   const latestBuild = buildList[0] ?? null
   const previousBuilds = buildList.slice(1)
 
   // ── Latest build console expand/collapse ──────────────────────────────────
   const [showLatestConsole, setShowLatestConsole] = useState(false)
-  // Auto-expand when a live build starts streaming phases
   useEffect(() => {
     if (phases.length > 0) setShowLatestConsole(true)
   }, [phases.length > 0])
@@ -132,6 +185,19 @@ export default function ProjectDetail({
       const text = await getBuildLog(buildId, token)
       setBuildLogCache((prev) => ({ ...prev, [buildId]: text }))
     }
+  }
+
+  if (loading) return <ProjectDetailSkeleton />
+
+  if (notFound || !project) {
+    return (
+      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-8 py-10">
+        <Link href="/dashboard/project" className="text-sm text-gray-500 hover:text-gray-900">
+          ← Back to projects
+        </Link>
+        <p className="mt-8 text-gray-500">Project not found.</p>
+      </div>
+    )
   }
 
   return (
@@ -360,7 +426,6 @@ export default function ProjectDetail({
                 )}
               </div>
             </button>
-            {/* Phased console — shown when expanded */}
             {showLatestConsole && (
               <div className="border-t border-gray-100 px-4 pb-4 sm:px-6">
                 {phases.length > 0 ? (

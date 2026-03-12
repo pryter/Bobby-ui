@@ -2,13 +2,9 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Worker } from "@/lib/api"
+import { Worker, getWorkers } from "@/lib/api"
 import { useWorkerStreamContext } from "@/components/WorkerStreamProvider"
-
-interface WorkersListProps {
-  workers: Worker[]
-  token: string
-}
+import { useAuth } from "@/components/AuthProvider"
 
 function OnlineBadge({ online }: { online: boolean }) {
   return (
@@ -25,11 +21,43 @@ function OnlineBadge({ online }: { online: boolean }) {
   )
 }
 
-export default function WorkersList({ workers }: Omit<WorkersListProps, "token">) {
-  const { subscribe } = useWorkerStreamContext()
-  const [onlineMap, setOnlineMap] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(workers.map((w) => [w.setupId, w.online]))
+function WorkersListSkeleton() {
+  return (
+    <div className="flex flex-col mt-6 space-y-4 animate-pulse">
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="flex items-center justify-between rounded-2xl bg-white px-6 py-4 shadow-md">
+          <div>
+            <div className="h-4 w-32 bg-gray-200 rounded mb-2" />
+            <div className="h-3 w-48 bg-gray-100 rounded" />
+          </div>
+          <div className="h-6 w-16 bg-gray-100 rounded-full" />
+        </div>
+      ))}
+    </div>
   )
+}
+
+export default function WorkersList() {
+  const { token } = useAuth()
+  const { subscribe } = useWorkerStreamContext()
+
+  const [workers, setWorkers] = useState<Worker[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [onlineMap, setOnlineMap] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    getWorkers(token)
+      .then((ws) => {
+        setWorkers(ws)
+        setOnlineMap(Object.fromEntries(ws.map((w) => [w.setupId, w.online])))
+        setLoading(false)
+      })
+      .catch((e) => {
+        setError((e as Error).message)
+        setLoading(false)
+      })
+  }, [token])
 
   useEffect(() => {
     return subscribe((evt) => {
@@ -40,6 +68,16 @@ export default function WorkersList({ workers }: Omit<WorkersListProps, "token">
       }
     })
   }, [subscribe])
+
+  if (loading) return <WorkersListSkeleton />
+
+  if (error) {
+    return (
+      <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        Could not load workers: {error}
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col mt-6 space-y-4">

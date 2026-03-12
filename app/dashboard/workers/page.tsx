@@ -1,19 +1,6 @@
-import { getServerAuth } from "@/lib/auth"
-import { getWorkers } from "@/lib/api"
 import WorkersList from "@/components/WorkersList"
 
-export default async function WorkersPage() {
-  const auth = await getServerAuth()
-
-  let workers: Awaited<ReturnType<typeof getWorkers>> = []
-  let error: string | null = null
-
-  try {
-    workers = await getWorkers(auth!.token)
-  } catch (e) {
-    error = (e as Error).message
-  }
-
+export default function WorkersPage() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-8 py-10">
       <div className="flex items-center justify-between">
@@ -22,14 +9,7 @@ export default async function WorkersPage() {
           Run <code className="font-mono">./bobby</code> on your machine to register a new worker
         </div>
       </div>
-
-      {error && (
-        <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          Could not load workers: {error}
-        </div>
-      )}
-
-      <WorkersList workers={workers} />
+      <WorkersList />
     </div>
   )
 }

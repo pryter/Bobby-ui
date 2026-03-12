@@ -1,22 +1,19 @@
-import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
-import DashboardSidebar from "@/components/DashboardSidebar"
-import { getServerAuth } from "@/lib/auth";
+"use client"
 
-export default async function DashboardLayout({
+import { useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
+
+export default function AccountLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const auth = await getServerAuth()
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) window.location.replace("/dashboard")
+    })
+  }, [])
 
-  if (auth) {
-    redirect("/dashboard")
-  }
-
-  return (
-    <>
-      {children}
-    </>
-  )
+  return <>{children}</>
 }
