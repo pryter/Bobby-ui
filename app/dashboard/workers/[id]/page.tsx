@@ -1,14 +1,11 @@
-import { createClient } from "@/lib/supabase/server"
+import { getServerSession } from "@/lib/auth"
 import { getWorker, getBuilds } from "@/lib/api"
 import WorkerDetail from "@/components/WorkerDetail"
 import Link from "next/link"
 
 export default async function WorkerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  const session = await getServerSession()
 
   if (!session) return null
 

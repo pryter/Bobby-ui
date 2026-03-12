@@ -1,12 +1,9 @@
-import { createClient } from "@/lib/supabase/server"
+import { getServerSession } from "@/lib/auth"
 import { getAllRepos, getWorkers } from "@/lib/api"
 import ProjectsPage from "@/components/ProjectsPage"
 
 export default async function ProjectPage() {
-  const supabase = await createClient()
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  const session = await getServerSession()
 
   if (!session) return null
 
