@@ -1,15 +1,15 @@
-import { getServerSession } from "@/lib/auth"
+import { getServerAuth } from "@/lib/auth"
 import { getWorkers } from "@/lib/api"
 import WorkersList from "@/components/WorkersList"
 
 export default async function WorkersPage() {
-  const session = await getServerSession()
+  const auth = await getServerAuth()
 
   let workers: Awaited<ReturnType<typeof getWorkers>> = []
   let error: string | null = null
 
   try {
-    workers = await getWorkers(session!.access_token)
+    workers = await getWorkers(auth!.token)
   } catch (e) {
     error = (e as Error).message
   }
@@ -29,7 +29,7 @@ export default async function WorkersPage() {
         </div>
       )}
 
-      <WorkersList workers={workers} token={session!.access_token} />
+      <WorkersList workers={workers} token={auth!.token} />
     </div>
   )
 }

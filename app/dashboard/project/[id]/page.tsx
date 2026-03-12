@@ -1,18 +1,18 @@
-import { getServerSession } from "@/lib/auth"
+import { getServerAuth } from "@/lib/auth"
 import { getRepo, getRepoBuilds, getWorkers } from "@/lib/api"
 import ProjectDetail from "@/components/ProjectDetail"
 import Link from "next/link"
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const session = await getServerSession()
+  const auth = await getServerAuth()
 
-  if (!session) return null
+  if (!auth) return null
 
   const [project, builds, workers] = await Promise.all([
-    getRepo(id, session.access_token).catch(() => null),
-    getRepoBuilds(id, session.access_token).catch(() => []),
-    getWorkers(session.access_token).catch(() => []),
+    getRepo(id, auth.token).catch(() => null),
+    getRepoBuilds(id, auth.token).catch(() => []),
+    getWorkers(auth.token).catch(() => []),
   ])
 
   if (!project) {
@@ -31,7 +31,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       project={project}
       builds={builds}
       workers={workers}
-      token={session.access_token}
+      token={auth.token}
     />
   )
 }

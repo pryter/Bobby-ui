@@ -1,27 +1,25 @@
-import { getServerSession } from "@/lib/auth"
+import { getServerAuth } from "@/lib/auth"
 import { getAllRepos, getWorkers } from "@/lib/api"
 import ProjectsPage from "@/components/ProjectsPage"
 
 export default async function ProjectPage() {
-  const session = await getServerSession()
+  const auth = await getServerAuth()
 
-  if (!session) return null
+  if (!auth) return null
 
   const [projects, workers] = await Promise.all([
-    getAllRepos(session.access_token).catch(() => []),
-    getWorkers(session.access_token).catch(() => []),
+    getAllRepos(auth.token).catch(() => []),
+    getWorkers(auth.token).catch(() => []),
   ])
 
-  // provider_token is the GitHub OAuth token — available right after GitHub OAuth login/link.
-  // May be null if the user is in a persisted session (not a fresh OAuth).
-  const githubToken = session.provider_token ?? null
-
+  // provider_token (GitHub OAuth token) is not in the JWT — only available right after
+  // GitHub OAuth login in the browser session. Handled client-side in ProjectsPage.
   return (
     <ProjectsPage
       initialProjects={projects}
       workers={workers}
-      token={session.access_token}
-      initialGithubToken={githubToken}
+      token={auth.token}
+      initialGithubToken={null}
     />
   )
 }

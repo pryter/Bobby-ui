@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
-import { getServerSession, getServerUserIdentities } from "@/lib/auth"
+import { getServerAuth } from "@/lib/auth"
+import { AuthProvider } from "@/components/AuthProvider"
 import DashboardSidebar from "@/components/DashboardSidebar"
 import DashboardShell from "@/components/DashboardShell"
 
@@ -8,26 +9,17 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const [session, identities] = await Promise.all([
-    getServerSession(),
-    getServerUserIdentities(),
-  ])
+  const auth = await getServerAuth() // reads middleware headers — no network call
 
-  if (!session) {
+  if (!auth) {
     redirect("/account")
   }
 
-  const identityData = identities?.identities?.[0]?.identity_data
-
-  const userData = {
-    email: identityData?.email || session.user.email || "",
-    fullName: identityData?.full_name || "",
-    avatarUrl: identityData?.avatar_url || "",
-  }
-
   return (
-    <DashboardShell sidebar={<DashboardSidebar userData={userData} />}>
-      {children}
-    </DashboardShell>
+    <AuthProvider initialToken={auth.token} initialUser={auth.user}>
+      <DashboardShell sidebar={<DashboardSidebar userData={auth.user} />}>
+        {children}
+      </DashboardShell>
+    </AuthProvider>
   )
 }

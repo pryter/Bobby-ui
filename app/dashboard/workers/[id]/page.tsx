@@ -1,17 +1,17 @@
-import { getServerSession } from "@/lib/auth"
+import { getServerAuth } from "@/lib/auth"
 import { getWorker, getBuilds } from "@/lib/api"
 import WorkerDetail from "@/components/WorkerDetail"
 import Link from "next/link"
 
 export default async function WorkerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const session = await getServerSession()
+  const auth = await getServerAuth()
 
-  if (!session) return null
+  if (!auth) return null
 
   const [worker, builds] = await Promise.all([
-    getWorker(id, session.access_token).catch(() => null),
-    getBuilds(id, session.access_token).catch(() => []),
+    getWorker(id, auth.token).catch(() => null),
+    getBuilds(id, auth.token).catch(() => []),
   ])
 
   if (!worker) {
@@ -29,7 +29,7 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
     <WorkerDetail
       worker={worker}
       builds={builds}
-      token={session.access_token}
+      token={auth.token}
     />
   )
 }
