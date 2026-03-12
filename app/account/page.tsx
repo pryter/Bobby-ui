@@ -16,7 +16,8 @@ export default function AccountPage() {
     setSigningIn(provider)
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
-      provider
+      provider,
+      options: { redirectTo: "https://bobby.pryter.me/auth/callback" },
     })
     setTimeout(() => {
       setSigningIn(null)
