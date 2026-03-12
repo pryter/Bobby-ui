@@ -25,15 +25,22 @@ const ProvidersIcon = {
 interface OAuthButtonProps {
   onClick: () => void
   provider: "google" | "github"
+  loading?: boolean
+  disabled?: boolean
 }
 
-export const OAuthButton: FC<OAuthButtonProps> = ({ onClick, provider }) => {
+export const OAuthButton: FC<OAuthButtonProps> = ({ onClick, provider, loading, disabled }) => {
   return (
     <button
       onClick={onClick}
-      className="my-4 flex h-10 w-20 items-center justify-center rounded-lg bg-gray-900 font-medium text-white"
+      disabled={loading || disabled}
+      className="my-4 flex h-10 w-20 items-center justify-center rounded-lg bg-gray-900 font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
     >
-      {ProvidersIcon[provider]}
+      {loading ? (
+        <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+      ) : (
+        ProvidersIcon[provider]
+      )}
     </button>
   )
 }

@@ -1,25 +1,26 @@
 "use client"
 import Link from "next/link"
+import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { OAuthButton } from "@/components/Button/OAuthButton"
 import { TextButton } from "@/components/Button/TextButton"
 import { TextInput } from "@/components/Forms/TextInput"
 
-export default function AccountPage() {
-  const handleGitHubLogin = async () => {
-    const supabase = createClient()
-    await supabase.auth.signInWithOAuth({
-      provider: "github",
-      options: { redirectTo: "https://bobby.pryter.me/auth/callback" },
-    })
-  }
+type OAuthProvider = "github" | "google"
 
-  const handleGoogleLogin = async () => {
+export default function AccountPage() {
+  const [signingIn, setSigningIn] = useState<OAuthProvider | null>(null)
+
+  const handleOAuthLogin = async (provider: OAuthProvider) => {
+    if (signingIn) return
+    setSigningIn(provider)
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
-      provider: "google",
+      provider,
       options: { redirectTo: "https://bobby.pryter.me/auth/callback" },
     })
+    // Only reachable if signInWithOAuth fails to redirect (e.g. popup blocked)
+    setSigningIn(null)
   }
 
   return (
@@ -28,11 +29,21 @@ export default function AccountPage() {
         <div className="flex h-full w-full flex-col items-center px-8 pb-6 pt-8">
           <h1 className="text-center text-3xl font-bold tracking-wide">Sign-in</h1>
           <p className="mb-2 mt-1 text-center font-light leading-[18px] tracking-wide text-gray-800">
-            Sign-in with your preferred provider below.
+            {signingIn ? `Redirecting to ${signingIn}…` : "Sign-in with your preferred provider below."}
           </p>
           <div className="flex space-x-2">
-            <OAuthButton onClick={handleGoogleLogin} provider="google" />
-            <OAuthButton onClick={handleGitHubLogin} provider="github" />
+            <OAuthButton
+              onClick={() => handleOAuthLogin("google")}
+              provider="google"
+              loading={signingIn === "google"}
+              disabled={signingIn !== null && signingIn !== "google"}
+            />
+            <OAuthButton
+              onClick={() => handleOAuthLogin("github")}
+              provider="github"
+              loading={signingIn === "github"}
+              disabled={signingIn !== null && signingIn !== "github"}
+            />
           </div>
           <div className="mb-10 mt-2 w-full space-y-4">
             <TextInput placeholder="email" title="Email" type="email" />
