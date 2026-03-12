@@ -42,7 +42,7 @@ export default function WorkersList({ workers }: Omit<WorkersListProps, "token">
   }, [subscribe])
 
   return (
-    <div className="mt-6 space-y-4">
+    <div className="flex flex-col mt-6 space-y-4">
       {workers.length === 0 && (
         <div className="rounded-2xl border border-dashed border-gray-300 px-8 py-12 text-center text-gray-500">
           <p className="font-medium">No workers registered yet.</p>

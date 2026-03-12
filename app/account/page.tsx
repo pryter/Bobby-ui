@@ -1,6 +1,6 @@
 "use client"
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client"
 import { OAuthButton } from "@/components/Button/OAuthButton"
 import { TextButton } from "@/components/Button/TextButton"
@@ -17,11 +17,16 @@ export default function AccountPage() {
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: new URL("/auth/callback", window.location.origin).toString() },
+      options: { redirectTo: new URL("/auth/callback", window.location.hostname.includes("localhost") ? window.location.origin : "https://bobby.pryter.me").toString() },
     })
-    // Only reachable if signInWithOAuth fails to redirect (e.g. popup blocked)
-    setSigningIn(null)
+    setTimeout(() => {
+      setSigningIn(null)
+    }, 20 * 1000)
   }
+
+  useEffect(() => {
+    console.log(signingIn)
+  }, [signingIn]);
 
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center text-gray-800">
@@ -33,13 +38,13 @@ export default function AccountPage() {
           </p>
           <div className="flex space-x-2">
             <OAuthButton
-              onClick={() => handleOAuthLogin("google")}
+              onClick={() => {handleOAuthLogin("google")}}
               provider="google"
               loading={signingIn === "google"}
               disabled={signingIn !== null && signingIn !== "google"}
             />
             <OAuthButton
-              onClick={() => handleOAuthLogin("github")}
+              onClick={() => {handleOAuthLogin("github")}}
               provider="github"
               loading={signingIn === "github"}
               disabled={signingIn !== null && signingIn !== "github"}
