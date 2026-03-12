@@ -5,14 +5,14 @@ import type { NextRequest } from "next/server"
 
 const JWT_SECRET = new TextEncoder().encode(process.env.SUPABASE_JWT_SECRET!)
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Security: strip any incoming x-auth-* headers to prevent injection attacks
   const requestHeaders = new Headers(request.headers)
   requestHeaders.delete("x-auth-token")
   requestHeaders.delete("x-auth-user")
 
   // Build a mutable response so Supabase can write refreshed cookies back
-  let response = NextResponse.next({ request: { headers: requestHeaders } })
+  const response = NextResponse.next({ request: { headers: requestHeaders } })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,9 +36,7 @@ export async function middleware(request: NextRequest) {
 
   if (tokenCookie) {
     try {
-      const raw = tokenCookie.startsWith("base64-")
-        ? atob(tokenCookie.slice(7))
-        : tokenCookie
+      const raw = tokenCookie.startsWith("base64-") ? atob(tokenCookie.slice(7)) : tokenCookie
       const parsed = JSON.parse(raw)
       const accessToken: string | undefined = parsed?.access_token
       if (accessToken) {
@@ -57,7 +55,20 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Slow path: token expired or not present — call Supabase (handles refresh + cookie rewrite)
+  // Slow path: token expired or not present.
+  // Use getUser() (not getSession()) — it verifies the user with the Supabase Auth server,
+  // preventing spoofed session cookies from being trusted. getSession() alone is insecure
+  // because it reads unverified data from the cookie without server validation.
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+
+  if (!user || error) {
+    return NextResponse.redirect(new URL("/account", request.url))
+  }
+
+  // User is server-verified. Now read the session only to get the access_token for forwarding.
   const {
     data: { session },
   } = await supabase.auth.getSession()
@@ -66,14 +77,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/account", request.url))
   }
 
-  const user = buildUser(request, {
-    sub: session.user.id,
-    email: session.user.email,
-  })
+  const userProfile = buildUser(request, { sub: user.id, email: user.email })
   requestHeaders.set("x-auth-token", session.access_token)
-  requestHeaders.set("x-auth-user", encodeUser(user))
+  requestHeaders.set("x-auth-user", encodeUser(userProfile))
 
-  // Return with both updated request headers AND the refreshed cookies
   return NextResponse.next({ request: { headers: requestHeaders } })
 }
 
