@@ -108,7 +108,7 @@ export default function AddProjectModal({
     const redirectTo =
       `${window.location.origin}/auth/callback` +
       `?next=${encodeURIComponent("/dashboard/project?modal=1")}`
-    supabase.auth.linkIdentity({
+    supabase.auth.signInWithOAuth({
       provider: "github",
       options: { scopes: "repo read:user", redirectTo },
     })
