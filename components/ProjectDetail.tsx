@@ -28,6 +28,7 @@ import {
   getRepoBuilds,
   getWorkers,
   getBuildLog,
+  rebuildLast,
 } from "@/lib/api"
 import { useWorkerStream } from "@/lib/useWorkerStream"
 import { parseLogPhases } from "@/lib/buildPhases"
@@ -199,6 +200,20 @@ export default function ProjectDetail({ id }: { id: string }) {
   const [workers, setWorkers] = useState<Worker[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [rebuildModalOpen, setRebuildModalOpen] = useState(false)
+  const [rebuildLoading, setRebuildLoading] = useState(false)
+
+  async function handleRebuild(reprovision: boolean) {
+    setRebuildLoading(true)
+    try {
+      await rebuildLast(id, reprovision, token)
+    } catch (e) {
+      console.error("Rebuild failed:", e)
+    } finally {
+      setRebuildLoading(false)
+      setRebuildModalOpen(false)
+    }
+  }
 
   useEffect(() => {
     Promise.all([
@@ -338,12 +353,13 @@ export default function ProjectDetail({ id }: { id: string }) {
             Run Build
           </button>
           <button
-            disabled={!latestBuild}
+            disabled={!latestBuild || rebuildLoading}
             title={latestBuild ? "Rebuild last commit" : "No builds yet"}
+            onClick={() => setRebuildModalOpen(true)}
             className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <ArrowPathIcon className="h-3.5 w-3.5" strokeWidth={2.5} />
-            Rebuild Last
+            <ArrowPathIcon className={`h-3.5 w-3.5 ${rebuildLoading ? "animate-spin" : ""}`} strokeWidth={2.5} />
+            {rebuildLoading ? "Rebuilding…" : "Rebuild Last"}
           </button>
         </div>
       </div>
@@ -614,6 +630,38 @@ export default function ProjectDetail({ id }: { id: string }) {
         <p className="mt-8 text-sm text-gray-500">
           No builds yet. Push to this repo to trigger a build.
         </p>
+      )}
+
+      {/* ── Rebuild Modal ──────────────────────────────────────────────────── */}
+      {rebuildModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-base font-semibold text-gray-900">Rebuild Last Commit</h3>
+            <p className="mt-2 text-sm text-gray-500">
+              Do you want to keep the existing container cache, or wipe it and start fresh?
+            </p>
+            <div className="mt-5 flex flex-col gap-2">
+              <button
+                onClick={() => handleRebuild(false)}
+                className="w-full rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-700"
+              >
+                Keep Cache
+              </button>
+              <button
+                onClick={() => handleRebuild(true)}
+                className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-100"
+              >
+                Reset Cache (reprovision container)
+              </button>
+              <button
+                onClick={() => setRebuildModalOpen(false)}
+                className="mt-1 text-sm text-gray-400 hover:text-gray-600"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -191,6 +191,15 @@ export function getRepoContainer(repoId: string, token: string): Promise<Contain
   return apiFetch(`/repos/${repoId}/container`, token)
 }
 
+/** Triggers a rebuild of the last commit for the given repo.
+ *  Pass reprovision=true to wipe the container and its volume first (clean environment). */
+export function rebuildLast(repoId: string, reprovision: boolean, token: string): Promise<void> {
+  return apiFetch(`/repos/${repoId}/rebuild`, token, {
+    method: "POST",
+    body: JSON.stringify({ reprovision }),
+  })
+}
+
 /** Saves (or clears) the container config for a repo. Pass null to run builds on the host. */
 export function saveRepoContainer(
   repoId: string,
