@@ -1,7 +1,14 @@
-import { getApiBase, getWsBase, getArtifactBase } from "./devConfig"
+const SERVICE_URL = process.env.NEXT_PUBLIC_SERVICE_URL || "http://localhost:4244"
+
+// Separate WebSocket URL — allows the WS server to live on a different host/port
+// (e.g. a dedicated ws:// server or a load balancer with sticky sessions).
+// Falls back to deriving from SERVICE_URL for zero-config local development.
+const WS_URL =
+  process.env.NEXT_PUBLIC_WS_URL ||
+  SERVICE_URL.replace(/^http/, "ws")
 
 async function apiFetch(path: string, token: string, options?: RequestInit) {
-  const res = await fetch(`${getApiBase()}/api${path}`, {
+  const res = await fetch(`${SERVICE_URL}/api${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -123,15 +130,17 @@ export function getRepoBuilds(id: string, token: string): Promise<Build[]> {
 
 /** Returns the WebSocket URL for real-time events. */
 export function getWorkerStreamURL(token: string): string {
-  return `${getWsBase()}/api/ws?token=${encodeURIComponent(token)}`
+  return `${WS_URL}/api/ws?token=${encodeURIComponent(token)}`
 }
 
-/** Rewrites an artifact URL to use the configured artifact base. */
+const ARTIFACT_BASE_URL = "https://artifact-bobby.pryter.me"
+
+/** Rewrites an artifact URL to use the public artifact CDN. */
 export function getArtifactDownloadURL(url: string | null): string | null {
   if (!url) return null
   try {
     const parsed = new URL(url)
-    return getArtifactBase() + parsed.pathname
+    return ARTIFACT_BASE_URL + parsed.pathname
   } catch {
     return url
   }
@@ -139,7 +148,7 @@ export function getArtifactDownloadURL(url: string | null): string | null {
 
 /** Fetches the persisted build log text for a completed build. Returns empty string on 404. */
 export function getBuildLog(buildId: string, token: string): Promise<string> {
-  return fetch(`${getApiBase()}/api/builds/${buildId}/log`, {
+  return fetch(`${SERVICE_URL}/api/builds/${buildId}/log`, {
     headers: { Authorization: `Bearer ${token}` },
   }).then((res) => (res.ok ? res.text() : ""))
 }
