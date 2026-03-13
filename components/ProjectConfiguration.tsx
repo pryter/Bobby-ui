@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, useCallback, Suspense } from "react"
 import dynamic from "next/dynamic"
-import { WrenchScrewdriverIcon } from "@heroicons/react/24/outline"
+import { WrenchScrewdriverIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon } from "@heroicons/react/24/outline"
 import {
   MonitoredRepo,
   Worker,
@@ -109,6 +109,19 @@ export default function ProjectConfiguration({ id }: { id: string }) {
     setPipeline(newPipeline)
   }
 
+  // ── Fullscreen ────────────────────────────────────────────────────────────
+
+  const [pipelineFullscreen, setPipelineFullscreen] = useState(false)
+
+  const exitFullscreen = useCallback(() => setPipelineFullscreen(false), [])
+
+  useEffect(() => {
+    if (!pipelineFullscreen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") exitFullscreen() }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [pipelineFullscreen, exitFullscreen])
+
   // ─────────────────────────────────────────────────────────────────────────
 
   if (loading) return <ConfigSkeleton />
@@ -196,17 +209,26 @@ export default function ProjectConfiguration({ id }: { id: string }) {
               <kbd className="rounded bg-gray-100 px-1 font-mono text-[10px]">Delete</kbd> to remove
             </p>
           </div>
-          {pipeline && (
+          <div className="flex shrink-0 items-center gap-3">
+            {pipeline && (
+              <button
+                onClick={async () => {
+                  await saveRepoPipeline(project.id, null, token)
+                  setPipeline(null)
+                }}
+                className="text-xs text-gray-400 hover:text-gray-600"
+              >
+                Reset to default
+              </button>
+            )}
             <button
-              onClick={async () => {
-                await saveRepoPipeline(project.id, null, token)
-                setPipeline(null)
-              }}
-              className="shrink-0 text-xs text-gray-400 hover:text-gray-600"
+              onClick={() => setPipelineFullscreen(true)}
+              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              title="Full screen"
             >
-              Reset to default
+              <ArrowsPointingOutIcon className="h-4 w-4" />
             </button>
-          )}
+          </div>
         </div>
 
         <PipelineCanvas
@@ -218,6 +240,49 @@ export default function ProjectConfiguration({ id }: { id: string }) {
           onSave={handleSavePipeline}
         />
       </div>
+
+      {/* ── Pipeline fullscreen overlay ────────────────────────────────────── */}
+      {pipelineFullscreen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-white">
+          <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-3">
+            <div>
+              <h2 className="text-base font-semibold">Build Pipeline</h2>
+              <p className="mt-0.5 text-xs text-gray-400">{project.repo_full_name}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {pipeline && (
+                <button
+                  onClick={async () => {
+                    await saveRepoPipeline(project.id, null, token)
+                    setPipeline(null)
+                  }}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                >
+                  Reset to default
+                </button>
+              )}
+              <button
+                onClick={exitFullscreen}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                title="Exit full screen (Esc)"
+              >
+                <ArrowsPointingInIcon className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          <div className="min-h-0 flex-1 p-4">
+            <PipelineCanvas
+              initialPipeline={pipeline}
+              preset={project.preset}
+              customInit={project.custom_init}
+              customBuild={project.custom_build}
+              artifactPath={project.artifact_path}
+              onSave={handleSavePipeline}
+              fullscreen
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

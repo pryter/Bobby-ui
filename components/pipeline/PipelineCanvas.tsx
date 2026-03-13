@@ -75,6 +75,7 @@ interface Props {
   customBuild?: string | null
   artifactPath?: string | null
   onSave: (pipeline: Pipeline) => Promise<void>
+  fullscreen?: boolean
 }
 
 export default function PipelineCanvas({
@@ -84,6 +85,7 @@ export default function PipelineCanvas({
   customBuild,
   artifactPath,
   onSave,
+  fullscreen = false,
 }: Props) {
   const defaultPipeline = buildDefaultPipeline(preset, customInit, customBuild, artifactPath)
   const seed = initialPipeline ?? defaultPipeline
@@ -206,7 +208,7 @@ export default function PipelineCanvas({
   }, [rfNodes, rfEdges, onSave])
 
   return (
-    <div className="flex h-[640px] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+    <div className={`flex overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm ${fullscreen ? "h-full" : "h-[640px]"}`}>
       {/* Left: Block palette */}
       <BlockPalette onAddBlock={handleAddBlock} />
 
