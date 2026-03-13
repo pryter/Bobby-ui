@@ -81,7 +81,7 @@ function ProjectSidebar({ projectId }: { projectId: string }) {
   const pathname = usePathname()
 
   return (
-    <div className="flex h-full min-h-screen w-[220px] flex-col border-r border-gray-100 bg-white py-5 px-3">
+    <div className="flex h-full min-h-screen w-[220px] flex-col border-r border-gray-100 bg-[#FCFCFC] py-5 px-3">
       <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">
         Project
       </p>

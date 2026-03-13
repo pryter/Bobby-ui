@@ -39,7 +39,7 @@ export default function DashboardShell({ sidebar, children }: DashboardShellProp
       </div>
 
       {/* Main area */}
-      <div className="flex min-h-screen flex-1 flex-col overflow-hidden">
+      <div className="flex h-screen flex-1 flex-col overflow-y-auto bg-[#FCFCFC]">
         {/* Mobile top bar */}
         <div className="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3 md:hidden">
           <button
