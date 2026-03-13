@@ -102,18 +102,25 @@ function ProjectsSkeleton() {
       <div className="mt-8 space-y-3">
         {[...Array(3)].map((_, i) => (
           <div key={i} className="rounded-2xl bg-white px-6 py-5 shadow-md">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-5">
               <div className="h-11 w-11 rounded-xl bg-gray-200 flex-shrink-0" />
               <div className="flex-1">
-                <div className="h-4 w-48 bg-gray-200 rounded mb-1.5" />
-                <div className="h-3 w-24 bg-gray-100 rounded mb-3" />
+                <div className="h-4 w-44 bg-gray-200 rounded mb-2" />
                 <div className="flex gap-2">
                   <div className="h-5 w-16 bg-gray-100 rounded-full" />
                   <div className="h-5 w-24 bg-gray-100 rounded-full" />
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="h-12 w-20 bg-gray-100 rounded-lg hidden sm:block" />
+              <div className="hidden md:block w-32 flex-shrink-0">
+                <div className="h-3 w-16 bg-gray-100 rounded mb-1.5" />
+                <div className="h-4 w-20 bg-gray-200 rounded" />
+              </div>
+              <div className="hidden sm:block w-36 flex-shrink-0">
+                <div className="h-3 w-16 bg-gray-100 rounded mb-1.5" />
+                <div className="h-5 w-14 bg-gray-100 rounded-full mb-1" />
+                <div className="h-3 w-20 bg-gray-100 rounded" />
+              </div>
+              <div className="flex gap-1 flex-shrink-0">
                 <div className="h-8 w-8 bg-gray-100 rounded-lg" />
                 <div className="h-8 w-8 bg-gray-100 rounded-lg" />
               </div>
@@ -237,35 +244,25 @@ export default function ProjectsPage() {
               key={p.id}
               className="group rounded-2xl bg-white px-6 py-5 shadow-md hover:shadow-lg transition-shadow"
             >
-              <div className="flex items-center gap-4">
-                {/* Framework icon — dark square */}
+              <div className="flex items-center gap-5">
+                {/* Col 1 — Framework icon */}
                 <Link href={`/dashboard/project/${p.id}`} className="flex-shrink-0" tabIndex={-1}>
                   <div className="w-11 h-11 rounded-xl bg-gray-900 flex items-center justify-center">
                     {cfg.icon}
                   </div>
                 </Link>
 
-                {/* Repo name + owner + chips */}
+                {/* Col 2 — Repo name + chips */}
                 <Link href={`/dashboard/project/${p.id}`} className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 truncate leading-tight">
-                    {repoName}
-                  </p>
-                  {owner && (
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      owned by <span className="font-medium text-gray-500">{owner}</span>
-                    </p>
-                  )}
+                  <p className="font-semibold text-gray-900 truncate leading-tight">{repoName}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    {/* Preset chip */}
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cfg.chip}`}>
                       {cfg.label}
                     </span>
-                    {/* Worker chip */}
                     <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200">
                       <BoltIcon className="h-3 w-3" />
                       {workerName(p.setup_id)}
                     </span>
-                    {/* Artifact chip */}
                     {p.artifact_path && (
                       <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200">
                         <ArchiveBoxIcon className="h-3 w-3" />
@@ -275,29 +272,40 @@ export default function ProjectsPage() {
                   </div>
                 </Link>
 
-                {/* Build status + SHA + actions */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {build && buildLabel && buildStyle && (
-                    <div className="text-right hidden sm:block mr-1">
-                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${buildStyle}`}>
+                {/* Col 3 — Owned by */}
+                <div className="hidden md:block w-32 flex-shrink-0">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Owned by</p>
+                  <p className="mt-0.5 text-sm font-medium text-gray-700 truncate">{owner ?? "—"}</p>
+                </div>
+
+                {/* Col 4 — Latest build */}
+                <div className="hidden sm:block w-36 flex-shrink-0">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Latest build</p>
+                  {buildLabel && buildStyle ? (
+                    <div className="mt-1 flex flex-col gap-1">
+                      <span className={`self-start rounded-full px-2 py-0.5 text-xs font-medium ${buildStyle}`}>
                         {buildLabel}
                       </span>
-                      <div className="mt-1 flex items-center justify-end gap-1.5">
+                      <div className="flex items-center gap-1.5">
                         <span className="font-mono text-[11px] text-gray-400 bg-gray-50 rounded px-1.5 py-0.5 ring-1 ring-inset ring-gray-200">
-                          {build.head_sha.slice(0, 7)}
+                          {build!.head_sha.slice(0, 7)}
+                        </span>
+                        <span className="text-[11px] text-gray-400">
+                          {build!.finished_at
+                            ? timeAgo(build!.finished_at)
+                            : build!.status === "in_progress"
+                              ? "running…"
+                              : null}
                         </span>
                       </div>
-                      <p className="mt-0.5 text-[11px] text-gray-400">
-                        {build.finished_at
-                          ? timeAgo(build.finished_at)
-                          : build.status === "in_progress"
-                            ? "running…"
-                            : null}
-                      </p>
                     </div>
+                  ) : (
+                    <p className="mt-1 text-xs text-gray-400">No builds yet</p>
                   )}
+                </div>
 
-                  {/* GitHub link */}
+                {/* Col 5 — Actions */}
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <a
                     href={`https://github.com/${p.repo_full_name}`}
                     target="_blank"
@@ -308,8 +316,6 @@ export default function ProjectsPage() {
                   >
                     <ArrowTopRightOnSquareIcon className="h-4 w-4" />
                   </a>
-
-                  {/* Delete */}
                   <button
                     disabled={removing === p.repo_id}
                     onClick={() => removeProject(p)}
