@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from "react"
 import {
   ReactFlow,
   Background,
@@ -18,6 +18,7 @@ import {
   Panel,
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
+import { ArrowsPointingOutIcon, ArrowsPointingInIcon } from "@heroicons/react/24/outline"
 
 import { Pipeline, PipelineEdge, PipelineNode, BLOCK_DEF_MAP, NodeType, buildDefaultPipeline } from "@/lib/pipeline"
 import BlockNode from "./nodes/BlockNode"
@@ -66,6 +67,12 @@ function uid() {
   return crypto.randomUUID()
 }
 
+// ── Handle (exposed to parent via ref) ────────────────────────────────────────
+
+export interface PipelineCanvasHandle {
+  getCurrentPipeline: () => Pipeline
+}
+
 // ── PipelineCanvas ────────────────────────────────────────────────────────────
 
 interface Props {
@@ -74,8 +81,10 @@ interface Props {
   customInit?: string | null
   customBuild?: string | null
   artifactPath?: string | null
-  onSave: (pipeline: Pipeline) => Promise<void>
   fullscreen?: boolean
+  onReset?: () => void
+  onExpand?: () => void
+  ref?: Ref<PipelineCanvasHandle>
 }
 
 export default function PipelineCanvas({
@@ -84,8 +93,10 @@ export default function PipelineCanvas({
   customInit,
   customBuild,
   artifactPath,
-  onSave,
   fullscreen = false,
+  onReset,
+  onExpand,
+  ref,
 }: Props) {
   const defaultPipeline = buildDefaultPipeline(preset, customInit, customBuild, artifactPath)
   const seed = initialPipeline ?? defaultPipeline
@@ -93,8 +104,6 @@ export default function PipelineCanvas({
   const [rfNodes, setRfNodes, onNodesChange] = useNodesState(seed.nodes.map(toRFNode))
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState(seed.edges.map(toRFEdge))
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
 
   // Keep track of nodes by id for the config panel
   const nodeMap = useMemo(
@@ -102,6 +111,15 @@ export default function PipelineCanvas({
     [rfNodes],
   )
   const selectedNode = selectedNodeId ? nodeMap[selectedNodeId] : null
+
+  // ── Expose current pipeline to parent ─────────────────────────────────────
+  useImperativeHandle(ref, () => ({
+    getCurrentPipeline: () => ({
+      version: 1,
+      nodes: rfNodes.map(fromRFNode),
+      edges: rfEdges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
+    }),
+  }), [rfNodes, rfEdges])
 
   // ── Sync pipeline nodes when initialPipeline changes ──────────────────────
   const isFirstRender = useRef(true)
@@ -191,22 +209,6 @@ export default function PipelineCanvas({
     [setRfNodes, setRfEdges],
   )
 
-  const handleSave = useCallback(async () => {
-    setSaving(true)
-    try {
-      const pipeline: Pipeline = {
-        version: 1,
-        nodes: rfNodes.map(fromRFNode),
-        edges: rfEdges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
-      }
-      await onSave(pipeline)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    } finally {
-      setSaving(false)
-    }
-  }, [rfNodes, rfEdges, onSave])
-
   return (
     <div className={`flex overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm ${fullscreen ? "h-full" : "h-[640px]"}`}>
       {/* Left: Block palette */}
@@ -247,17 +249,26 @@ export default function PipelineCanvas({
           />
           <Panel position="top-right">
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className={`rounded-lg px-4 py-1.5 text-sm font-medium shadow-sm transition-colors ${
-                  saved
-                    ? "bg-green-500 text-white"
-                    : "bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-50"
-                }`}
-              >
-                {saving ? "Saving…" : saved ? "Saved ✓" : "Save Pipeline"}
-              </button>
+              {onReset && (
+                <button
+                  onClick={onReset}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                >
+                  Reset to default
+                </button>
+              )}
+              {onExpand && (
+                <button
+                  onClick={onExpand}
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                  title={fullscreen ? "Exit full screen (Esc)" : "Full screen"}
+                >
+                  {fullscreen
+                    ? <ArrowsPointingInIcon className="h-4 w-4" />
+                    : <ArrowsPointingOutIcon className="h-4 w-4" />
+                  }
+                </button>
+              )}
             </div>
           </Panel>
         </ReactFlow>

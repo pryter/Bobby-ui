@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback, Suspense } from "react"
+import { useState, useEffect, useCallback, useRef, Suspense } from "react"
 import dynamic from "next/dynamic"
-import { WrenchScrewdriverIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon } from "@heroicons/react/24/outline"
+import { WrenchScrewdriverIcon } from "@heroicons/react/24/outline"
 import {
   MonitoredRepo,
   Worker,
@@ -14,6 +14,7 @@ import {
 } from "@/lib/api"
 import { Pipeline } from "@/lib/pipeline"
 import { useAuth } from "@/components/AuthProvider"
+import type { PipelineCanvasHandle } from "@/components/pipeline/PipelineCanvas"
 
 // React Flow uses DOM APIs — import dynamically to avoid SSR issues
 const PipelineCanvas = dynamic(() => import("./pipeline/PipelineCanvas"), {
@@ -109,6 +110,23 @@ export default function ProjectConfiguration({ id }: { id: string }) {
     setPipeline(newPipeline)
   }
 
+  const canvasRef = useRef<PipelineCanvasHandle>(null)
+  const fsCanvasRef = useRef<PipelineCanvasHandle>(null)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  async function triggerSave(ref: React.RefObject<PipelineCanvasHandle | null>) {
+    if (!ref.current) return
+    setSaving(true)
+    try {
+      await handleSavePipeline(ref.current.getCurrentPipeline())
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   // ── Fullscreen ────────────────────────────────────────────────────────────
 
   const [pipelineFullscreen, setPipelineFullscreen] = useState(false)
@@ -121,6 +139,14 @@ export default function ProjectConfiguration({ id }: { id: string }) {
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [pipelineFullscreen, exitFullscreen])
+
+  // ── Reset pipeline ────────────────────────────────────────────────────────
+
+  async function handleReset() {
+    if (!project) return
+    await saveRepoPipeline(project.id, null, token)
+    setPipeline(null)
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -209,35 +235,28 @@ export default function ProjectConfiguration({ id }: { id: string }) {
               <kbd className="rounded bg-gray-100 px-1 font-mono text-[10px]">Delete</kbd> to remove
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-3">
-            {pipeline && (
-              <button
-                onClick={async () => {
-                  await saveRepoPipeline(project.id, null, token)
-                  setPipeline(null)
-                }}
-                className="text-xs text-gray-400 hover:text-gray-600"
-              >
-                Reset to default
-              </button>
-            )}
-            <button
-              onClick={() => setPipelineFullscreen(true)}
-              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-              title="Full screen"
-            >
-              <ArrowsPointingOutIcon className="h-4 w-4" />
-            </button>
-          </div>
+          <button
+            onClick={() => triggerSave(canvasRef)}
+            disabled={saving}
+            className={`shrink-0 rounded-lg px-4 py-1.5 text-sm font-medium shadow-sm transition-colors ${
+              saved
+                ? "bg-green-500 text-white"
+                : "bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-50"
+            }`}
+          >
+            {saving ? "Saving…" : saved ? "Saved ✓" : "Save Pipeline"}
+          </button>
         </div>
 
         <PipelineCanvas
+          ref={canvasRef}
           initialPipeline={pipeline}
           preset={project.preset}
           customInit={project.custom_init}
           customBuild={project.custom_build}
           artifactPath={project.artifact_path}
-          onSave={handleSavePipeline}
+          onReset={pipeline ? handleReset : undefined}
+          onExpand={() => setPipelineFullscreen(true)}
         />
       </div>
 
@@ -249,35 +268,28 @@ export default function ProjectConfiguration({ id }: { id: string }) {
               <h2 className="text-base font-semibold">Build Pipeline</h2>
               <p className="mt-0.5 text-xs text-gray-400">{project.repo_full_name}</p>
             </div>
-            <div className="flex items-center gap-3">
-              {pipeline && (
-                <button
-                  onClick={async () => {
-                    await saveRepoPipeline(project.id, null, token)
-                    setPipeline(null)
-                  }}
-                  className="text-xs text-gray-400 hover:text-gray-600"
-                >
-                  Reset to default
-                </button>
-              )}
-              <button
-                onClick={exitFullscreen}
-                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                title="Exit full screen (Esc)"
-              >
-                <ArrowsPointingInIcon className="h-4 w-4" />
-              </button>
-            </div>
+            <button
+              onClick={() => triggerSave(fsCanvasRef)}
+              disabled={saving}
+              className={`rounded-lg px-4 py-1.5 text-sm font-medium shadow-sm transition-colors ${
+                saved
+                  ? "bg-green-500 text-white"
+                  : "bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-50"
+              }`}
+            >
+              {saving ? "Saving…" : saved ? "Saved ✓" : "Save Pipeline"}
+            </button>
           </div>
           <div className="min-h-0 flex-1 p-4">
             <PipelineCanvas
+              ref={fsCanvasRef}
               initialPipeline={pipeline}
               preset={project.preset}
               customInit={project.custom_init}
               customBuild={project.custom_build}
               artifactPath={project.artifact_path}
-              onSave={handleSavePipeline}
+              onReset={pipeline ? handleReset : undefined}
+              onExpand={exitFullscreen}
               fullscreen
             />
           </div>
