@@ -53,6 +53,7 @@ const MenuItem: FC<MenuItemProps> = ({ Icon, title, id, disabled, collapsed }) =
     >
       <Icon stroke="currentColor" strokeWidth={2.3} className="h-6 w-6 shrink-0" />
       <motion.h2
+        initial={false}
         animate={{ opacity: collapsed ? 0 : 1, width: collapsed ? 0 : "auto" }}
         transition={{ duration: 0.15, ease: EASE }}
         className="overflow-hidden whitespace-nowrap font-medium"
@@ -135,6 +136,7 @@ export default function DashboardSidebar() {
     <div className="flex min-h-screen">
       {/* ── Main sidebar — animates between full and icon-rail ── */}
       <motion.div
+        initial={false}
         animate={{ width: collapsed ? 68 : 280 }}
         transition={{ duration: 0.3, ease: EASE }}
         className="relative flex min-h-screen flex-shrink-0 flex-col overflow-hidden bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-pink-300 via-purple-300 to-indigo-400"
@@ -153,6 +155,7 @@ export default function DashboardSidebar() {
             {/* Logo */}
             <div className={classnames("flex items-center", collapsed ? "justify-center" : "gap-2")}>
               <motion.h1
+                initial={false}
                 animate={{ fontSize: collapsed ? "1rem" : "1.25rem" }}
                 transition={{ duration: 0.3, ease: EASE }}
                 className="font-bold text-gray-800 whitespace-nowrap"
@@ -160,6 +163,7 @@ export default function DashboardSidebar() {
                 {collapsed ? "B" : "Bobby"}
               </motion.h1>
               <motion.div
+                initial={false}
                 animate={{ opacity: collapsed ? 0 : 1, width: collapsed ? 0 : "auto" }}
                 transition={{ duration: 0.15, ease: EASE }}
                 className="overflow-hidden"
@@ -174,6 +178,7 @@ export default function DashboardSidebar() {
               <MenuItem Icon={FolderIcon}    title="Projects" id="project" collapsed={collapsed} />
 
               <motion.h2
+                initial={false}
                 animate={{ opacity: collapsed ? 0 : 1, height: collapsed ? 0 : "auto", marginTop: collapsed ? 0 : "1.5rem" }}
                 transition={{ duration: 0.15, ease: EASE }}
                 className="overflow-hidden text-sm font-medium text-gray-500 whitespace-nowrap"
@@ -184,6 +189,7 @@ export default function DashboardSidebar() {
               <MenuItem Icon={ArchiveBoxIcon}  title="Artifacts"   id="artifacts" collapsed={collapsed} disabled />
 
               <motion.h2
+                initial={false}
                 animate={{ opacity: collapsed ? 0 : 1, height: collapsed ? 0 : "auto", marginTop: collapsed ? 0 : "1.5rem" }}
                 transition={{ duration: 0.15, ease: EASE }}
                 className="overflow-hidden text-sm font-medium text-gray-500 whitespace-nowrap"
