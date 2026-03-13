@@ -160,3 +160,20 @@ export function updateRepoWorker(repoId: string, setupId: string, token: string)
     body: JSON.stringify({ setupId }),
   })
 }
+
+/** Fetches the saved pipeline for a repo. Returns null when none is configured. */
+export function getRepoPipeline(repoId: string, token: string): Promise<import("./pipeline").Pipeline | null> {
+  return apiFetch(`/repos/${repoId}/pipeline`, token)
+}
+
+/** Saves (or clears) the pipeline for a repo. Pass null to fall back to preset. */
+export function saveRepoPipeline(
+  repoId: string,
+  pipeline: import("./pipeline").Pipeline | null,
+  token: string,
+): Promise<void> {
+  return apiFetch(`/repos/${repoId}/pipeline`, token, {
+    method: "PUT",
+    body: JSON.stringify(pipeline),
+  })
+}

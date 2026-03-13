@@ -1,4 +1,4 @@
-export const PHASE_START_RE = /^##\[phase-start:(\w+):(.+)\]$/
+export const PHASE_START_RE = /^##\[phase-start:([\w-]+):(.+)\]$/
 export const PHASE_END_RE = /^##\[phase-end:(success|failure)\]$/
 
 export interface BuildPhase {

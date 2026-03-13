@@ -1,18 +1,29 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
+import dynamic from "next/dynamic"
 import { WrenchScrewdriverIcon } from "@heroicons/react/24/outline"
 import {
   MonitoredRepo,
   Worker,
   getRepo,
   getWorkers,
-  updateRepoPreset,
   updateRepoWorker,
+  getRepoPipeline,
+  saveRepoPipeline,
 } from "@/lib/api"
+import { Pipeline } from "@/lib/pipeline"
 import { useAuth } from "@/components/AuthProvider"
 
-type Preset = "node" | "go" | "custom"
+// React Flow uses DOM APIs — import dynamically to avoid SSR issues
+const PipelineCanvas = dynamic(() => import("./pipeline/PipelineCanvas"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[640px] items-center justify-center rounded-xl border border-gray-200 bg-gray-50">
+      <p className="text-sm text-gray-400">Loading pipeline editor…</p>
+    </div>
+  ),
+})
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 
@@ -25,13 +36,7 @@ function ConfigSkeleton() {
         <div className="mb-4 h-5 w-32 rounded bg-gray-200" />
         <div className="h-4 w-48 rounded bg-gray-100" />
       </div>
-      <div className="mt-4 rounded-2xl bg-white px-6 py-5 shadow-md">
-        <div className="mb-4 h-5 w-28 rounded bg-gray-200" />
-        <div className="space-y-2">
-          <div className="h-4 w-32 rounded bg-gray-100" />
-          <div className="h-4 w-56 rounded bg-gray-100" />
-        </div>
-      </div>
+      <div className="mt-4 h-[640px] rounded-2xl bg-white shadow-md" />
     </div>
   )
 }
@@ -43,6 +48,7 @@ export default function ProjectConfiguration({ id }: { id: string }) {
 
   const [project, setProject] = useState<MonitoredRepo | null>(null)
   const [workers, setWorkers] = useState<Worker[]>([])
+  const [pipeline, setPipeline] = useState<Pipeline | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -50,10 +56,12 @@ export default function ProjectConfiguration({ id }: { id: string }) {
     Promise.all([
       getRepo(id, token).catch(() => null),
       getWorkers(token).catch(() => [] as Worker[]),
-    ]).then(([proj, ws]) => {
+      getRepoPipeline(id, token).catch(() => null),
+    ]).then(([proj, ws, pl]) => {
       if (!proj) { setNotFound(true); setLoading(false); return }
       setProject(proj)
       setWorkers(ws)
+      setPipeline(pl)
       setLoading(false)
     })
   }, [id, token])
@@ -93,45 +101,12 @@ export default function ProjectConfiguration({ id }: { id: string }) {
     }
   }
 
-  // ── Build Preset ──────────────────────────────────────────────────────────
+  // ── Pipeline save ─────────────────────────────────────────────────────────
 
-  const [preset, setPreset] = useState<Preset>("node")
-  const [customInit, setCustomInit] = useState("")
-  const [customBuild, setCustomBuild] = useState("")
-  const [artifactPath, setArtifactPath] = useState("")
-  const [editingPreset, setEditingPreset] = useState(false)
-  const [savingPreset, setSavingPreset] = useState(false)
-  const [presetError, setPresetError] = useState<string | null>(null)
-
-  useEffect(() => {
+  async function handleSavePipeline(newPipeline: Pipeline) {
     if (!project) return
-    setPreset((project.preset as Preset) || "node")
-    setCustomInit(project.custom_init ?? "")
-    setCustomBuild(project.custom_build ?? "")
-    setArtifactPath(project.artifact_path ?? "")
-  }, [project])
-
-  async function savePreset() {
-    if (!project) return
-    setSavingPreset(true)
-    setPresetError(null)
-    try {
-      await updateRepoPreset(
-        project.id,
-        {
-          preset,
-          customInit: preset === "custom" ? customInit : undefined,
-          customBuild: preset === "custom" ? customBuild : undefined,
-          artifactPath: artifactPath || undefined,
-        },
-        token,
-      )
-      setEditingPreset(false)
-    } catch (e) {
-      setPresetError((e as Error).message)
-    } finally {
-      setSavingPreset(false)
-    }
+    await saveRepoPipeline(project.id, newPipeline, token)
+    setPipeline(newPipeline)
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -147,14 +122,14 @@ export default function ProjectConfiguration({ id }: { id: string }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-8 sm:py-10">
+    <div className="mx-auto flex w-full max-w-5xl flex-col px-4 py-6 sm:px-8 sm:py-10">
       {/* Header */}
       <div className="flex items-center gap-3">
         <WrenchScrewdriverIcon className="h-6 w-6 text-gray-400" />
         <h1 className="text-2xl font-semibold">Configuration</h1>
       </div>
       <p className="mt-1 text-sm text-gray-500">
-        Build preset, commands, and worker assignment for{" "}
+        Build pipeline and worker assignment for{" "}
         <span className="font-medium text-gray-700">{project.repo_full_name}</span>.
       </p>
 
@@ -210,143 +185,38 @@ export default function ProjectConfiguration({ id }: { id: string }) {
         )}
       </div>
 
-      {/* ── Build Preset ───────────────────────────────────────────────────── */}
-      <div className="mt-4 rounded-2xl bg-white px-4 py-5 shadow-md sm:px-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold">Build Preset</h2>
-          {!editingPreset && (
+      {/* ── Build Pipeline ─────────────────────────────────────────────────── */}
+      <div className="mt-6">
+        <div className="mb-3 flex items-start justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Build Pipeline</h2>
+            <p className="mt-0.5 text-xs text-gray-400">
+              Drag blocks from the left panel · connect nodes to define flow ·
+              click a block to configure · press{" "}
+              <kbd className="rounded bg-gray-100 px-1 font-mono text-[10px]">Delete</kbd> to remove
+            </p>
+          </div>
+          {pipeline && (
             <button
-              onClick={() => setEditingPreset(true)}
-              className="text-sm text-gray-500 hover:text-gray-900"
+              onClick={async () => {
+                await saveRepoPipeline(project.id, null, token)
+                setPipeline(null)
+              }}
+              className="shrink-0 text-xs text-gray-400 hover:text-gray-600"
             >
-              Edit
+              Reset to default
             </button>
           )}
         </div>
 
-        {!editingPreset ? (
-          <div className="space-y-2 text-sm">
-            <div className="flex gap-3">
-              <span className="w-20 shrink-0 text-gray-500">Preset</span>
-              <span className="font-medium capitalize">{project.preset || "node"}</span>
-            </div>
-            {project.custom_init && (
-              <div className="flex gap-3">
-                <span className="w-20 shrink-0 text-gray-500">Init</span>
-                <code className="break-all rounded bg-gray-100 px-2 py-0.5 font-mono text-xs">
-                  {project.custom_init}
-                </code>
-              </div>
-            )}
-            {project.custom_build && (
-              <div className="flex gap-3">
-                <span className="w-20 shrink-0 text-gray-500">Build</span>
-                <code className="break-all rounded bg-gray-100 px-2 py-0.5 font-mono text-xs">
-                  {project.custom_build}
-                </code>
-              </div>
-            )}
-            {project.artifact_path && (
-              <div className="flex gap-3">
-                <span className="w-20 shrink-0 text-gray-500">Artifact</span>
-                <code className="break-all rounded bg-gray-100 px-2 py-0.5 font-mono text-xs">
-                  {project.artifact_path}
-                </code>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              {(["node", "go", "custom"] as Preset[]).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPreset(p)}
-                  className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                    preset === p
-                      ? "border-gray-900 bg-gray-900 text-white"
-                      : "border-gray-200 text-gray-600 hover:border-gray-400"
-                  }`}
-                >
-                  {p === "node" ? "Node" : p === "go" ? "Go" : "Custom"}
-                </button>
-              ))}
-            </div>
-            {preset === "node" && (
-              <p className="text-xs text-gray-400">
-                Runs <code className="rounded bg-gray-100 px-1 font-mono">yarn</code> then{" "}
-                <code className="rounded bg-gray-100 px-1 font-mono">yarn build</code>
-              </p>
-            )}
-            {preset === "go" && (
-              <p className="text-xs text-gray-400">
-                Runs{" "}
-                <code className="rounded bg-gray-100 px-1 font-mono">go mod download</code> then{" "}
-                <code className="rounded bg-gray-100 px-1 font-mono">go build ./...</code>
-              </p>
-            )}
-            {preset === "custom" && (
-              <div className="space-y-2">
-                <div>
-                  <label className="mb-1 block text-xs text-gray-500">Init command</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. npm install"
-                    value={customInit}
-                    onChange={(e) => setCustomInit(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-1.5 font-mono text-sm outline-none focus:ring-2 focus:ring-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-gray-500">Build command</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. npm run build"
-                    value={customBuild}
-                    onChange={(e) => setCustomBuild(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-1.5 font-mono text-sm outline-none focus:ring-2 focus:ring-gray-900"
-                  />
-                </div>
-              </div>
-            )}
-            <div>
-              <label className="mb-1 block text-xs text-gray-500">
-                Artifact folder override{" "}
-                <span className="text-gray-400">(optional)</span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. dist"
-                value={artifactPath}
-                onChange={(e) => setArtifactPath(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3 py-1.5 font-mono text-sm outline-none focus:ring-2 focus:ring-gray-900"
-              />
-            </div>
-            {presetError && <p className="text-sm text-red-600">{presetError}</p>}
-            <div className="flex gap-2">
-              <button
-                onClick={savePreset}
-                disabled={savingPreset}
-                className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
-              >
-                {savingPreset ? "Saving…" : "Save"}
-              </button>
-              <button
-                onClick={() => {
-                  setPreset((project.preset as Preset) || "node")
-                  setCustomInit(project.custom_init ?? "")
-                  setCustomBuild(project.custom_build ?? "")
-                  setArtifactPath(project.artifact_path ?? "")
-                  setEditingPreset(false)
-                  setPresetError(null)
-                }}
-                className="rounded-lg px-4 py-1.5 text-sm text-gray-500 hover:text-gray-900"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
+        <PipelineCanvas
+          initialPipeline={pipeline}
+          preset={project.preset}
+          customInit={project.custom_init}
+          customBuild={project.custom_build}
+          artifactPath={project.artifact_path}
+          onSave={handleSavePipeline}
+        />
       </div>
     </div>
   )

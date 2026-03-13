@@ -1,0 +1,26 @@
+"use client"
+
+import { Handle, Position, NodeProps } from "@xyflow/react"
+import { BoltIcon } from "@heroicons/react/24/solid"
+
+export default function TriggerNode({ selected }: NodeProps) {
+  return (
+    <div
+      className={`flex items-center gap-2 rounded-full border px-4 py-2 shadow-sm transition-shadow ${
+        selected
+          ? "border-violet-400 bg-violet-50 shadow-violet-100"
+          : "border-violet-300 bg-white shadow-sm"
+      }`}
+    >
+      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-violet-100">
+        <BoltIcon className="h-3.5 w-3.5 text-violet-600" />
+      </div>
+      <span className="text-sm font-medium text-violet-700">Git Push</span>
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!h-3 !w-3 !border-2 !border-white !bg-violet-400"
+      />
+    </div>
+  )
+}
