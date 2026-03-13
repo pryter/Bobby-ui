@@ -6,11 +6,14 @@ import { WrenchScrewdriverIcon } from "@heroicons/react/24/outline"
 import {
   MonitoredRepo,
   Worker,
+  ContainerConfig,
   getRepo,
   getWorkers,
   updateRepoWorker,
   getRepoPipeline,
   saveRepoPipeline,
+  getRepoContainer,
+  saveRepoContainer,
 } from "@/lib/api"
 import { Pipeline } from "@/lib/pipeline"
 import { useAuth } from "@/components/AuthProvider"
@@ -50,6 +53,7 @@ export default function ProjectConfiguration({ id }: { id: string }) {
   const [project, setProject] = useState<MonitoredRepo | null>(null)
   const [workers, setWorkers] = useState<Worker[]>([])
   const [pipeline, setPipeline] = useState<Pipeline | null>(null)
+  const [containerConfig, setContainerConfig] = useState<ContainerConfig | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -58,11 +62,13 @@ export default function ProjectConfiguration({ id }: { id: string }) {
       getRepo(id, token).catch(() => null),
       getWorkers(token).catch(() => [] as Worker[]),
       getRepoPipeline(id, token).catch(() => null),
-    ]).then(([proj, ws, pl]) => {
+      getRepoContainer(id, token).catch(() => null),
+    ]).then(([proj, ws, pl, ctr]) => {
       if (!proj) { setNotFound(true); setLoading(false); return }
       setProject(proj)
       setWorkers(ws)
       setPipeline(pl)
+      setContainerConfig(ctr)
       setLoading(false)
     })
   }, [id, token])
@@ -148,6 +154,62 @@ export default function ProjectConfiguration({ id }: { id: string }) {
     setPipeline(null)
   }
 
+  // ── Container environment ─────────────────────────────────────────────────
+
+  type EnvRow = { key: string; value: string }
+  const [editingContainer, setEditingContainer] = useState(false)
+  const [containerImage, setContainerImage] = useState("")
+  const [containerEnvRows, setContainerEnvRows] = useState<EnvRow[]>([])
+  const [savingContainer, setSavingContainer] = useState(false)
+  const [containerError, setContainerError] = useState<string | null>(null)
+
+  // Seed edit form whenever we enter edit mode
+  useEffect(() => {
+    if (!editingContainer) return
+    setContainerImage(containerConfig?.image ?? "")
+    const rows: EnvRow[] = Object.entries(containerConfig?.env ?? {}).map(([key, value]) => ({ key, value }))
+    setContainerEnvRows(rows.length ? rows : [{ key: "", value: "" }])
+  }, [editingContainer, containerConfig])
+
+  async function saveContainer() {
+    if (!project) return
+    setSavingContainer(true)
+    setContainerError(null)
+    try {
+      const trimmedImage = containerImage.trim()
+      if (!trimmedImage) {
+        // Clear the container config
+        await saveRepoContainer(project.id, null, token)
+        setContainerConfig(null)
+      } else {
+        const env: Record<string, string> = {}
+        for (const { key, value } of containerEnvRows) {
+          if (key.trim()) env[key.trim()] = value
+        }
+        const cfg: ContainerConfig = { image: trimmedImage, ...(Object.keys(env).length ? { env } : {}) }
+        await saveRepoContainer(project.id, cfg, token)
+        setContainerConfig(cfg)
+      }
+      setEditingContainer(false)
+    } catch (e) {
+      setContainerError((e as Error).message)
+    } finally {
+      setSavingContainer(false)
+    }
+  }
+
+  function addEnvRow() {
+    setContainerEnvRows((rows) => [...rows, { key: "", value: "" }])
+  }
+
+  function removeEnvRow(i: number) {
+    setContainerEnvRows((rows) => rows.filter((_, idx) => idx !== i))
+  }
+
+  function updateEnvRow(i: number, field: "key" | "value", val: string) {
+    setContainerEnvRows((rows) => rows.map((r, idx) => idx === i ? { ...r, [field]: val } : r))
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
 
   if (loading) return <ConfigSkeleton />
@@ -215,6 +277,132 @@ export default function ProjectConfiguration({ id }: { id: string }) {
               </button>
               <button
                 onClick={() => { setEditingWorker(false); setWorkerError(null) }}
+                className="rounded-lg px-4 py-1.5 text-sm text-gray-500 hover:text-gray-900"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Container Environment ──────────────────────────────────────────── */}
+      <div className="mt-4 rounded-2xl bg-white px-4 py-5 shadow-md sm:px-6">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Container Environment</h2>
+            <p className="mt-0.5 text-xs text-gray-400">
+              Run builds inside a Podman container for a deterministic, isolated environment.
+              Leave blank to build directly on the worker host.
+            </p>
+          </div>
+          {!editingContainer && (
+            <button
+              onClick={() => { setEditingContainer(true); setContainerError(null) }}
+              className="shrink-0 text-sm text-gray-500 hover:text-gray-900"
+            >
+              {containerConfig ? "Edit" : "Configure"}
+            </button>
+          )}
+        </div>
+
+        {!editingContainer ? (
+          containerConfig ? (
+            <div className="space-y-1 text-sm">
+              <p>
+                <span className="mr-2 text-gray-500">Image</span>
+                <span className="font-mono font-medium">{containerConfig.image}</span>
+              </p>
+              {containerConfig.env && Object.keys(containerConfig.env).length > 0 && (
+                <div className="mt-2">
+                  <p className="mb-1 text-xs text-gray-400">Environment variables</p>
+                  <div className="divide-y divide-gray-100 rounded-lg border border-gray-100">
+                    {Object.entries(containerConfig.env).map(([k, v]) => (
+                      <div key={k} className="flex gap-2 px-3 py-1.5 font-mono text-xs">
+                        <span className="text-gray-700">{k}</span>
+                        <span className="text-gray-400">=</span>
+                        <span className="text-gray-600">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">No container configured — builds run on the host.</p>
+          )
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                OCI Image
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. node:20-alpine or golang:1.22"
+                value={containerImage}
+                onChange={(e) => setContainerImage(e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-sm outline-none focus:ring-2 focus:ring-gray-900"
+              />
+              <p className="mt-1 text-xs text-gray-400">
+                Clear to disable container isolation and run builds on the host.
+              </p>
+            </div>
+
+            {/* Env vars */}
+            <div>
+              <div className="mb-1 flex items-center justify-between">
+                <label className="text-xs font-medium text-gray-600">Environment Variables</label>
+                <button
+                  onClick={addEnvRow}
+                  className="text-xs text-gray-500 hover:text-gray-900"
+                >
+                  + Add variable
+                </button>
+              </div>
+              {containerEnvRows.length > 0 && (
+                <div className="space-y-2">
+                  {containerEnvRows.map((row, i) => (
+                    <div key={i} className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="KEY"
+                        value={row.key}
+                        onChange={(e) => updateEnvRow(i, "key", e.target.value)}
+                        className="w-2/5 rounded-lg border border-gray-200 px-3 py-1.5 font-mono text-xs outline-none focus:ring-2 focus:ring-gray-900"
+                      />
+                      <input
+                        type="text"
+                        placeholder="value"
+                        value={row.value}
+                        onChange={(e) => updateEnvRow(i, "value", e.target.value)}
+                        className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 font-mono text-xs outline-none focus:ring-2 focus:ring-gray-900"
+                      />
+                      <button
+                        onClick={() => removeEnvRow(i)}
+                        className="px-2 text-gray-400 hover:text-red-500"
+                        aria-label="Remove"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {containerError && <p className="text-sm text-red-600">{containerError}</p>}
+
+            <div className="flex gap-2">
+              <button
+                onClick={saveContainer}
+                disabled={savingContainer}
+                className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
+              >
+                {savingContainer ? "Saving…" : "Save"}
+              </button>
+              <button
+                onClick={() => { setEditingContainer(false); setContainerError(null) }}
                 className="rounded-lg px-4 py-1.5 text-sm text-gray-500 hover:text-gray-900"
               >
                 Cancel

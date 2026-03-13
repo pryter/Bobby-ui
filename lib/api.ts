@@ -177,3 +177,28 @@ export function saveRepoPipeline(
     body: JSON.stringify(pipeline),
   })
 }
+
+/** Container environment config for a monitored repo. */
+export interface ContainerConfig {
+  /** OCI image, e.g. "node:20-alpine" or "golang:1.22". */
+  image: string
+  /** Extra environment variables injected into the container at runtime. */
+  env?: Record<string, string>
+}
+
+/** Fetches the container config for a repo. Returns null when none is configured. */
+export function getRepoContainer(repoId: string, token: string): Promise<ContainerConfig | null> {
+  return apiFetch(`/repos/${repoId}/container`, token)
+}
+
+/** Saves (or clears) the container config for a repo. Pass null to run builds on the host. */
+export function saveRepoContainer(
+  repoId: string,
+  config: ContainerConfig | null,
+  token: string,
+): Promise<void> {
+  return apiFetch(`/repos/${repoId}/container`, token, {
+    method: "PUT",
+    body: JSON.stringify(config),
+  })
+}
