@@ -289,7 +289,7 @@ export default function ProjectsPage() {
                 <div className="hidden sm:block w-40 flex-shrink-0">
                   <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Latest build</p>
                   {buildLabel ? (
-                    <div className="mt-1.5 space-y-1">
+                    <div className="flex flex-row items-center space-x-2 mt-2">
                       <div className="flex items-center gap-1.5">
                         <BuildStatusIcon status={buildLabel} />
                         <span className="font-mono text-[11px] text-gray-500 bg-gray-50 rounded px-1.5 py-0.5 ring-1 ring-inset ring-gray-200">
