@@ -21,6 +21,11 @@ import {
   ArchiveBoxIcon,
   WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline"
+import {
+  CheckCircleIcon,
+  XCircleIcon,
+  MinusCircleIcon,
+} from "@heroicons/react/24/solid"
 import { useAuth } from "@/components/AuthProvider"
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -80,11 +85,14 @@ const PRESET_CFG: Record<string, PresetCfg> = {
   },
 }
 
-const BUILD_STYLE: Record<string, string> = {
-  success: "bg-green-100 text-green-700",
-  failure: "bg-red-100 text-red-700",
-  in_progress: "bg-yellow-100 text-yellow-700",
-  cancelled: "bg-gray-100 text-gray-500",
+function BuildStatusIcon({ status }: { status: string }) {
+  if (status === "success")
+    return <CheckCircleIcon className="h-4 w-4 text-green-500 flex-shrink-0" />
+  if (status === "failure")
+    return <XCircleIcon className="h-4 w-4 text-red-500 flex-shrink-0" />
+  if (status === "in_progress")
+    return <span className="inline-block h-3 w-3 rounded-full bg-yellow-400 animate-pulse flex-shrink-0" />
+  return <MinusCircleIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
 }
 
 // ── skeleton ───────────────────────────────────────────────────────────────
@@ -234,7 +242,6 @@ export default function ProjectsPage() {
           const cfg = PRESET_CFG[p.preset] ?? PRESET_CFG.custom
           const build = latestBuilds[p.id]
           const buildLabel = build ? (build.conclusion || build.status) : null
-          const buildStyle = buildLabel ? (BUILD_STYLE[buildLabel] ?? BUILD_STYLE.cancelled) : null
           const slashIdx = p.repo_full_name.indexOf("/")
           const owner = slashIdx !== -1 ? p.repo_full_name.slice(0, slashIdx) : null
           const repoName = slashIdx !== -1 ? p.repo_full_name.slice(slashIdx + 1) : p.repo_full_name
@@ -279,25 +286,23 @@ export default function ProjectsPage() {
                 </div>
 
                 {/* Col 4 — Latest build */}
-                <div className="hidden sm:block w-36 flex-shrink-0">
+                <div className="hidden sm:block w-40 flex-shrink-0">
                   <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Latest build</p>
-                  {buildLabel && buildStyle ? (
-                    <div className="mt-1 flex flex-col gap-1">
-                      <span className={`self-start rounded-full px-2 py-0.5 text-xs font-medium ${buildStyle}`}>
-                        {buildLabel}
-                      </span>
+                  {buildLabel ? (
+                    <div className="mt-1.5 space-y-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-[11px] text-gray-400 bg-gray-50 rounded px-1.5 py-0.5 ring-1 ring-inset ring-gray-200">
+                        <BuildStatusIcon status={buildLabel} />
+                        <span className="font-mono text-[11px] text-gray-500 bg-gray-50 rounded px-1.5 py-0.5 ring-1 ring-inset ring-gray-200">
                           {build!.head_sha.slice(0, 7)}
                         </span>
-                        <span className="text-[11px] text-gray-400">
-                          {build!.finished_at
-                            ? timeAgo(build!.finished_at)
-                            : build!.status === "in_progress"
-                              ? "running…"
-                              : null}
-                        </span>
                       </div>
+                      <p className="text-[11px] text-gray-400 pl-0.5">
+                        {build!.finished_at
+                          ? timeAgo(build!.finished_at)
+                          : build!.status === "in_progress"
+                            ? "running…"
+                            : "—"}
+                      </p>
                     </div>
                   ) : (
                     <p className="mt-1 text-xs text-gray-400">No builds yet</p>
