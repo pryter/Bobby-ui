@@ -19,6 +19,7 @@ import {
   BoltIcon,
   ArrowTopRightOnSquareIcon,
   ArchiveBoxIcon,
+  WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline"
 import { useAuth } from "@/components/AuthProvider"
 
@@ -34,41 +35,55 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
-const PRESET_CFG: Record<string, { label: string; abbr: string; iconBg: string; iconText: string; chip: string }> = {
+// ── framework icons ─────────────────────────────────────────────────────────
+// Simple Icons CDN — white variant on dark bg-gray-900 container
+
+type PresetKey = "node" | "go" | "python" | "custom"
+
+interface PresetCfg {
+  label: string
+  icon: React.ReactNode
+  chip: string
+}
+
+function SimpleIcon({ slug, alt }: { slug: string; alt: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`https://cdn.simpleicons.org/${slug}/ffffff`}
+      alt={alt}
+      className="h-5 w-5"
+    />
+  )
+}
+
+const PRESET_CFG: Record<string, PresetCfg> = {
   node: {
     label: "Node.js",
-    abbr: "N",
-    iconBg: "bg-green-100",
-    iconText: "text-green-700",
+    icon: <SimpleIcon slug="nodedotjs" alt="Node.js" />,
     chip: "bg-green-50 text-green-700 ring-1 ring-inset ring-green-200",
   },
   go: {
     label: "Go",
-    abbr: "Go",
-    iconBg: "bg-cyan-100",
-    iconText: "text-cyan-700",
+    icon: <SimpleIcon slug="go" alt="Go" />,
     chip: "bg-cyan-50 text-cyan-700 ring-1 ring-inset ring-cyan-200",
   },
   python: {
     label: "Python",
-    abbr: "Py",
-    iconBg: "bg-blue-100",
-    iconText: "text-blue-700",
+    icon: <SimpleIcon slug="python" alt="Python" />,
     chip: "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200",
   },
   custom: {
     label: "Custom",
-    abbr: "⚙",
-    iconBg: "bg-gray-100",
-    iconText: "text-gray-500",
-    chip: "bg-gray-50 text-gray-500 ring-1 ring-inset ring-gray-200",
+    icon: <WrenchScrewdriverIcon className="h-5 w-5 text-white" />,
+    chip: "bg-gray-100 text-gray-600 ring-1 ring-inset ring-gray-200",
   },
 }
 
 const BUILD_STYLE: Record<string, string> = {
   success: "bg-green-100 text-green-700",
   failure: "bg-red-100 text-red-700",
-  in_progress: "bg-yellow-100 text-yellow-700 animate-pulse",
+  in_progress: "bg-yellow-100 text-yellow-700",
   cancelled: "bg-gray-100 text-gray-500",
 }
 
@@ -90,14 +105,15 @@ function ProjectsSkeleton() {
             <div className="flex items-center gap-4">
               <div className="h-11 w-11 rounded-xl bg-gray-200 flex-shrink-0" />
               <div className="flex-1">
-                <div className="h-4 w-48 bg-gray-200 rounded mb-3" />
+                <div className="h-4 w-48 bg-gray-200 rounded mb-1.5" />
+                <div className="h-3 w-24 bg-gray-100 rounded mb-3" />
                 <div className="flex gap-2">
                   <div className="h-5 w-16 bg-gray-100 rounded-full" />
                   <div className="h-5 w-24 bg-gray-100 rounded-full" />
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="h-5 w-16 bg-gray-100 rounded-full hidden sm:block" />
+                <div className="h-12 w-20 bg-gray-100 rounded-lg hidden sm:block" />
                 <div className="h-8 w-8 bg-gray-100 rounded-lg" />
                 <div className="h-8 w-8 bg-gray-100 rounded-lg" />
               </div>
@@ -212,9 +228,9 @@ export default function ProjectsPage() {
           const build = latestBuilds[p.id]
           const buildLabel = build ? (build.conclusion || build.status) : null
           const buildStyle = buildLabel ? (BUILD_STYLE[buildLabel] ?? BUILD_STYLE.cancelled) : null
-          const [org, repoName] = p.repo_full_name.includes("/")
-            ? p.repo_full_name.split("/")
-            : ["", p.repo_full_name]
+          const slashIdx = p.repo_full_name.indexOf("/")
+          const owner = slashIdx !== -1 ? p.repo_full_name.slice(0, slashIdx) : null
+          const repoName = slashIdx !== -1 ? p.repo_full_name.slice(slashIdx + 1) : p.repo_full_name
 
           return (
             <div
@@ -222,21 +238,23 @@ export default function ProjectsPage() {
               className="group rounded-2xl bg-white px-6 py-5 shadow-md hover:shadow-lg transition-shadow"
             >
               <div className="flex items-center gap-4">
-                {/* Framework icon */}
+                {/* Framework icon — dark square */}
                 <Link href={`/dashboard/project/${p.id}`} className="flex-shrink-0" tabIndex={-1}>
-                  <div
-                    className={`w-11 h-11 rounded-xl ${cfg.iconBg} ${cfg.iconText} flex items-center justify-center text-sm font-bold select-none`}
-                  >
-                    {cfg.abbr}
+                  <div className="w-11 h-11 rounded-xl bg-gray-900 flex items-center justify-center">
+                    {cfg.icon}
                   </div>
                 </Link>
 
-                {/* Repo name + chips */}
+                {/* Repo name + owner + chips */}
                 <Link href={`/dashboard/project/${p.id}`} className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 truncate group-hover:[&]:underline">
-                    {org && <span className="font-normal text-gray-400">{org}/</span>}
+                  <p className="font-semibold text-gray-900 truncate leading-tight">
                     {repoName}
                   </p>
+                  {owner && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      owned by <span className="font-medium text-gray-500">{owner}</span>
+                    </p>
+                  )}
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     {/* Preset chip */}
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cfg.chip}`}>
@@ -257,19 +275,25 @@ export default function ProjectsPage() {
                   </div>
                 </Link>
 
-                {/* Latest build + actions */}
+                {/* Build status + SHA + actions */}
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  {buildLabel && buildStyle && (
+                  {build && buildLabel && buildStyle && (
                     <div className="text-right hidden sm:block mr-1">
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${buildStyle}`}>
                         {buildLabel}
                       </span>
-                      {build?.finished_at && (
-                        <p className="mt-0.5 text-xs text-gray-400">{timeAgo(build.finished_at)}</p>
-                      )}
-                      {build?.status === "in_progress" && !build.finished_at && (
-                        <p className="mt-0.5 text-xs text-gray-400">running…</p>
-                      )}
+                      <div className="mt-1 flex items-center justify-end gap-1.5">
+                        <span className="font-mono text-[11px] text-gray-400 bg-gray-50 rounded px-1.5 py-0.5 ring-1 ring-inset ring-gray-200">
+                          {build.head_sha.slice(0, 7)}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[11px] text-gray-400">
+                        {build.finished_at
+                          ? timeAgo(build.finished_at)
+                          : build.status === "in_progress"
+                            ? "running…"
+                            : null}
+                      </p>
                     </div>
                   )}
 
