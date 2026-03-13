@@ -1,8 +1,29 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
+import type { ElementType } from "react"
 import Link from "next/link"
-import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline"
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  PlayIcon,
+  ArrowPathIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon,
+  SignalIcon,
+  SignalSlashIcon,
+  BoltIcon,
+  UserIcon,
+  CodeBracketIcon,
+  CalendarIcon,
+  WrenchScrewdriverIcon,
+  ArrowTopRightOnSquareIcon,
+} from "@heroicons/react/24/outline"
+import {
+  CheckCircleIcon as CheckCircleSolid,
+  XCircleIcon as XCircleSolid,
+} from "@heroicons/react/24/solid"
 import {
   MonitoredRepo,
   Build,
@@ -13,7 +34,6 @@ import {
   updateRepoPreset,
   updateRepoWorker,
   getBuildLog,
-  getArtifactDownloadURL,
 } from "@/lib/api"
 import { useWorkerStream } from "@/lib/useWorkerStream"
 import { parseLogPhases } from "@/lib/buildPhases"
@@ -21,6 +41,35 @@ import BuildConsole from "@/components/BuildConsole"
 import { useAuth } from "@/components/AuthProvider"
 
 type Preset = "node" | "go" | "custom"
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function getDurationSecs(b: Build): number | null {
+  if (!b.finished_at) return null
+  return Math.round(
+    (new Date(b.finished_at).getTime() - new Date(b.started_at).getTime()) / 1000,
+  )
+}
+
+function formatDuration(secs: number | null): string {
+  if (secs === null) return "—"
+  if (secs < 60) return `${secs}s`
+  const m = Math.floor(secs / 60)
+  const s = secs % 60
+  return s > 0 ? `${m}m ${s}s` : `${m}m`
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return "just now"
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
+// ── StatusBadge ───────────────────────────────────────────────────────────────
 
 function StatusBadge({ status, conclusion }: { status: string; conclusion: string | null }) {
   const label = conclusion || status
@@ -31,35 +80,132 @@ function StatusBadge({ status, conclusion }: { status: string; conclusion: strin
     cancelled: "bg-gray-100 text-gray-600",
   }
   return (
-    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[label] || "bg-gray-100 text-gray-600"}`}>
+    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[label] ?? "bg-gray-100 text-gray-600"}`}>
       {label}
     </span>
   )
 }
 
+// ── StatusDot (icon-only) ─────────────────────────────────────────────────────
+
+function StatusDot({ status, conclusion }: { status: string; conclusion: string | null }) {
+  const label = conclusion || status
+  if (label === "success")
+    return <CheckCircleSolid className="h-4 w-4 shrink-0 text-green-500" />
+  if (label === "failure")
+    return <XCircleSolid className="h-4 w-4 shrink-0 text-red-500" />
+  if (label === "in_progress")
+    return (
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+        <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-yellow-400" />
+      </span>
+    )
+  return <span className="h-4 w-4 shrink-0 rounded-full bg-gray-300" />
+}
+
+// ── MetricCard ────────────────────────────────────────────────────────────────
+
+function MetricCard({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  accent = "gray",
+}: {
+  label: string
+  value: string
+  sub?: string
+  icon: ElementType
+  accent?: "green" | "red" | "yellow" | "gray"
+}) {
+  const accentMap = {
+    green: "text-green-500",
+    red: "text-red-500",
+    yellow: "text-yellow-500",
+    gray: "text-gray-400",
+  }
+  return (
+    <div className="flex flex-col gap-1.5 rounded-2xl bg-white px-4 py-4 shadow-md">
+      <div className="flex items-center gap-1.5">
+        <Icon className={`h-3.5 w-3.5 shrink-0 ${accentMap[accent]}`} strokeWidth={2} />
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+          {label}
+        </span>
+      </div>
+      <p className="text-xl font-bold leading-none text-gray-900">{value}</p>
+      {sub && <p className="text-[11px] text-gray-400">{sub}</p>}
+    </div>
+  )
+}
+
+// ── Sparkline ─────────────────────────────────────────────────────────────────
+
+function Sparkline({ values, color = "#374151" }: { values: number[]; color?: string }) {
+  if (values.length < 2) return <span className="text-xs text-gray-300">Not enough data</span>
+  const max = Math.max(...values)
+  const min = Math.min(...values)
+  const range = max - min || 1
+  const W = 160
+  const H = 44
+  const pts = values
+    .map((v, i) => {
+      const x = (i / (values.length - 1)) * W
+      const y = H - 4 - ((v - min) / range) * (H - 10)
+      return `${x},${y}`
+    })
+    .join(" ")
+  return (
+    <svg
+      width={W}
+      height={H}
+      viewBox={`0 0 ${W} ${H}`}
+      className="overflow-visible"
+      aria-hidden
+    >
+      <polyline
+        points={pts}
+        fill="none"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+
 function ProjectDetailSkeleton() {
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-8 sm:py-10 animate-pulse">
-      <div className="h-4 w-24 bg-gray-200 rounded" />
+    <div className="mx-auto flex min-h-screen w-full max-w-5xl animate-pulse flex-col px-4 py-6 sm:px-8 sm:py-10">
+      <div className="h-4 w-24 rounded bg-gray-200" />
       <div className="mt-4">
-        <div className="h-7 w-56 bg-gray-200 rounded-lg" />
-        <div className="mt-2 h-4 w-32 bg-gray-100 rounded" />
+        <div className="h-7 w-56 rounded-lg bg-gray-200" />
+        <div className="mt-2 h-4 w-32 rounded bg-gray-100" />
       </div>
-      <div className="mt-8 rounded-2xl bg-white px-6 py-5 shadow-md">
-        <div className="h-5 w-32 bg-gray-200 rounded mb-4" />
-        <div className="h-4 w-48 bg-gray-100 rounded" />
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-20 rounded-2xl bg-white shadow-md" />
+        ))}
       </div>
       <div className="mt-4 rounded-2xl bg-white px-6 py-5 shadow-md">
-        <div className="h-5 w-28 bg-gray-200 rounded mb-4" />
-        <div className="h-4 w-24 bg-gray-100 rounded" />
+        <div className="mb-4 h-5 w-32 rounded bg-gray-200" />
+        <div className="h-4 w-48 rounded bg-gray-100" />
+      </div>
+      <div className="mt-4 rounded-2xl bg-white px-6 py-5 shadow-md">
+        <div className="mb-4 h-5 w-28 rounded bg-gray-200" />
+        <div className="h-4 w-24 rounded bg-gray-100" />
       </div>
       <div className="mt-8">
-        <div className="h-6 w-32 bg-gray-200 rounded mb-3" />
-        <div className="rounded-2xl bg-white shadow-md h-16" />
+        <div className="mb-3 h-6 w-32 rounded bg-gray-200" />
+        <div className="h-20 rounded-2xl bg-white shadow-md" />
       </div>
     </div>
   )
 }
+
+// ── Main Component ────────────────────────────────────────────────────────────
 
 export default function ProjectDetail({ id }: { id: string }) {
   const { token } = useAuth()
@@ -86,7 +232,8 @@ export default function ProjectDetail({ id }: { id: string }) {
 
   const { activeBuild, phases } = useWorkerStream(project?.setup_id ?? "", false)
 
-  // ── Preset editor ──────────────────────────────────────────────────────────
+  // ── Preset editor ─────────────────────────────────────────────────────────
+
   const [preset, setPreset] = useState<Preset>("node")
   const [customInit, setCustomInit] = useState("")
   const [customBuild, setCustomBuild] = useState("")
@@ -116,7 +263,7 @@ export default function ProjectDetail({ id }: { id: string }) {
           customBuild: preset === "custom" ? customBuild : undefined,
           artifactPath: artifactPath || undefined,
         },
-        token
+        token,
       )
       setEditingPreset(false)
     } catch (e) {
@@ -127,6 +274,7 @@ export default function ProjectDetail({ id }: { id: string }) {
   }
 
   // ── Worker assignment ─────────────────────────────────────────────────────
+
   const [currentSetupId, setCurrentSetupId] = useState("")
   const [editingWorker, setEditingWorker] = useState(false)
   const [selectedWorker, setSelectedWorker] = useState("")
@@ -138,6 +286,9 @@ export default function ProjectDetail({ id }: { id: string }) {
     setCurrentSetupId(project.setup_id)
     setSelectedWorker(project.setup_id)
   }, [project])
+
+  const linkedWorker: Worker | null =
+    workers.find((w) => w.setupId === currentSetupId) ?? null
 
   const workerName = (wid: string) => {
     const w = workers.find((w) => w.setupId === wid)
@@ -161,20 +312,58 @@ export default function ProjectDetail({ id }: { id: string }) {
   }
 
   // ── Build list with live build merged in ──────────────────────────────────
+
   const buildList: (Build & { isLive?: boolean })[] = activeBuild
     ? [{ ...activeBuild, isLive: true }, ...builds.filter((b) => b.id !== activeBuild.id)]
     : builds
 
   const latestBuild = buildList[0] ?? null
   const previousBuilds = buildList.slice(1)
+  const isWorkerBuilding = !!activeBuild
 
-  // ── Latest build console expand/collapse ──────────────────────────────────
+  // ── Derived metrics ───────────────────────────────────────────────────────
+
+  const last20 = useMemo(() => buildList.slice(0, 20), [buildList])
+
+  const successCount = useMemo(
+    () => last20.filter((b) => b.conclusion === "success").length,
+    [last20],
+  )
+
+  const successRate = last20.length > 0
+    ? Math.round((successCount / last20.length) * 100)
+    : null
+
+  const avgDuration = useMemo(() => {
+    const completed = last20.filter((b) => b.finished_at)
+    if (!completed.length) return null
+    const total = completed.reduce((sum, b) => sum + (getDurationSecs(b) ?? 0), 0)
+    return Math.round(total / completed.length)
+  }, [last20])
+
+  const lastSuccess = useMemo(
+    () => buildList.find((b) => b.conclusion === "success") ?? null,
+    [buildList],
+  )
+
+  // Sparkline series (oldest → newest)
+  const durationTrend = useMemo(
+    () => [...last20].reverse().filter((b) => b.finished_at).map((b) => getDurationSecs(b) ?? 0),
+    [last20],
+  )
+  const successTrend = useMemo(
+    () => [...last20].reverse().map((b) => (b.conclusion === "success" ? 1 : 0)),
+    [last20],
+  )
+
+  // ── Latest build console expand/collapse ─────────────────────────────────
+
   const [showLatestConsole, setShowLatestConsole] = useState(false)
-  useEffect(() => {
-    if (phases.length > 0) setShowLatestConsole(true)
-  }, [phases.length > 0])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (phases.length > 0) setShowLatestConsole(true) }, [phases.length > 0])
 
   // ── Past build log expansion ──────────────────────────────────────────────
+
   const [expandedBuildId, setExpandedBuildId] = useState<string | null>(null)
   const [buildLogCache, setBuildLogCache] = useState<Record<string, string>>({})
 
@@ -186,6 +375,8 @@ export default function ProjectDetail({ id }: { id: string }) {
       setBuildLogCache((prev) => ({ ...prev, [buildId]: text }))
     }
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   if (loading) return <ProjectDetailSkeleton />
 
@@ -206,15 +397,89 @@ export default function ProjectDetail({ id }: { id: string }) {
         ← Back to projects
       </Link>
 
-      {/* Header */}
-      <div className="mt-4">
-        <h1 className="text-xl font-semibold sm:text-2xl">{project.repo_full_name}</h1>
-        <p className="mt-1 font-mono text-sm text-gray-400">{project.repo_name}</p>
+      {/* ── Header + Quick Actions ─────────────────────────────────────────── */}
+      <div className="mt-4 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold sm:text-2xl">{project.repo_full_name}</h1>
+          <p className="mt-1 font-mono text-sm text-gray-400">{project.repo_name}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2 pt-1">
+          <button
+            disabled
+            title="Coming soon"
+            className="flex items-center gap-1.5 rounded-xl bg-gray-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <PlayIcon className="h-3.5 w-3.5" strokeWidth={2.5} />
+            Run Build
+          </button>
+          <button
+            disabled={!latestBuild}
+            title={latestBuild ? "Rebuild last commit" : "No builds yet"}
+            className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <ArrowPathIcon className="h-3.5 w-3.5" strokeWidth={2.5} />
+            Rebuild Last
+          </button>
+        </div>
       </div>
 
-      {/* Linked Worker */}
-      <div className="mt-6 rounded-2xl bg-white px-4 py-5 shadow-md sm:mt-8 sm:px-6">
-        <div className="flex items-center justify-between mb-4">
+      {/* ── Build Health Summary ───────────────────────────────────────────── */}
+      {buildList.length > 0 && (
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <MetricCard
+            label="Latest Status"
+            value={latestBuild ? (latestBuild.conclusion ?? latestBuild.status) : "—"}
+            sub={latestBuild ? timeAgo(latestBuild.started_at) : undefined}
+            icon={
+              latestBuild?.conclusion === "success"
+                ? CheckCircleIcon
+                : latestBuild?.conclusion === "failure"
+                  ? XCircleIcon
+                  : ClockIcon
+            }
+            accent={
+              latestBuild?.conclusion === "success"
+                ? "green"
+                : latestBuild?.conclusion === "failure"
+                  ? "red"
+                  : "yellow"
+            }
+          />
+          <MetricCard
+            label="Success Rate"
+            value={successRate !== null ? `${successRate}%` : "—"}
+            sub={last20.length > 0 ? `${successCount} / ${last20.length} builds` : undefined}
+            icon={CheckCircleIcon}
+            accent={
+              successRate === null
+                ? "gray"
+                : successRate >= 80
+                  ? "green"
+                  : successRate >= 50
+                    ? "yellow"
+                    : "red"
+            }
+          />
+          <MetricCard
+            label="Avg Duration"
+            value={formatDuration(avgDuration)}
+            sub={last20.length > 0 ? `last ${last20.length} builds` : undefined}
+            icon={ClockIcon}
+            accent="gray"
+          />
+          <MetricCard
+            label="Last Success"
+            value={lastSuccess ? timeAgo(lastSuccess.started_at) : "—"}
+            sub={lastSuccess ? lastSuccess.head_sha?.slice(0, 7) : undefined}
+            icon={CalendarIcon}
+            accent={lastSuccess ? "green" : "gray"}
+          />
+        </div>
+      )}
+
+      {/* ── Linked Worker ──────────────────────────────────────────────────── */}
+      <div className="mt-4 rounded-2xl bg-white px-4 py-5 shadow-md sm:mt-5 sm:px-6">
+        <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold">Linked Worker</h2>
           {!editingWorker && (
             <button
@@ -227,10 +492,52 @@ export default function ProjectDetail({ id }: { id: string }) {
         </div>
 
         {!editingWorker ? (
-          <p className="text-sm">
-            <span className="text-gray-500 mr-2">Worker</span>
-            <span className="font-medium">{workerName(currentSetupId)}</span>
-          </p>
+          <div className="space-y-2 text-sm">
+            {/* Name + online badge */}
+            <div className="flex items-center gap-3">
+              {linkedWorker?.online ? (
+                <SignalIcon className="h-4 w-4 shrink-0 text-green-500" strokeWidth={2} />
+              ) : (
+                <SignalSlashIcon className="h-4 w-4 shrink-0 text-gray-400" strokeWidth={2} />
+              )}
+              <span className="font-medium">{workerName(currentSetupId)}</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                  linkedWorker?.online
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-100 text-gray-500"
+                }`}
+              >
+                {linkedWorker?.online ? "online" : "offline"}
+              </span>
+            </div>
+
+            {/* Current activity */}
+            <div className="flex items-center gap-2 text-gray-500">
+              <BoltIcon className="h-3.5 w-3.5 shrink-0 text-gray-400" strokeWidth={2} />
+              <span className="text-xs">
+                {isWorkerBuilding ? (
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-yellow-400" />
+                    Building&nbsp;
+                    <code className="font-mono text-gray-700">
+                      {activeBuild?.head_sha?.slice(0, 7)}
+                    </code>
+                  </span>
+                ) : (
+                  "Idle"
+                )}
+              </span>
+            </div>
+
+            {/* Last registered */}
+            {linkedWorker?.createdAt && (
+              <div className="flex items-center gap-2 text-gray-500">
+                <ClockIcon className="h-3.5 w-3.5 shrink-0 text-gray-400" strokeWidth={2} />
+                <span className="text-xs">Registered {timeAgo(linkedWorker.createdAt)}</span>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="space-y-3">
             <select
@@ -264,12 +571,15 @@ export default function ProjectDetail({ id }: { id: string }) {
         )}
       </div>
 
-      {/* Build Preset */}
+      {/* ── Build Preset ──────────────────────────────────────────────────── */}
       <div className="mt-4 rounded-2xl bg-white px-4 py-5 shadow-md sm:px-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold">Build Preset</h2>
           {!editingPreset && (
-            <button onClick={() => setEditingPreset(true)} className="text-sm text-gray-500 hover:text-gray-900">
+            <button
+              onClick={() => setEditingPreset(true)}
+              className="text-sm text-gray-500 hover:text-gray-900"
+            >
               Edit
             </button>
           )}
@@ -278,25 +588,31 @@ export default function ProjectDetail({ id }: { id: string }) {
         {!editingPreset ? (
           <div className="space-y-2 text-sm">
             <div className="flex gap-3">
-              <span className="text-gray-500 w-20 shrink-0">Preset</span>
+              <span className="w-20 shrink-0 text-gray-500">Preset</span>
               <span className="font-medium capitalize">{project.preset || "node"}</span>
             </div>
             {project.custom_init && (
               <div className="flex gap-3">
-                <span className="text-gray-500 w-20 shrink-0">Init</span>
-                <code className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded break-all">{project.custom_init}</code>
+                <span className="w-20 shrink-0 text-gray-500">Init</span>
+                <code className="break-all rounded bg-gray-100 px-2 py-0.5 font-mono text-xs">
+                  {project.custom_init}
+                </code>
               </div>
             )}
             {project.custom_build && (
               <div className="flex gap-3">
-                <span className="text-gray-500 w-20 shrink-0">Build</span>
-                <code className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded break-all">{project.custom_build}</code>
+                <span className="w-20 shrink-0 text-gray-500">Build</span>
+                <code className="break-all rounded bg-gray-100 px-2 py-0.5 font-mono text-xs">
+                  {project.custom_build}
+                </code>
               </div>
             )}
             {project.artifact_path && (
               <div className="flex gap-3">
-                <span className="text-gray-500 w-20 shrink-0">Artifact</span>
-                <code className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded break-all">{project.artifact_path}</code>
+                <span className="w-20 shrink-0 text-gray-500">Artifact</span>
+                <code className="break-all rounded bg-gray-100 px-2 py-0.5 font-mono text-xs">
+                  {project.artifact_path}
+                </code>
               </div>
             )}
           </div>
@@ -319,50 +635,51 @@ export default function ProjectDetail({ id }: { id: string }) {
             </div>
             {preset === "node" && (
               <p className="text-xs text-gray-400">
-                Runs <code className="font-mono bg-gray-100 px-1 rounded">yarn</code> then{" "}
-                <code className="font-mono bg-gray-100 px-1 rounded">yarn build</code>
+                Runs <code className="rounded bg-gray-100 px-1 font-mono">yarn</code> then{" "}
+                <code className="rounded bg-gray-100 px-1 font-mono">yarn build</code>
               </p>
             )}
             {preset === "go" && (
               <p className="text-xs text-gray-400">
-                Runs <code className="font-mono bg-gray-100 px-1 rounded">go mod download</code> then{" "}
-                <code className="font-mono bg-gray-100 px-1 rounded">go build ./...</code>
+                Runs <code className="rounded bg-gray-100 px-1 font-mono">go mod download</code>{" "}
+                then <code className="rounded bg-gray-100 px-1 font-mono">go build ./...</code>
               </p>
             )}
             {preset === "custom" && (
               <div className="space-y-2">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Init command</label>
+                  <label className="mb-1 block text-xs text-gray-500">Init command</label>
                   <input
                     type="text"
                     placeholder="e.g. npm install"
                     value={customInit}
                     onChange={(e) => setCustomInit(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-mono outline-none focus:ring-2 focus:ring-gray-900"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-1.5 font-mono text-sm outline-none focus:ring-2 focus:ring-gray-900"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Build command</label>
+                  <label className="mb-1 block text-xs text-gray-500">Build command</label>
                   <input
                     type="text"
                     placeholder="e.g. npm run build"
                     value={customBuild}
                     onChange={(e) => setCustomBuild(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-mono outline-none focus:ring-2 focus:ring-gray-900"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-1.5 font-mono text-sm outline-none focus:ring-2 focus:ring-gray-900"
                   />
                 </div>
               </div>
             )}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                Artifact folder override <span className="text-gray-400">(optional)</span>
+              <label className="mb-1 block text-xs text-gray-500">
+                Artifact folder override{" "}
+                <span className="text-gray-400">(optional)</span>
               </label>
               <input
                 type="text"
                 placeholder="e.g. dist"
                 value={artifactPath}
                 onChange={(e) => setArtifactPath(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-mono outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full rounded-lg border border-gray-200 px-3 py-1.5 font-mono text-sm outline-none focus:ring-2 focus:ring-gray-900"
               />
             </div>
             {presetError && <p className="text-sm text-red-600">{presetError}</p>}
@@ -392,42 +709,87 @@ export default function ProjectDetail({ id }: { id: string }) {
         )}
       </div>
 
-      {/* Latest Build */}
+      {/* ── Latest Build ───────────────────────────────────────────────────── */}
       {latestBuild && (
         <div className="mt-6 sm:mt-8">
-          <h2 className="text-lg font-semibold mb-3">Latest Build</h2>
-          <div className="rounded-2xl bg-white shadow-md overflow-hidden">
-            <button
-              onClick={() => setShowLatestConsole((v) => !v)}
-              className="flex w-full flex-wrap items-start justify-between gap-y-2 px-4 py-4 text-left sm:px-6"
-            >
-              <div className="min-w-0 flex-1">
-                <h3 className="font-medium truncate">{latestBuild.repo_name || `repo #${latestBuild.repo_id}`}</h3>
-                <p className="mt-0.5 font-mono text-xs text-gray-400">
-                  {latestBuild.head_sha?.slice(0, 7)} · {new Date(latestBuild.started_at).toLocaleString()}
-                </p>
-              </div>
-              <div className="flex items-center gap-3 shrink-0 ml-2">
-                <StatusBadge status={latestBuild.status} conclusion={latestBuild.conclusion} />
-                {latestBuild.artifact_url && (
-                  <a
-                    href={getArtifactDownloadURL(latestBuild.artifact_url)!}
-                    className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
-                    download
-                    onClick={(e) => e.stopPropagation()}
+          <h2 className="mb-3 text-lg font-semibold">Latest Build</h2>
+          <div className="overflow-hidden rounded-2xl bg-white shadow-md">
+            {/* Card body */}
+            <div className="px-4 pt-4 sm:px-6">
+              <div className="flex items-start justify-between gap-3">
+                {/* Left: SHA, branch, status, meta */}
+                <div className="min-w-0 flex-1">
+                  {/* SHA + branch + status */}
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <code className="font-mono text-sm font-semibold text-gray-800">
+                      {latestBuild.head_sha?.slice(0, 7)}
+                    </code>
+                    {(latestBuild as any).branch && (
+                      <span className="flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-600">
+                        <CodeBracketIcon className="h-3 w-3" />
+                        {(latestBuild as any).branch}
+                      </span>
+                    )}
+                    <StatusDot status={latestBuild.status} conclusion={latestBuild.conclusion} />
+                    <StatusBadge status={latestBuild.status} conclusion={latestBuild.conclusion} />
+                    {(latestBuild as any).trigger && (
+                      <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-xs font-medium text-indigo-600">
+                        {(latestBuild as any).trigger}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Meta row */}
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <span className="flex items-center gap-1 text-xs text-gray-400">
+                      <CalendarIcon className="h-3 w-3 shrink-0" />
+                      {timeAgo(latestBuild.started_at)}
+                    </span>
+                    <span className="flex items-center gap-1 text-xs text-gray-400">
+                      <ClockIcon className="h-3 w-3 shrink-0" />
+                      {formatDuration(getDurationSecs(latestBuild))}
+                    </span>
+                    {(latestBuild as any).commit_author && (
+                      <span className="flex items-center gap-1 text-xs text-gray-400">
+                        <UserIcon className="h-3 w-3 shrink-0" />
+                        {(latestBuild as any).commit_author}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1 text-xs text-gray-400">
+                      <WrenchScrewdriverIcon className="h-3 w-3 shrink-0" />
+                      {workerName(latestBuild.setup_id)}
+                    </span>
+                  </div>
+
+                  {/* Commit message */}
+                  {(latestBuild as any).commit_message && (
+                    <p className="mt-1.5 max-w-lg truncate text-xs italic text-gray-500">
+                      &ldquo;{(latestBuild as any).commit_message}&rdquo;
+                    </p>
+                  )}
+                </div>
+
+                {/* Right: View Logs button */}
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    onClick={() => setShowLatestConsole((v) => !v)}
+                    className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
                   >
-                    Download
-                  </a>
-                )}
-                {showLatestConsole ? (
-                  <ChevronDownIcon className="h-4 w-4 text-gray-400" />
-                ) : (
-                  <ChevronRightIcon className="h-4 w-4 text-gray-400" />
-                )}
+                    <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
+                    {showLatestConsole ? "Hide Logs" : "View Logs"}
+                  </button>
+                  {showLatestConsole ? (
+                    <ChevronDownIcon className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <ChevronRightIcon className="h-4 w-4 text-gray-400" />
+                  )}
+                </div>
               </div>
-            </button>
-            {showLatestConsole && (
-              <div className="border-t border-gray-100 px-4 pb-4 sm:px-6">
+            </div>
+
+            {/* Console / bottom padding */}
+            {showLatestConsole ? (
+              <div className="mt-4 border-t border-gray-100 px-4 pb-4 sm:px-6">
                 {phases.length > 0 ? (
                   <BuildConsole phases={phases} active={!latestBuild.conclusion} />
                 ) : (
@@ -436,15 +798,17 @@ export default function ProjectDetail({ id }: { id: string }) {
                   </p>
                 )}
               </div>
+            ) : (
+              <div className="pb-4" />
             )}
           </div>
         </div>
       )}
 
-      {/* Previous Builds */}
+      {/* ── Previous Builds ────────────────────────────────────────────────── */}
       {previousBuilds.length > 0 && (
         <div className="mt-6 sm:mt-8">
-          <h2 className="text-lg font-semibold mb-3">Previous Builds</h2>
+          <h2 className="mb-3 text-lg font-semibold">Previous Builds</h2>
           <div className="space-y-2">
             {previousBuilds.map((b) => {
               const isExpanded = expandedBuildId === b.id
@@ -452,30 +816,44 @@ export default function ProjectDetail({ id }: { id: string }) {
               const pastPhases = cachedLog
                 ? parseLogPhases(cachedLog.split("\n").filter(Boolean))
                 : null
+              const dur = getDurationSecs(b)
 
               return (
-                <div key={b.id} className="rounded-2xl bg-white shadow-md overflow-hidden">
+                <div key={b.id} className="overflow-hidden rounded-2xl bg-white shadow-md">
                   <button
                     onClick={() => toggleBuildLog(b.id)}
-                    className="flex w-full flex-wrap items-start justify-between gap-y-2 px-4 py-4 text-left sm:px-6"
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left sm:px-6"
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-mono text-xs text-gray-400">
-                        {b.head_sha?.slice(0, 7)} · {new Date(b.started_at).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0 ml-2">
-                      <StatusBadge status={b.status} conclusion={b.conclusion} />
-                      {b.artifact_url && (
-                        <a
-                          href={getArtifactDownloadURL(b.artifact_url)!}
-                          className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
-                          download
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Download
-                        </a>
+                    {/* Icon-only status */}
+                    <StatusDot status={b.status} conclusion={b.conclusion} />
+
+                    {/* SHA · branch · time · duration · worker */}
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1">
+                      <code className="font-mono text-xs font-semibold text-gray-700">
+                        {b.head_sha?.slice(0, 7)}
+                      </code>
+                      {(b as any).branch && (
+                        <>
+                          <span className="text-gray-300">·</span>
+                          <span className="font-mono text-xs text-indigo-500">
+                            {(b as any).branch}
+                          </span>
+                        </>
                       )}
+                      <span className="text-gray-300">·</span>
+                      <span className="text-xs text-gray-400">{timeAgo(b.started_at)}</span>
+                      <span className="text-gray-300">·</span>
+                      <span className="flex items-center gap-0.5 text-xs text-gray-400">
+                        <ClockIcon className="h-3 w-3 shrink-0" />
+                        {formatDuration(dur)}
+                      </span>
+                      <span className="text-gray-300">·</span>
+                      <span className="text-xs text-gray-400">{workerName(b.setup_id)}</span>
+                    </div>
+
+                    {/* Inline status badge + chevron */}
+                    <div className="flex shrink-0 items-center gap-2">
+                      <StatusBadge status={b.status} conclusion={b.conclusion} />
                       {isExpanded ? (
                         <ChevronDownIcon className="h-4 w-4 text-gray-400" />
                       ) : (
@@ -483,16 +861,21 @@ export default function ProjectDetail({ id }: { id: string }) {
                       )}
                     </div>
                   </button>
+
                   {isExpanded && (
                     <div className="border-t border-gray-100 px-4 pb-4 sm:px-6">
                       {pastPhases ? (
                         pastPhases.length > 0 ? (
                           <BuildConsole phases={pastPhases} active={false} />
                         ) : (
-                          <p className="pt-3 text-xs text-gray-400">No log recorded for this build.</p>
+                          <p className="pt-3 text-xs text-gray-400">
+                            No log recorded for this build.
+                          </p>
                         )
                       ) : (
-                        <p className="pt-3 text-xs text-gray-400 animate-pulse">Loading log…</p>
+                        <p className="animate-pulse pt-3 text-xs text-gray-400">
+                          Loading log…
+                        </p>
                       )}
                     </div>
                   )}
@@ -503,8 +886,53 @@ export default function ProjectDetail({ id }: { id: string }) {
         </div>
       )}
 
+      {/* ── Build Trends ───────────────────────────────────────────────────── */}
+      {last20.length >= 4 && (
+        <div className="mt-6 sm:mt-8">
+          <h2 className="mb-3 text-lg font-semibold">Build Trends</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* Success rate trend */}
+            <div className="rounded-2xl bg-white px-5 py-4 shadow-md">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                Success Rate
+              </p>
+              <p className="mt-0.5 text-xs text-gray-400">Last {last20.length} builds</p>
+              <div className="mt-3 flex items-end justify-between">
+                <Sparkline
+                  values={successTrend}
+                  color={
+                    successRate !== null && successRate >= 80 ? "#16a34a" : "#f59e0b"
+                  }
+                />
+                <span className="text-2xl font-bold text-gray-800">
+                  {successRate !== null ? `${successRate}%` : "—"}
+                </span>
+              </div>
+            </div>
+
+            {/* Duration trend */}
+            <div className="rounded-2xl bg-white px-5 py-4 shadow-md">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                Build Duration
+              </p>
+              <p className="mt-0.5 text-xs text-gray-400">
+                Last {durationTrend.length} completed builds
+              </p>
+              <div className="mt-3 flex items-end justify-between">
+                <Sparkline values={durationTrend} color="#6366f1" />
+                <span className="text-2xl font-bold text-gray-800">
+                  {formatDuration(avgDuration)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {buildList.length === 0 && (
-        <p className="mt-8 text-sm text-gray-500">No builds yet. Push to this repo to trigger a build.</p>
+        <p className="mt-8 text-sm text-gray-500">
+          No builds yet. Push to this repo to trigger a build.
+        </p>
       )}
     </div>
   )
