@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Worker, Build, getWorker, getBuilds, updateWorkerName, getArtifactDownloadURL } from "@/lib/api"
+import { Worker, Build, getWorker, getBuilds, updateWorkerName, getArtifactDownloadURL, getBuildLog } from "@/lib/api"
 import { useWorkerStream } from "@/lib/useWorkerStream"
+import { parseLogPhases } from "@/lib/buildPhases"
+import type { BuildPhase } from "@/lib/buildPhases"
 import BuildConsole from "@/components/BuildConsole"
 import { useAuth } from "@/components/AuthProvider"
 
@@ -64,6 +66,21 @@ export default function WorkerDetail({ id }: { id: string }) {
   }, [id, token])
 
   const { online, activeBuild, phases } = useWorkerStream(id, worker?.online ?? false)
+
+  // Load persisted log for the most recent completed build when no live stream is active.
+  const [persistedPhases, setPersistedPhases] = useState<BuildPhase[]>([])
+  // Use builds[0] (DB data) — we only need persisted logs for completed builds.
+  const latestDbBuild = builds[0] ?? null
+
+  useEffect(() => {
+    if (activeBuild) { setPersistedPhases([]); return }
+    if (!latestDbBuild?.conclusion || !token) return
+    getBuildLog(latestDbBuild.id, token).then((text) => {
+      if (text) setPersistedPhases(parseLogPhases(text.split("\n").filter(Boolean)))
+    })
+  }, [latestDbBuild?.id, latestDbBuild?.conclusion, activeBuild?.id, token])
+
+  const displayPhases = phases.length > 0 ? phases : persistedPhases
 
   const [name, setName] = useState("")
   const [editingName, setEditingName] = useState(false)
@@ -172,9 +189,9 @@ export default function WorkerDetail({ id }: { id: string }) {
                 )}
               </div>
             </div>
-            {index === 0 && (phases.length > 0 || activeBuild) && (
+            {index === 0 && (displayPhases.length > 0 || activeBuild) && (
               <div className="border-t border-gray-100 px-4 pb-4 sm:px-6">
-                <BuildConsole phases={phases} active={activeBuild !== null && !b.conclusion} />
+                <BuildConsole phases={displayPhases} active={activeBuild !== null && !b.conclusion} />
               </div>
             )}
           </div>

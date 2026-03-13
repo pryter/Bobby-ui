@@ -266,11 +266,26 @@ export default function ProjectDetail({ id }: { id: string }) {
     [last20],
   )
 
+  // ── Latest build: load persisted log on mount (for completed builds) ─────
+
+  const [persistedLatestPhases, setPersistedLatestPhases] = useState<import("@/lib/buildPhases").BuildPhase[] | null>(null)
+
+  useEffect(() => {
+    if (!latestBuild?.conclusion || !token) return
+    setPersistedLatestPhases(null)
+    getBuildLog(latestBuild.id, token).then((text) => {
+      if (text) setPersistedLatestPhases(parseLogPhases(text.split("\n").filter(Boolean)))
+    })
+  }, [latestBuild?.id, latestBuild?.conclusion, token])
+
+  // Use live WS phases when available; fall back to persisted log after refresh.
+  const latestBuildPhases = phases.length > 0 ? phases : (persistedLatestPhases ?? [])
+
   // ── Latest build console expand/collapse ─────────────────────────────────
 
   const [showLatestConsole, setShowLatestConsole] = useState(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { if (phases.length > 0) setShowLatestConsole(true) }, [phases.length > 0])
+  useEffect(() => { if (latestBuildPhases.length > 0) setShowLatestConsole(true) }, [latestBuildPhases.length > 0])
 
   // ── Past build log expansion ──────────────────────────────────────────────
 
@@ -465,8 +480,8 @@ export default function ProjectDetail({ id }: { id: string }) {
 
             {showLatestConsole ? (
               <div className="mt-4 border-t border-gray-100 px-4 pb-4 sm:px-6">
-                {phases.length > 0 ? (
-                  <BuildConsole phases={phases} active={!latestBuild.conclusion} />
+                {latestBuildPhases.length > 0 ? (
+                  <BuildConsole phases={latestBuildPhases} active={!latestBuild.conclusion} />
                 ) : (
                   <p className="pt-3 text-xs text-gray-400">
                     {activeBuild ? "Waiting for build output…" : "No log recorded for this build."}
