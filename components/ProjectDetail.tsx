@@ -11,9 +11,6 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   ClockIcon,
-  SignalIcon,
-  SignalSlashIcon,
-  BoltIcon,
   UserIcon,
   CodeBracketIcon,
   CalendarIcon,
@@ -25,22 +22,17 @@ import {
   XCircleIcon as XCircleSolid,
 } from "@heroicons/react/24/solid"
 import {
-  MonitoredRepo,
   Build,
   Worker,
   getRepo,
   getRepoBuilds,
   getWorkers,
-  updateRepoPreset,
-  updateRepoWorker,
   getBuildLog,
 } from "@/lib/api"
 import { useWorkerStream } from "@/lib/useWorkerStream"
 import { parseLogPhases } from "@/lib/buildPhases"
 import BuildConsole from "@/components/BuildConsole"
 import { useAuth } from "@/components/AuthProvider"
-
-type Preset = "node" | "go" | "custom"
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -189,14 +181,6 @@ function ProjectDetailSkeleton() {
           <div key={i} className="h-20 rounded-2xl bg-white shadow-md" />
         ))}
       </div>
-      <div className="mt-4 rounded-2xl bg-white px-6 py-5 shadow-md">
-        <div className="mb-4 h-5 w-32 rounded bg-gray-200" />
-        <div className="h-4 w-48 rounded bg-gray-100" />
-      </div>
-      <div className="mt-4 rounded-2xl bg-white px-6 py-5 shadow-md">
-        <div className="mb-4 h-5 w-28 rounded bg-gray-200" />
-        <div className="h-4 w-24 rounded bg-gray-100" />
-      </div>
       <div className="mt-8">
         <div className="mb-3 h-6 w-32 rounded bg-gray-200" />
         <div className="h-20 rounded-2xl bg-white shadow-md" />
@@ -210,7 +194,7 @@ function ProjectDetailSkeleton() {
 export default function ProjectDetail({ id }: { id: string }) {
   const { token } = useAuth()
 
-  const [project, setProject] = useState<MonitoredRepo | null>(null)
+  const [project, setProject] = useState<{ setup_id: string; repo_full_name: string; repo_name: string } | null>(null)
   const [builds, setBuilds] = useState<Build[]>([])
   const [workers, setWorkers] = useState<Worker[]>([])
   const [loading, setLoading] = useState(true)
@@ -232,83 +216,10 @@ export default function ProjectDetail({ id }: { id: string }) {
 
   const { activeBuild, phases } = useWorkerStream(project?.setup_id ?? "", false)
 
-  // ── Preset editor ─────────────────────────────────────────────────────────
-
-  const [preset, setPreset] = useState<Preset>("node")
-  const [customInit, setCustomInit] = useState("")
-  const [customBuild, setCustomBuild] = useState("")
-  const [artifactPath, setArtifactPath] = useState("")
-  const [editingPreset, setEditingPreset] = useState(false)
-  const [savingPreset, setSavingPreset] = useState(false)
-  const [presetError, setPresetError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!project) return
-    setPreset((project.preset as Preset) || "node")
-    setCustomInit(project.custom_init ?? "")
-    setCustomBuild(project.custom_build ?? "")
-    setArtifactPath(project.artifact_path ?? "")
-  }, [project])
-
-  async function savePreset() {
-    if (!project) return
-    setSavingPreset(true)
-    setPresetError(null)
-    try {
-      await updateRepoPreset(
-        project.id,
-        {
-          preset,
-          customInit: preset === "custom" ? customInit : undefined,
-          customBuild: preset === "custom" ? customBuild : undefined,
-          artifactPath: artifactPath || undefined,
-        },
-        token,
-      )
-      setEditingPreset(false)
-    } catch (e) {
-      setPresetError((e as Error).message)
-    } finally {
-      setSavingPreset(false)
-    }
-  }
-
-  // ── Worker assignment ─────────────────────────────────────────────────────
-
-  const [currentSetupId, setCurrentSetupId] = useState("")
-  const [editingWorker, setEditingWorker] = useState(false)
-  const [selectedWorker, setSelectedWorker] = useState("")
-  const [savingWorker, setSavingWorker] = useState(false)
-  const [workerError, setWorkerError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!project) return
-    setCurrentSetupId(project.setup_id)
-    setSelectedWorker(project.setup_id)
-  }, [project])
-
-  const linkedWorker: Worker | null =
-    workers.find((w) => w.setupId === currentSetupId) ?? null
-
+  // Worker name lookup (display only — editing lives in Configuration)
   const workerName = (wid: string) => {
     const w = workers.find((w) => w.setupId === wid)
     return w?.name || wid.slice(0, 8) + "…"
-  }
-
-  async function saveWorker() {
-    if (!project) return
-    if (selectedWorker === currentSetupId) { setEditingWorker(false); return }
-    setSavingWorker(true)
-    setWorkerError(null)
-    try {
-      await updateRepoWorker(project.id, selectedWorker, token)
-      setCurrentSetupId(selectedWorker)
-      setEditingWorker(false)
-    } catch (e) {
-      setWorkerError((e as Error).message)
-    } finally {
-      setSavingWorker(false)
-    }
   }
 
   // ── Build list with live build merged in ──────────────────────────────────
@@ -319,7 +230,6 @@ export default function ProjectDetail({ id }: { id: string }) {
 
   const latestBuild = buildList[0] ?? null
   const previousBuilds = buildList.slice(1)
-  const isWorkerBuilding = !!activeBuild
 
   // ── Derived metrics ───────────────────────────────────────────────────────
 
@@ -477,249 +387,15 @@ export default function ProjectDetail({ id }: { id: string }) {
         </div>
       )}
 
-      {/* ── Linked Worker ──────────────────────────────────────────────────── */}
-      <div className="mt-4 rounded-2xl bg-white px-4 py-5 shadow-md sm:mt-5 sm:px-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold">Linked Worker</h2>
-          {!editingWorker && (
-            <button
-              onClick={() => { setSelectedWorker(currentSetupId); setEditingWorker(true) }}
-              className="text-sm text-gray-500 hover:text-gray-900"
-            >
-              Change
-            </button>
-          )}
-        </div>
-
-        {!editingWorker ? (
-          <div className="space-y-2 text-sm">
-            {/* Name + online badge */}
-            <div className="flex items-center gap-3">
-              {linkedWorker?.online ? (
-                <SignalIcon className="h-4 w-4 shrink-0 text-green-500" strokeWidth={2} />
-              ) : (
-                <SignalSlashIcon className="h-4 w-4 shrink-0 text-gray-400" strokeWidth={2} />
-              )}
-              <span className="font-medium">{workerName(currentSetupId)}</span>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  linkedWorker?.online
-                    ? "bg-green-100 text-green-700"
-                    : "bg-gray-100 text-gray-500"
-                }`}
-              >
-                {linkedWorker?.online ? "online" : "offline"}
-              </span>
-            </div>
-
-            {/* Current activity */}
-            <div className="flex items-center gap-2 text-gray-500">
-              <BoltIcon className="h-3.5 w-3.5 shrink-0 text-gray-400" strokeWidth={2} />
-              <span className="text-xs">
-                {isWorkerBuilding ? (
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-yellow-400" />
-                    Building&nbsp;
-                    <code className="font-mono text-gray-700">
-                      {activeBuild?.head_sha?.slice(0, 7)}
-                    </code>
-                  </span>
-                ) : (
-                  "Idle"
-                )}
-              </span>
-            </div>
-
-            {/* Last registered */}
-            {linkedWorker?.createdAt && (
-              <div className="flex items-center gap-2 text-gray-500">
-                <ClockIcon className="h-3.5 w-3.5 shrink-0 text-gray-400" strokeWidth={2} />
-                <span className="text-xs">Registered {timeAgo(linkedWorker.createdAt)}</span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <select
-              value={selectedWorker}
-              onChange={(e) => setSelectedWorker(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-900"
-            >
-              {workers.map((w) => (
-                <option key={w.setupId} value={w.setupId}>
-                  {w.name || w.setupId}
-                </option>
-              ))}
-            </select>
-            {workerError && <p className="text-sm text-red-600">{workerError}</p>}
-            <div className="flex gap-2">
-              <button
-                onClick={saveWorker}
-                disabled={savingWorker}
-                className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
-              >
-                {savingWorker ? "Saving…" : "Save"}
-              </button>
-              <button
-                onClick={() => { setEditingWorker(false); setWorkerError(null) }}
-                className="rounded-lg px-4 py-1.5 text-sm text-gray-500 hover:text-gray-900"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Build Preset ──────────────────────────────────────────────────── */}
-      <div className="mt-4 rounded-2xl bg-white px-4 py-5 shadow-md sm:px-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold">Build Preset</h2>
-          {!editingPreset && (
-            <button
-              onClick={() => setEditingPreset(true)}
-              className="text-sm text-gray-500 hover:text-gray-900"
-            >
-              Edit
-            </button>
-          )}
-        </div>
-
-        {!editingPreset ? (
-          <div className="space-y-2 text-sm">
-            <div className="flex gap-3">
-              <span className="w-20 shrink-0 text-gray-500">Preset</span>
-              <span className="font-medium capitalize">{project.preset || "node"}</span>
-            </div>
-            {project.custom_init && (
-              <div className="flex gap-3">
-                <span className="w-20 shrink-0 text-gray-500">Init</span>
-                <code className="break-all rounded bg-gray-100 px-2 py-0.5 font-mono text-xs">
-                  {project.custom_init}
-                </code>
-              </div>
-            )}
-            {project.custom_build && (
-              <div className="flex gap-3">
-                <span className="w-20 shrink-0 text-gray-500">Build</span>
-                <code className="break-all rounded bg-gray-100 px-2 py-0.5 font-mono text-xs">
-                  {project.custom_build}
-                </code>
-              </div>
-            )}
-            {project.artifact_path && (
-              <div className="flex gap-3">
-                <span className="w-20 shrink-0 text-gray-500">Artifact</span>
-                <code className="break-all rounded bg-gray-100 px-2 py-0.5 font-mono text-xs">
-                  {project.artifact_path}
-                </code>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              {(["node", "go", "custom"] as Preset[]).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPreset(p)}
-                  className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                    preset === p
-                      ? "border-gray-900 bg-gray-900 text-white"
-                      : "border-gray-200 text-gray-600 hover:border-gray-400"
-                  }`}
-                >
-                  {p === "node" ? "Node" : p === "go" ? "Go" : "Custom"}
-                </button>
-              ))}
-            </div>
-            {preset === "node" && (
-              <p className="text-xs text-gray-400">
-                Runs <code className="rounded bg-gray-100 px-1 font-mono">yarn</code> then{" "}
-                <code className="rounded bg-gray-100 px-1 font-mono">yarn build</code>
-              </p>
-            )}
-            {preset === "go" && (
-              <p className="text-xs text-gray-400">
-                Runs <code className="rounded bg-gray-100 px-1 font-mono">go mod download</code>{" "}
-                then <code className="rounded bg-gray-100 px-1 font-mono">go build ./...</code>
-              </p>
-            )}
-            {preset === "custom" && (
-              <div className="space-y-2">
-                <div>
-                  <label className="mb-1 block text-xs text-gray-500">Init command</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. npm install"
-                    value={customInit}
-                    onChange={(e) => setCustomInit(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-1.5 font-mono text-sm outline-none focus:ring-2 focus:ring-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-gray-500">Build command</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. npm run build"
-                    value={customBuild}
-                    onChange={(e) => setCustomBuild(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-1.5 font-mono text-sm outline-none focus:ring-2 focus:ring-gray-900"
-                  />
-                </div>
-              </div>
-            )}
-            <div>
-              <label className="mb-1 block text-xs text-gray-500">
-                Artifact folder override{" "}
-                <span className="text-gray-400">(optional)</span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. dist"
-                value={artifactPath}
-                onChange={(e) => setArtifactPath(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3 py-1.5 font-mono text-sm outline-none focus:ring-2 focus:ring-gray-900"
-              />
-            </div>
-            {presetError && <p className="text-sm text-red-600">{presetError}</p>}
-            <div className="flex gap-2">
-              <button
-                onClick={savePreset}
-                disabled={savingPreset}
-                className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
-              >
-                {savingPreset ? "Saving…" : "Save"}
-              </button>
-              <button
-                onClick={() => {
-                  setPreset((project.preset as Preset) || "node")
-                  setCustomInit(project.custom_init ?? "")
-                  setCustomBuild(project.custom_build ?? "")
-                  setArtifactPath(project.artifact_path ?? "")
-                  setEditingPreset(false)
-                  setPresetError(null)
-                }}
-                className="rounded-lg px-4 py-1.5 text-sm text-gray-500 hover:text-gray-900"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* ── Latest Build ───────────────────────────────────────────────────── */}
       {latestBuild && (
         <div className="mt-6 sm:mt-8">
           <h2 className="mb-3 text-lg font-semibold">Latest Build</h2>
           <div className="overflow-hidden rounded-2xl bg-white shadow-md">
-            {/* Card body */}
             <div className="px-4 pt-4 sm:px-6">
               <div className="flex items-start justify-between gap-3">
                 {/* Left: SHA, branch, status, meta */}
                 <div className="min-w-0 flex-1">
-                  {/* SHA + branch + status */}
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <code className="font-mono text-sm font-semibold text-gray-800">
                       {latestBuild.head_sha?.slice(0, 7)}
@@ -787,7 +463,6 @@ export default function ProjectDetail({ id }: { id: string }) {
               </div>
             </div>
 
-            {/* Console / bottom padding */}
             {showLatestConsole ? (
               <div className="mt-4 border-t border-gray-100 px-4 pb-4 sm:px-6">
                 {phases.length > 0 ? (
@@ -824,10 +499,8 @@ export default function ProjectDetail({ id }: { id: string }) {
                     onClick={() => toggleBuildLog(b.id)}
                     className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left sm:px-6"
                   >
-                    {/* Icon-only status */}
                     <StatusDot status={b.status} conclusion={b.conclusion} />
 
-                    {/* SHA · branch · time · duration · worker */}
                     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1">
                       <code className="font-mono text-xs font-semibold text-gray-700">
                         {b.head_sha?.slice(0, 7)}
@@ -851,7 +524,6 @@ export default function ProjectDetail({ id }: { id: string }) {
                       <span className="text-xs text-gray-400">{workerName(b.setup_id)}</span>
                     </div>
 
-                    {/* Inline status badge + chevron */}
                     <div className="flex shrink-0 items-center gap-2">
                       <StatusBadge status={b.status} conclusion={b.conclusion} />
                       {isExpanded ? (
@@ -873,9 +545,7 @@ export default function ProjectDetail({ id }: { id: string }) {
                           </p>
                         )
                       ) : (
-                        <p className="animate-pulse pt-3 text-xs text-gray-400">
-                          Loading log…
-                        </p>
+                        <p className="animate-pulse pt-3 text-xs text-gray-400">Loading log…</p>
                       )}
                     </div>
                   )}
@@ -891,7 +561,6 @@ export default function ProjectDetail({ id }: { id: string }) {
         <div className="mt-6 sm:mt-8">
           <h2 className="mb-3 text-lg font-semibold">Build Trends</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {/* Success rate trend */}
             <div className="rounded-2xl bg-white px-5 py-4 shadow-md">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                 Success Rate
@@ -900,9 +569,7 @@ export default function ProjectDetail({ id }: { id: string }) {
               <div className="mt-3 flex items-end justify-between">
                 <Sparkline
                   values={successTrend}
-                  color={
-                    successRate !== null && successRate >= 80 ? "#16a34a" : "#f59e0b"
-                  }
+                  color={successRate !== null && successRate >= 80 ? "#16a34a" : "#f59e0b"}
                 />
                 <span className="text-2xl font-bold text-gray-800">
                   {successRate !== null ? `${successRate}%` : "—"}
@@ -910,7 +577,6 @@ export default function ProjectDetail({ id }: { id: string }) {
               </div>
             </div>
 
-            {/* Duration trend */}
             <div className="rounded-2xl bg-white px-5 py-4 shadow-md">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                 Build Duration
