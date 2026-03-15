@@ -18,7 +18,8 @@ export default function AccountPage() {
 
     const getUrl = () => {
       const base = window.location.hostname === "localhost" ? "http://localhost:3000" : "https://bobby.pryter.me"
-      return new URL("/auth/callback", base).toString()
+      console.log(base, window.location.hostname)
+      return new URL("/auth/callback", base).href
     }
 
     await supabase.auth.signInWithOAuth({
@@ -32,10 +33,6 @@ export default function AccountPage() {
       setSigningIn(null)
     }, 20 * 1000)
   }
-
-  useEffect(() => {
-    console.log(signingIn)
-  }, [signingIn]);
 
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center text-gray-800">

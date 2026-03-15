@@ -105,8 +105,13 @@ export default function AddProjectModal({
 
   function connectGitHub() {
     const supabase = createClient()
+    const getUrl = () => {
+      const base = window.location.hostname === "localhost" ? "http://localhost:3000" : "https://bobby.pryter.me"
+      console.log(base, window.location.hostname)
+      return new URL("/auth/callback", base).href
+    }
     const redirectTo =
-      `${window.location.origin}/auth/callback` +
+      `${getUrl()}` +
       `?next=${encodeURIComponent("/dashboard/project?modal=1")}`
     supabase.auth.signInWithOAuth({
       provider: "github",
