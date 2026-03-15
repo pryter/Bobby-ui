@@ -107,7 +107,6 @@ export default function AddProjectModal({
     const supabase = createClient()
     const getUrl = () => {
       const base = window.location.hostname === "localhost" ? "http://localhost:3000" : "https://bobby.pryter.me"
-      console.log(base, window.location.hostname)
       return new URL("/auth/callback", base).href
     }
     const redirectTo =
