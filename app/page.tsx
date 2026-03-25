@@ -140,7 +140,7 @@ function TileRow({
   }, [])
 
   return (
-    <div className="flex items-end justify-start gap-3 sm:gap-3 md:gap-4">
+    <div className="flex items-end justify-start sm:justify-center gap-3 sm:gap-3 md:gap-4">
       {order.slice(0, count).map((tileId, displayIndex) => (
         <TileItem
           key={tileId}
@@ -329,11 +329,11 @@ export default function LandingPage() {
           </motion.div>
 
           {/* ── Hero content: text upper, tiles lower ─────────────────── */}
-          <div className="relative h-full flex flex-col items-start px-5 md:px-12"
+          <div className="relative h-full flex flex-col items-start sm:items-center px-5 md:px-12"
                style={{ paddingTop: "max(88px, 16vh)", paddingBottom: "max(28px, 6vh)" }}>
 
             {/* Phase 1 – Text (title and subtext animate independently) */}
-            <div className="flex flex-col items-start text-left w-full max-w-3xl pointer-events-none select-none">
+            <div className="flex flex-col items-start sm:items-center text-left sm:text-center w-full max-w-3xl pointer-events-none select-none">
 
               {/* Title exits first */}
               <motion.div style={{ opacity: titleOpacity, y: titleY, scale: titleScale }}>
