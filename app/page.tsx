@@ -252,22 +252,23 @@ function FeatureCard({ icon, title, desc, index }: { icon: string; title: string
 export default function LandingPage() {
   const [dark, setDark]           = useState(true)
   const heroRef                   = useRef<HTMLDivElement>(null)
+  const tilesWrapRef              = useRef<HTMLDivElement>(null)
   const [riseAmount, setRiseAmount] = useState(140)
   const [tileCount, setTileCount]   = useState(5)   // 3 on mobile, 5 on sm+
 
   useEffect(() => {
-    const update = () => {
+    const measure = () => {
       const vw = window.innerWidth
+      setTileCount(vw < 640 ? 3 : 5)
+      if (!tilesWrapRef.current) return
+      const rect = tilesWrapRef.current.getBoundingClientRect()
       const vh = window.innerHeight
-      const pb    = Math.max(28, vh * 0.06)
-      const n     = vw < 640 ? 3 : 5
-      const tileH = vw >= 1024 ? 180 : vw >= 768 ? 138 : vw >= 640 ? 104 : 80
-      setTileCount(n)
-      setRiseAmount(Math.max(60, vh / 2 - pb - tileH / 2))
+      setRiseAmount(Math.max(30, rect.top + rect.height / 2 - vh / 2))
     }
-    update()
-    window.addEventListener("resize", update)
-    return () => window.removeEventListener("resize", update)
+    // Delay initial measurement until after entrance animations settle
+    const t = setTimeout(measure, 1200)
+    window.addEventListener("resize", measure)
+    return () => { clearTimeout(t); window.removeEventListener("resize", measure) }
   }, [])
 
   const { scrollYProgress } = useScroll({
@@ -329,7 +330,7 @@ export default function LandingPage() {
           </motion.div>
 
           {/* ── Hero content: text upper, tiles lower ─────────────────── */}
-          <div className="relative h-full flex flex-col items-start sm:items-center px-5 md:px-12"
+          <div className="relative h-full flex flex-col justify-center sm:justify-start items-start sm:items-center px-5 md:px-12"
                style={{ paddingTop: "max(88px, 16vh)", paddingBottom: "max(28px, 6vh)" }}>
 
             {/* Phase 1 – Text (title and subtext animate independently) */}
@@ -344,9 +345,8 @@ export default function LandingPage() {
                   className="text-[clamp(3.2rem,7.5vw,6rem)] font-black tracking-tight leading-[1.03]
                              text-gray-900 dark:text-white"
                 >
-                  Automate every
-                  <br />
-                  deployment
+                  <span className="sm:hidden">Automate<br />every<br />deployment</span>
+                  <span className="hidden sm:inline">Automate every<br />deployment</span>
                 </motion.h1>
               </motion.div>
 
@@ -369,14 +369,16 @@ export default function LandingPage() {
 
             </div>
 
-            {/* Spacer: grows freely on desktop, capped on mobile */}
-            <div className="flex-1 max-h-[6rem] sm:max-h-none" />
+            {/* Spacer: sm+ only — pushes tiles to bottom on desktop */}
+            <div className="hidden sm:block flex-1" />
 
-            {/* Phase 2 & 3 – Tiles (anchored to bottom) */}
+            {/* Phase 2 & 3 – Tiles */}
             <motion.div
+              ref={tilesWrapRef}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.42 }}
+              className="mt-8 sm:mt-0"
             >
               <TileRow scrollYProgress={scrollYProgress} riseAmount={riseAmount} count={tileCount} />
             </motion.div>
