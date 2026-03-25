@@ -81,11 +81,11 @@ function TileItem({
       <motion.div
         animate={swapControls}
         initial={{ scale: 1 }}
-        className="w-[60px] h-[60px] sm:w-[100px] sm:h-[100px] md:w-[138px] md:h-[138px] lg:w-[180px] lg:h-[180px]
+        className="w-[80px] h-[80px] sm:w-[104px] sm:h-[104px] md:w-[138px] md:h-[138px] lg:w-[180px] lg:h-[180px]
                    flex items-center justify-center"
         style={{ backgroundColor: tile.color, ...SHAPE_STYLE[tile.shape] }}
       >
-        <tile.Icon className="w-8 h-8 sm:w-12 sm:h-12 md:w-[62px] md:h-[62px] lg:w-[80px] lg:h-[80px] text-black/80" />
+        <tile.Icon className="w-10 h-10 sm:w-[48px] sm:h-[48px] md:w-[62px] md:h-[62px] lg:w-[80px] lg:h-[80px] text-black/80" />
       </motion.div>
     </motion.div>
   )
@@ -96,16 +96,20 @@ function TileItem({
 function TileRow({
   scrollYProgress,
   riseAmount,
+  count,
 }: {
   scrollYProgress: MotionValue<number>
   riseAmount: number
+  count: number
 }) {
   const [order, setOrder] = useState([0, 1, 2, 3, 4])
   const [shrinking, setShrinking] = useState<Set<number>>(new Set())
   const orderRef  = useRef([0, 1, 2, 3, 4])
   const pausedRef = useRef(false)
+  const countRef  = useRef(count)
+  useEffect(() => { countRef.current = count }, [count])
 
-  // Stop swaps during the pop phase so they don't conflict
+  // Stop swaps during the pop phase
   useEffect(() => {
     const unsub = scrollYProgress.on("change", (v) => {
       pausedRef.current = v > 0.56
@@ -116,8 +120,9 @@ function TileRow({
   useEffect(() => {
     const tick = () => {
       if (pausedRef.current) return
-      const pos1 = Math.floor(Math.random() * 5)
-      let pos2 = Math.floor(Math.random() * 4)
+      const n = countRef.current
+      const pos1 = Math.floor(Math.random() * n)
+      let pos2 = Math.floor(Math.random() * (n - 1))
       if (pos2 >= pos1) pos2++
       const id1 = orderRef.current[pos1]
       const id2 = orderRef.current[pos2]
@@ -135,8 +140,8 @@ function TileRow({
   }, [])
 
   return (
-    <div className="flex items-end justify-center gap-2 sm:gap-3 md:gap-4">
-      {order.map((tileId, displayIndex) => (
+    <div className="flex items-end justify-center gap-3 sm:gap-3 md:gap-4">
+      {order.slice(0, count).map((tileId, displayIndex) => (
         <TileItem
           key={tileId}
           tile={TILE_CONFIGS[tileId]}
@@ -174,16 +179,20 @@ function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
           <span className="text-white text-sm font-semibold tracking-tight">Bobby</span>
         </div>
 
-        {["Features", "Docs", "Pricing", "FAQ"].map((l) => (
-          <button
-            key={l}
-            className="px-3 py-1.5 text-sm text-gray-400 hover:text-white rounded-full
-                       hover:bg-white/[0.06] transition-colors"
-          >
-            {l}
-          </button>
-        ))}
+        {/* Nav links — hidden on mobile */}
+        <div className="hidden sm:flex items-center gap-1">
+          {["Features", "Docs", "Pricing", "FAQ"].map((l) => (
+            <button
+              key={l}
+              className="px-3 py-1.5 text-sm text-gray-400 hover:text-white rounded-full
+                         hover:bg-white/[0.06] transition-colors"
+            >
+              {l}
+            </button>
+          ))}
+        </div>
 
+        {/* Theme toggle */}
         <button
           onClick={onToggle}
           className="w-8 h-8 flex items-center justify-center rounded-full
@@ -193,10 +202,11 @@ function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
           {dark ? "○" : "●"}
         </button>
 
+        {/* CTA */}
         <button
           onClick={() => router.push("/account")}
-          className="ml-1 px-4 py-1.5 rounded-full text-sm font-bold text-black
-                     transition-all hover:scale-105 active:scale-95"
+          className="ml-1 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold text-black
+                     transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
           style={{ background: "#a3e635" }}
         >
           Get started
@@ -240,23 +250,24 @@ function FeatureCard({ icon, title, desc, index }: { icon: string; title: string
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const [dark, setDark] = useState(true)
-  const heroRef    = useRef<HTMLDivElement>(null)
+  const [dark, setDark]           = useState(true)
+  const heroRef                   = useRef<HTMLDivElement>(null)
   const [riseAmount, setRiseAmount] = useState(140)
+  const [tileCount, setTileCount]   = useState(5)   // 3 on mobile, 5 on sm+
 
-  // Formula-based rise: distance from tile center (bottom of justify-between layout)
-  // to viewport center. Avoids ref timing issues from entrance animations.
   useEffect(() => {
-    const measure = () => {
+    const update = () => {
       const vw = window.innerWidth
       const vh = window.innerHeight
-      const pb      = Math.max(28, vh * 0.06)          // paddingBottom
-      const tileH   = vw >= 1024 ? 180 : vw >= 768 ? 138 : vw >= 640 ? 100 : 60
+      const pb    = Math.max(28, vh * 0.06)
+      const n     = vw < 640 ? 3 : 5
+      const tileH = vw >= 1024 ? 180 : vw >= 768 ? 138 : vw >= 640 ? 104 : 80
+      setTileCount(n)
       setRiseAmount(Math.max(60, vh / 2 - pb - tileH / 2))
     }
-    measure()
-    window.addEventListener("resize", measure)
-    return () => window.removeEventListener("resize", measure)
+    update()
+    window.addEventListener("resize", update)
+    return () => window.removeEventListener("resize", update)
   }, [])
 
   const { scrollYProgress } = useScroll({
@@ -318,8 +329,8 @@ export default function LandingPage() {
           </motion.div>
 
           {/* ── Hero content: text upper, tiles lower ─────────────────── */}
-          <div className="relative h-full flex flex-col items-center justify-between px-5"
-               style={{ paddingTop: "max(88px, 18vh)", paddingBottom: "max(28px, 6vh)" }}>
+          <div className="relative h-full flex flex-col items-center px-5"
+               style={{ paddingTop: "max(88px, 16vh)", paddingBottom: "max(28px, 6vh)" }}>
 
             {/* Phase 1 – Text (title and subtext animate independently) */}
             <div className="flex flex-col items-center text-center w-full max-w-3xl pointer-events-none select-none">
@@ -330,7 +341,7 @@ export default function LandingPage() {
                   initial={{ opacity: 0, y: 28 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.7, ease: [0.22, 0.1, 0.35, 1], delay: 0.1 }}
-                  className="text-[clamp(2.8rem,7.5vw,6rem)] font-black tracking-tight leading-[1.03]
+                  className="text-[clamp(3.2rem,7.5vw,6rem)] font-black tracking-tight leading-[1.03]
                              text-gray-900 dark:text-white"
                 >
                   Automate every
@@ -358,13 +369,16 @@ export default function LandingPage() {
 
             </div>
 
+            {/* Spacer: grows freely on desktop, capped on mobile */}
+            <div className="flex-1 max-h-[6rem] sm:max-h-none" />
+
             {/* Phase 2 & 3 – Tiles (anchored to bottom) */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.42 }}
             >
-              <TileRow scrollYProgress={scrollYProgress} riseAmount={riseAmount} />
+              <TileRow scrollYProgress={scrollYProgress} riseAmount={riseAmount} count={tileCount} />
             </motion.div>
 
           </div>
