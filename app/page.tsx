@@ -160,7 +160,47 @@ function TileRow({
 function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
   const router = useRouter()
   return (
-    <div className="fixed top-5 inset-x-0 z-50 flex justify-center px-4">
+    <>
+    {/* Mobile: full-width bar */}
+    <div className="fixed top-0 inset-x-0 z-50 sm:hidden px-4 py-3
+                    bg-white/80 dark:bg-[#080808]/80 backdrop-blur-xl
+                    border-b border-gray-200/60 dark:border-white/[0.06]
+                    flex items-center justify-between">
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 0.1, 0.35, 1] }}
+        className="flex items-center gap-2"
+      >
+        <div className="w-7 h-7 rounded-md flex items-center justify-center"
+             style={{ background: "linear-gradient(135deg,#6366f1,#7c3aed)" }}>
+          <span className="text-white text-[11px] font-bold leading-none">B</span>
+        </div>
+        <span className="text-gray-900 dark:text-white text-sm font-semibold tracking-tight">Bobby</span>
+      </motion.div>
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 0.1, 0.35, 1] }}
+        className="flex items-center gap-2"
+      >
+        <button onClick={onToggle}
+                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400
+                           hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors text-xs"
+                aria-label="Toggle theme">
+          {dark ? "○" : "●"}
+        </button>
+        <button onClick={() => router.push("/account")}
+                className="px-3 py-1.5 rounded-full text-xs font-bold text-black
+                           transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+                style={{ background: "#a3e635" }}>
+          Get started
+        </button>
+      </motion.div>
+    </div>
+
+    {/* Desktop: centered pill */}
+    <div className="hidden sm:flex fixed top-5 inset-x-0 z-50 justify-center px-4">
       <motion.div
         initial={{ opacity: 0, y: -14 }}
         animate={{ opacity: 1, y: 0 }}
@@ -170,49 +210,36 @@ function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
                    border border-white/[0.08] shadow-xl shadow-black/30"
       >
         <div className="flex items-center gap-1.5 px-2 mr-1">
-          <div
-            className="w-6 h-6 rounded-md flex items-center justify-center"
-            style={{ background: "black" }}
-          >
+          <div className="w-6 h-6 rounded-md flex items-center justify-center"
+               style={{ background: "linear-gradient(135deg,#6366f1,#7c3aed)" }}>
             <span className="text-white text-[10px] font-bold leading-none">B</span>
           </div>
           <span className="text-white text-sm font-semibold tracking-tight">Bobby</span>
         </div>
-
-        {/* Nav links — hidden on mobile */}
-        <div className="hidden sm:flex items-center gap-1">
+        <div className="flex items-center gap-1">
           {["Features", "Docs", "Pricing", "FAQ"].map((l) => (
-            <button
-              key={l}
-              className="px-3 py-1.5 text-sm text-gray-400 hover:text-white rounded-full
-                         hover:bg-white/[0.06] transition-colors"
-            >
+            <button key={l}
+                    className="px-3 py-1.5 text-sm text-gray-400 hover:text-white rounded-full
+                               hover:bg-white/[0.06] transition-colors">
               {l}
             </button>
           ))}
         </div>
-
-        {/* Theme toggle */}
-        <button
-          onClick={onToggle}
-          className="w-8 h-8 flex items-center justify-center rounded-full
-                     text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors text-xs ml-1"
-          aria-label="Toggle theme"
-        >
+        <button onClick={onToggle}
+                className="w-8 h-8 flex items-center justify-center rounded-full
+                           text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors text-xs ml-1"
+                aria-label="Toggle theme">
           {dark ? "○" : "●"}
         </button>
-
-        {/* CTA */}
-        <button
-          onClick={() => router.push("/account")}
-          className="ml-1 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold text-black
-                     transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
-          style={{ background: "#a3e635" }}
-        >
+        <button onClick={() => router.push("/account")}
+                className="ml-1 px-4 py-1.5 rounded-full text-sm font-bold text-black
+                           transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+                style={{ background: "#a3e635" }}>
           Get started
         </button>
       </motion.div>
     </div>
+    </>
   )
 }
 
@@ -259,7 +286,7 @@ export default function LandingPage() {
   useEffect(() => {
     const measure = () => {
       const vw = window.innerWidth
-      setTileCount(vw < 640 ? 4 : 5)
+      setTileCount(vw < 640 ? 3 : 5)
       if (!tilesWrapRef.current) return
       const rect = tilesWrapRef.current.getBoundingClientRect()
       const vh = window.innerHeight
@@ -330,7 +357,7 @@ export default function LandingPage() {
           </motion.div>
 
           {/* ── Hero content: text upper, tiles lower ─────────────────── */}
-          <div className="relative h-full flex flex-col justify-center sm:justify-start items-start sm:items-center px-5 md:px-12 pt-[88px] sm:pt-[128px]"
+          <div className="relative h-full flex flex-col justify-center sm:justify-start items-start sm:items-center px-5 md:px-12 pt-[64px] sm:pt-[128px]"
                style={{ paddingBottom: "max(28px, 6vh)" }}>
 
             {/* Phase 1 – Text (title and subtext animate independently) */}
@@ -378,7 +405,7 @@ export default function LandingPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.42 }}
-              className="mt-24 sm:mt-0"
+              className="mt-8 sm:mt-0"
             >
               <TileRow scrollYProgress={scrollYProgress} riseAmount={riseAmount} count={tileCount} />
             </motion.div>
