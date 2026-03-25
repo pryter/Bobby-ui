@@ -140,7 +140,7 @@ function TileRow({
   }, [])
 
   return (
-    <div className="flex items-end justify-center gap-3 sm:gap-3 md:gap-4">
+    <div className="flex items-end justify-start sm:justify-center gap-3 sm:gap-3 md:gap-4">
       {order.slice(0, count).map((tileId, displayIndex) => (
         <TileItem
           key={tileId}
@@ -329,11 +329,11 @@ export default function LandingPage() {
           </motion.div>
 
           {/* ── Hero content: text upper, tiles lower ─────────────────── */}
-          <div className="relative h-full flex flex-col items-center px-5"
+          <div className="relative h-full flex flex-col items-start sm:items-center px-5 md:px-12"
                style={{ paddingTop: "max(88px, 16vh)", paddingBottom: "max(28px, 6vh)" }}>
 
             {/* Phase 1 – Text (title and subtext animate independently) */}
-            <div className="flex flex-col items-center text-center w-full max-w-3xl pointer-events-none select-none">
+            <div className="flex flex-col items-start sm:items-center text-left sm:text-center w-full max-w-3xl pointer-events-none select-none">
 
               {/* Title exits first */}
               <motion.div style={{ opacity: titleOpacity, y: titleY, scale: titleScale }}>
@@ -360,7 +360,7 @@ export default function LandingPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.65, ease: [0.22, 0.1, 0.35, 1], delay: 0.30 }}
                   className="text-sm md:text-base text-gray-400 dark:text-gray-500
-                             max-w-xs leading-relaxed"
+                             max-w-sm leading-relaxed"
                 >
                   Zero config. Zero code.<br />
                   Bobby ships your projects the moment you push.
