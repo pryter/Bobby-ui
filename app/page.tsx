@@ -330,8 +330,8 @@ export default function LandingPage() {
           </motion.div>
 
           {/* ── Hero content: text upper, tiles lower ─────────────────── */}
-          <div className="relative h-full flex flex-col justify-center sm:justify-start items-start sm:items-center px-5 md:px-12"
-               style={{ paddingTop: "max(88px, 16vh)", paddingBottom: "max(28px, 6vh)" }}>
+          <div className="relative h-full flex flex-col justify-center sm:justify-start items-start sm:items-center px-5 md:px-12 pt-[88px] sm:pt-[128px]"
+               style={{ paddingBottom: "max(28px, 6vh)" }}>
 
             {/* Phase 1 – Text (title and subtext animate independently) */}
             <div className="flex flex-col items-start sm:items-center text-left sm:text-center w-full max-w-3xl pointer-events-none select-none">
