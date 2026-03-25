@@ -7,8 +7,6 @@ import {
   useTransform,
   useAnimation,
   MotionValue,
-  useMotionValue,
-  useSpring,
 } from "framer-motion"
 import { useRouter } from "next/navigation"
 import {
@@ -244,19 +242,17 @@ function FeatureCard({ icon, title, desc, index }: { icon: string; title: string
 export default function LandingPage() {
   const [dark, setDark] = useState(true)
   const heroRef    = useRef<HTMLDivElement>(null)
-  const tilesRef   = useRef<HTMLDivElement>(null)
-  const textRef    = useRef<HTMLDivElement>(null)
-  const [riseAmount, setRiseAmount] = useState(160)   // px, measured on mount
+  const [riseAmount, setRiseAmount] = useState(140)
 
-  // Measure real rise amount: distance from tile center to viewport center
+  // Formula-based rise: distance from tile center (bottom of justify-between layout)
+  // to viewport center. Avoids ref timing issues from entrance animations.
   useEffect(() => {
     const measure = () => {
-      if (!tilesRef.current) return
+      const vw = window.innerWidth
       const vh = window.innerHeight
-      const tilesRect = tilesRef.current.getBoundingClientRect()
-      const tileCenter = tilesRect.top + tilesRect.height / 2
-      const vpCenter   = vh / 2
-      setRiseAmount(Math.max(60, tileCenter - vpCenter))
+      const pb      = Math.max(28, vh * 0.06)          // paddingBottom
+      const tileH   = vw >= 768 ? 140 : vw >= 640 ? 116 : 96
+      setRiseAmount(Math.max(60, vh / 2 - pb - tileH / 2))
     }
     measure()
     window.addEventListener("resize", measure)
@@ -265,7 +261,7 @@ export default function LandingPage() {
 
   const { scrollYProgress } = useScroll({
     target: heroRef,
-    offset: ["start start", "end start"],
+    offset: ["start start", "end end"],
   })
 
   // ── Phase 1: text fades up + shrinks ──────────────────────────────────────
@@ -286,19 +282,20 @@ export default function LandingPage() {
   }, [dark])
 
   return (
-    <div className="bg-white dark:bg-[#080808] text-gray-900 dark:text-white overflow-x-hidden">
+    <div className="bg-white dark:bg-[#080808] text-gray-900 dark:text-white">
       <Navbar dark={dark} onToggle={() => setDark((d) => !d)} />
 
       {/*
         ── Hero ──────────────────────────────────────────────────────────────
-        270vh scroll container. The sticky viewport is 100vh.
-        Scroll phases (scrollYProgress 0→1 over ~170vh of scrolling):
+        Height = 100vh + 1800px  →  sticky scroll range is always 1800px,
+        consistent across viewport sizes. offset "end end" maps progress
+        0→1 exactly over that 1800px sticky window.
 
-          0.10 – 0.32  │ Phase 1: text fades up + scales down
-          0.28 – 0.60  │ Phase 2: tiles rise to center, staggered left→right
-          0.62 – 0.87  │ Phase 3: tiles pop (scale→0), staggered left→right
+          0.10 – 0.32  │ Phase 1: text fades up + scales down     (~396px)
+          0.28 – 0.62  │ Phase 2: tiles rise to center, L→R       (~612px)
+          0.62 – 0.88  │ Phase 3: tiles pop out,        L→R       (~468px)
         ─────────────────────────────────────────────────────────────────── */}
-      <div ref={heroRef} style={{ height: "270vh" }}>
+      <div ref={heroRef} style={{ height: "calc(100vh + 1800px)" }}>
         <div className="sticky top-0 h-screen overflow-hidden">
 
           {/* Background */}
@@ -321,7 +318,6 @@ export default function LandingPage() {
 
             {/* Phase 1 – Text */}
             <motion.div
-              ref={textRef}
               style={{ opacity: textOpacity, y: textY, scale: textScale }}
               className="flex flex-col items-center text-center w-full max-w-3xl pointer-events-none select-none"
             >
@@ -351,10 +347,9 @@ export default function LandingPage() {
 
             {/* Phase 2 & 3 – Tiles (anchored to bottom) */}
             <motion.div
-              ref={tilesRef}
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: [0.22, 0.1, 0.35, 1], delay: 0.42 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.42 }}
             >
               <TileRow scrollYProgress={scrollYProgress} riseAmount={riseAmount} />
             </motion.div>
