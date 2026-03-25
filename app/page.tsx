@@ -28,9 +28,9 @@ const TILE_CONFIGS = [
 ]
 
 const SHAPE_STYLE: Record<string, React.CSSProperties> = {
-  roundedSq: { borderRadius: "22px" },
+  roundedSq: { borderRadius: "clamp(16px, 14%, 28px)" },
   circle:    { borderRadius: "50%" },
-  pentagon:  { clipPath: "polygon(0 0, 78% 0, 100% 50%, 78% 100%, 0 100%)", borderRadius: "14px 0 0 14px" },
+  pentagon:  { clipPath: "polygon(0 0, 78% 0, 100% 50%, 78% 100%, 0 100%)", borderRadius: "clamp(12px, 10%, 20px) 0 0 clamp(12px, 10%, 20px)" },
 }
 
 type TileConfig = typeof TILE_CONFIGS[number]
@@ -81,11 +81,11 @@ function TileItem({
       <motion.div
         animate={swapControls}
         initial={{ scale: 1 }}
-        className="w-[96px] h-[96px] sm:w-[116px] sm:h-[116px] md:w-[140px] md:h-[140px]
+        className="w-[60px] h-[60px] sm:w-[100px] sm:h-[100px] md:w-[138px] md:h-[138px] lg:w-[180px] lg:h-[180px]
                    flex items-center justify-center"
         style={{ backgroundColor: tile.color, ...SHAPE_STYLE[tile.shape] }}
       >
-        <tile.Icon className="w-11 h-11 sm:w-14 sm:h-14 md:w-[64px] md:h-[64px] text-black/80" />
+        <tile.Icon className="w-8 h-8 sm:w-12 sm:h-12 md:w-[62px] md:h-[62px] lg:w-[80px] lg:h-[80px] text-black/80" />
       </motion.div>
     </motion.div>
   )
@@ -135,7 +135,7 @@ function TileRow({
   }, [])
 
   return (
-    <div className="flex items-end justify-center gap-3 md:gap-4">
+    <div className="flex items-end justify-center gap-2 sm:gap-3 md:gap-4">
       {order.map((tileId, displayIndex) => (
         <TileItem
           key={tileId}
@@ -251,7 +251,7 @@ export default function LandingPage() {
       const vw = window.innerWidth
       const vh = window.innerHeight
       const pb      = Math.max(28, vh * 0.06)          // paddingBottom
-      const tileH   = vw >= 768 ? 140 : vw >= 640 ? 116 : 96
+      const tileH   = vw >= 1024 ? 180 : vw >= 768 ? 138 : vw >= 640 ? 100 : 60
       setRiseAmount(Math.max(60, vh / 2 - pb - tileH / 2))
     }
     measure()
@@ -264,10 +264,15 @@ export default function LandingPage() {
     offset: ["start start", "end end"],
   })
 
-  // ── Phase 1: text fades up + shrinks ──────────────────────────────────────
-  const textOpacity = useTransform(scrollYProgress, [0.10, 0.32], [1, 0])
-  const textY       = useTransform(scrollYProgress, [0.10, 0.32], [0, -70])
-  const textScale   = useTransform(scrollYProgress, [0.10, 0.32], [1, 0.88])
+  // ── Phase 1a: title fades first ────────────────────────────────────────────
+  const titleOpacity = useTransform(scrollYProgress, [0.10, 0.26], [1, 0])
+  const titleY       = useTransform(scrollYProgress, [0.10, 0.26], [0, -65])
+  const titleScale   = useTransform(scrollYProgress, [0.10, 0.26], [1, 0.88])
+
+  // ── Phase 1b: subtext fades after title ────────────────────────────────────
+  const subtextOpacity = useTransform(scrollYProgress, [0.18, 0.34], [1, 0])
+  const subtextY       = useTransform(scrollYProgress, [0.18, 0.34], [0, -50])
+  const subtextScale   = useTransform(scrollYProgress, [0.18, 0.34], [1, 0.92])
 
   // ── Background parallax ────────────────────────────────────────────────────
   const bgScale = useTransform(scrollYProgress, [0, 1], [1, 1.2])
@@ -316,34 +321,42 @@ export default function LandingPage() {
           <div className="relative h-full flex flex-col items-center justify-between px-5"
                style={{ paddingTop: "max(88px, 18vh)", paddingBottom: "max(28px, 6vh)" }}>
 
-            {/* Phase 1 – Text */}
-            <motion.div
-              style={{ opacity: textOpacity, y: textY, scale: textScale }}
-              className="flex flex-col items-center text-center w-full max-w-3xl pointer-events-none select-none"
-            >
-              <motion.h1
-                initial={{ opacity: 0, y: 28 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, ease: [0.22, 0.1, 0.35, 1], delay: 0.1 }}
-                className="text-[clamp(2.8rem,7.5vw,6rem)] font-black tracking-tight leading-[1.03]
-                           text-gray-900 dark:text-white"
-              >
-                Automate every
-                <br />
-                deployment
-              </motion.h1>
+            {/* Phase 1 – Text (title and subtext animate independently) */}
+            <div className="flex flex-col items-center text-center w-full max-w-3xl pointer-events-none select-none">
 
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.65, ease: [0.22, 0.1, 0.35, 1], delay: 0.28 }}
-                className="mt-4 text-sm md:text-base text-gray-400 dark:text-gray-500
-                           max-w-xs leading-relaxed"
+              {/* Title exits first */}
+              <motion.div style={{ opacity: titleOpacity, y: titleY, scale: titleScale }}>
+                <motion.h1
+                  initial={{ opacity: 0, y: 28 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, ease: [0.22, 0.1, 0.35, 1], delay: 0.1 }}
+                  className="text-[clamp(2.8rem,7.5vw,6rem)] font-black tracking-tight leading-[1.03]
+                             text-gray-900 dark:text-white"
+                >
+                  Automate every
+                  <br />
+                  deployment
+                </motion.h1>
+              </motion.div>
+
+              {/* Subtext exits after title */}
+              <motion.div
+                style={{ opacity: subtextOpacity, y: subtextY, scale: subtextScale }}
+                className="mt-8 sm:mt-10"
               >
-                Zero config. Zero code.<br />
-                Bobby ships your projects the moment you push.
-              </motion.p>
-            </motion.div>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.65, ease: [0.22, 0.1, 0.35, 1], delay: 0.30 }}
+                  className="text-sm md:text-base text-gray-400 dark:text-gray-500
+                             max-w-xs leading-relaxed"
+                >
+                  Zero config. Zero code.<br />
+                  Bobby ships your projects the moment you push.
+                </motion.p>
+              </motion.div>
+
+            </div>
 
             {/* Phase 2 & 3 – Tiles (anchored to bottom) */}
             <motion.div
