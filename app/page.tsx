@@ -160,7 +160,7 @@ function TileRow({
 function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
   const router = useRouter()
   return (
-    <div className="fixed top-3 sm:top-5 inset-x-0 z-50 flex justify-center px-4">
+    <div className="fixed top-5 sm:top-5 inset-x-0 z-50 flex justify-center px-4">
       <motion.div
         initial={{ opacity: 0, y: -14 }}
         animate={{ opacity: 1, y: 0 }}
@@ -171,7 +171,7 @@ function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
       >
         <div className="flex items-center gap-1.5 px-2 mr-1">
           <div className="w-6 h-6 rounded-md flex items-center justify-center"
-               style={{ background: "linear-gradient(135deg,#6366f1,#7c3aed)" }}>
+               style={{ background: "black" }}>
             <span className="text-white text-[10px] font-bold leading-none">B</span>
           </div>
           <span className="text-white text-sm font-semibold tracking-tight">Bobby</span>
@@ -251,7 +251,7 @@ export default function LandingPage() {
   useEffect(() => {
     const measure = () => {
       const vw = window.innerWidth
-      setTileCount(vw < 640 ? 3 : 5)
+      setTileCount(vw < 640 ? 4 : 5)
       if (!tilesWrapRef.current) return
       const rect = tilesWrapRef.current.getBoundingClientRect()
       const vh = window.innerHeight
@@ -370,7 +370,7 @@ export default function LandingPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.42 }}
-              className="mt-8 sm:mt-0"
+              className="mt-24 sm:mt-0"
             >
               <TileRow scrollYProgress={scrollYProgress} riseAmount={riseAmount} count={tileCount} />
             </motion.div>
