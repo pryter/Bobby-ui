@@ -111,10 +111,10 @@ function TileRow({
   const countRef  = useRef(count)
   useEffect(() => { countRef.current = count }, [count])
 
-  // Stop swaps once tiles start rising (Phase 2 begins at 0.26)
+  // Stop swaps as soon as text begins moving (Phase 1a begins at 0.04)
   useEffect(() => {
     const unsub = scrollYProgress.on("change", (v) => {
-      pausedRef.current = v > 0.26
+      pausedRef.current = v > 0.04
     })
     return unsub
   }, [scrollYProgress])
@@ -367,6 +367,46 @@ function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
   )
 }
 
+// ─── Hero scroll ring ─────────────────────────────────────────────────────────
+
+function HeroScrollRing({ progress, dark }: { progress: MotionValue<number>; dark: boolean }) {
+  const size  = 34
+  const stroke = 3
+  const r     = (size - stroke) / 2
+  const circ  = 2 * Math.PI * r
+
+  const dashOffset = useTransform(progress, [0, 0.90], [circ, 0])
+  const opacity    = useTransform(progress, [0, 0.03, 0.80, 1], [0, 1, 1, 0])
+
+  return (
+    <motion.div
+      style={{ opacity }}
+      className="fixed top-[68px] mt-6 right-4 z-50 pointer-events-none"
+    >
+      <svg
+        width={size} height={size}
+        style={{ transform: "rotate(-90deg)" }}
+      >
+        <circle
+          cx={size / 2} cy={size / 2} r={r}
+          fill="none"
+          stroke={dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)"}
+          strokeWidth={stroke}
+        />
+        <motion.circle
+          cx={size / 2} cy={size / 2} r={r}
+          fill="none"
+          stroke="#a3e635"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          style={{ strokeDashoffset: dashOffset }}
+        />
+      </svg>
+    </motion.div>
+  )
+}
+
 // ─── Features ─────────────────────────────────────────────────────────────────
 
 const FEATURES = [
@@ -476,11 +516,14 @@ export default function LandingPage() {
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark)
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', dark ? '#080808' : '#ffffff')
   }, [dark])
 
   return (
     <div className="bg-white dark:bg-[#080808] text-gray-900 dark:text-white">
       <Navbar dark={dark} onToggle={() => setDark((d) => !d)} />
+      <HeroScrollRing progress={smoothProgress} dark={dark} />
 
       {/*
         ── Hero ──────────────────────────────────────────────────────────────

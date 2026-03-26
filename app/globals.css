@@ -6,6 +6,16 @@
   @apply fixed inset-0 z-50 bg-white bg-opacity-80;
 }
 
+/* Base background — prevents white overscroll flash on iOS */
+html,
+body {
+  background-color: #ffffff;
+}
+html.dark,
+html.dark body {
+  background-color: #080808;
+}
+
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;

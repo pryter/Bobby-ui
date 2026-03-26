@@ -12,7 +12,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Runs synchronously before first paint — sets dark class + theme-color
+            so there is zero flash of wrong background on any device/mode.       */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){var d=window.matchMedia('(prefers-color-scheme:dark)').matches;if(d)document.documentElement.classList.add('dark');var m=document.createElement('meta');m.name='theme-color';m.content=d?'#080808':'#ffffff';document.head.appendChild(m);}())` }} />
+      </head>
       <body>{children}</body>
     </html>
   )
