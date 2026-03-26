@@ -86,7 +86,7 @@ function TileItem({
                    flex items-center justify-center"
         style={{ backgroundColor: tile.color, ...SHAPE_STYLE[tile.shape] }}
       >
-        <tile.Icon className="w-10 h-10 sm:w-[48px] sm:h-[48px] md:w-[62px] md:h-[62px] lg:w-[80px] lg:h-[80px] text-black/80" />
+        <tile.Icon className="w-10 h-10 sm:w-[48px] sm:h-[48px] md:w-[62px] md:h-[62px] lg:w-[80px] lg:h-[80px] text-white dark:text-black/80" />
       </motion.div>
     </motion.div>
   )
@@ -170,7 +170,8 @@ function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
 
   useEffect(() => {
     const measure = () => {
-      if (pillRef.current && !menuOpen) {
+      // offsetWidth is 0 when display:none (sm:hidden on desktop) — skip to avoid overwriting with 0
+      if (pillRef.current && pillRef.current.offsetWidth > 0) {
         setPillW(pillRef.current.offsetWidth)
         setPillH(pillRef.current.offsetHeight)
       }
@@ -264,7 +265,7 @@ function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
         <motion.div
           animate={{ opacity: menuOpen ? 0 : 1 }}
           transition={{ duration: menuOpen ? 0.08 : 0.18, delay: menuOpen ? 0 : 0.22 }}
-          className="flex items-center gap-1 px-2 py-1.5"
+          className="flex items-center gap-1 pl-2 pr-1 py-1.5"
           style={{ pointerEvents: menuOpen ? "none" : "auto" }}
         >
           <div className="flex items-center gap-1.5 px-2 mr-1">
@@ -274,14 +275,21 @@ function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
             <span className="text-white text-sm font-semibold tracking-tight">Bobby</span>
           </div>
           <button
+            onClick={onToggle}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors text-xs"
+            aria-label="Toggle theme"
+          >
+            {dark ? "○" : "●"}
+          </button>
+          <button
             onClick={() => setMenuOpen(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+            className="w-12 h-8 flex items-center justify-center rounded-full text-white bg-white/[0.12] hover:bg-white/20 transition-colors ml-0.5 mr-1"
             aria-label="Open menu"
           >
-            <svg width="16" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
-              <rect y="0"  width="16" height="1.5" rx="0.75" fill="currentColor"/>
-              <rect y="5"  width="11" height="1.5" rx="0.75" fill="currentColor"/>
-              <rect y="10" width="16" height="1.5" rx="0.75" fill="currentColor"/>
+            <svg width="15" height="11" viewBox="0 0 15 11" fill="none" aria-hidden="true">
+              <rect y="0"   width="15" height="1.5" rx="0.75" fill="currentColor"/>
+              <rect y="4.75" width="10" height="1.5" rx="0.75" fill="currentColor"/>
+              <rect y="9.5"  width="15" height="1.5" rx="0.75" fill="currentColor"/>
             </svg>
           </button>
         </motion.div>
@@ -501,7 +509,7 @@ export default function LandingPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.65, ease: [0.22, 0.1, 0.35, 1], delay: 0.30 }}
-                  className="text-sm md:text-base text-gray-400 dark:text-gray-500
+                  className="text-sm md:text-base text-gray-400 dark:text-gray-200
                              max-w-sm leading-relaxed"
                 >
                   Zero config. Zero code.<br />
