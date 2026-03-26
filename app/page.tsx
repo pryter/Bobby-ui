@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useEffect } from "react"
+import { useRef, useState, useEffect, useLayoutEffect } from "react"
 import {
   motion,
   AnimatePresence,
@@ -17,6 +17,10 @@ import {
   RocketLaunchIcon,
   BoltIcon,
   ShieldCheckIcon,
+  AdjustmentsHorizontalIcon,
+  CommandLineIcon,
+  SignalIcon,
+  LinkIcon,
 } from "@heroicons/react/24/solid"
 
 // ─── Tile config ──────────────────────────────────────────────────────────────
@@ -375,8 +379,8 @@ function HeroScrollRing({ progress, dark }: { progress: MotionValue<number>; dar
   const r     = (size - stroke) / 2
   const circ  = 2 * Math.PI * r
 
-  const dashOffset = useTransform(progress, [0, 0.90], [circ, 0])
-  const opacity    = useTransform(progress, [0, 0.03, 0.80, 1], [0, 1, 1, 0])
+  const dashOffset = useTransform(progress, [0.05, 0.90,1], [circ, 0,0])
+  const opacity    = useTransform(progress, [0, 0.02, 0.80, 1], [0, 1, 1, 0])
 
   return (
     <motion.div
@@ -409,16 +413,18 @@ function HeroScrollRing({ progress, dark }: { progress: MotionValue<number>; dar
 
 // ─── Features ─────────────────────────────────────────────────────────────────
 
-const FEATURES = [
-  { icon: "⚡", title: "Zero Config",       desc: "Bobby reads your codebase and sets up the entire pipeline. Not a single YAML file." },
-  { icon: "🚫", title: "Zero Code",         desc: "No Dockerfiles. No CI scripts. Push to git and your app ships itself." },
-  { icon: "🚀", title: "Instant Deploy",    desc: "From commit to live in seconds. Built for speed at every step." },
-  { icon: "🔒", title: "Secure by Default", desc: "Isolated build envs, encrypted secrets, signed artifacts — always on." },
-  { icon: "📡", title: "Live Streaming",    desc: "Watch every build happen in real time. No polling, no mystery." },
-  { icon: "🔗", title: "Git Native",        desc: "Connect any GitHub, GitLab, or Bitbucket repo in one click." },
+type FeatureIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>
+
+const FEATURES: { icon: FeatureIcon; title: string; desc: string }[] = [
+  { icon: AdjustmentsHorizontalIcon, title: "Zero Config",       desc: "Bobby reads your codebase and sets up the entire pipeline. Not a single YAML file." },
+  { icon: CommandLineIcon,           title: "Zero Code",         desc: "No Dockerfiles. No CI scripts. Push to git and your app ships itself." },
+  { icon: RocketLaunchIcon,          title: "Instant Deploy",    desc: "From commit to live in seconds. Built for speed at every step." },
+  { icon: ShieldCheckIcon,           title: "Secure by Default", desc: "Isolated build envs, encrypted secrets, signed artifacts — always on." },
+  { icon: SignalIcon,                title: "Live Streaming",    desc: "Watch every build happen in real time. No polling, no mystery." },
+  { icon: LinkIcon,                  title: "Git Native",        desc: "Connect any GitHub, GitLab, or Bitbucket repo in one click." },
 ]
 
-function FeatureCard({ icon, title, desc, index, scrollProgress }: { icon: string; title: string; desc: string; index: number; scrollProgress: MotionValue<number> }) {
+function FeatureCard({ icon: Icon, title, desc, index, scrollProgress }: { icon: FeatureIcon; title: string; desc: string; index: number; scrollProgress: MotionValue<number> }) {
   const start   = 0.12 + index * 0.05
   const end     = start + 0.15
   const opacity = useTransform(scrollProgress, [start, end], [0, 1])
@@ -433,7 +439,7 @@ function FeatureCard({ icon, title, desc, index, scrollProgress }: { icon: strin
                  hover:bg-indigo-50/30 dark:hover:bg-indigo-500/[0.04]
                  transition-all duration-300"
     >
-      <div className="text-2xl mb-3 select-none">{icon}</div>
+      <Icon className="w-6 h-6 mb-3 text-indigo-500 dark:text-indigo-400" />
       <h3 className="font-semibold text-gray-900 dark:text-white mb-1.5 text-sm">{title}</h3>
       <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{desc}</p>
     </motion.div>
@@ -449,21 +455,34 @@ export default function LandingPage() {
   const featuresRef               = useRef<HTMLDivElement>(null)
   const ctaRef                    = useRef<HTMLDivElement>(null)
   const [riseAmount, setRiseAmount] = useState(140)
-  const [tileCount, setTileCount]   = useState(5)   // 3 on mobile, 5 on sm+
+  const [tileCount, setTileCount]   = useState(5)   // 4 on mobile, 5 on sm+
+
+  // Set correct tile count before first paint — prevents flash of wrong count
+  useLayoutEffect(() => {
+    setTileCount(window.innerWidth < 640 ? 4 : 5)
+  }, [])
 
   useEffect(() => {
     const measure = () => {
-      const vw = window.innerWidth
-      setTileCount(vw < 640 ? 4 : 5)
+      setTileCount(window.innerWidth < 640 ? 4 : 5)
       if (!tilesWrapRef.current) return
       const rect = tilesWrapRef.current.getBoundingClientRect()
       const vh = window.innerHeight
       setRiseAmount(Math.max(30, rect.top + rect.height / 2 - vh / 2))
     }
-    // Delay initial measurement until after entrance animations settle
+    // Delay riseAmount measurement until after entrance animations settle
     const t = setTimeout(measure, 1200)
     window.addEventListener("resize", measure)
     return () => { clearTimeout(t); window.removeEventListener("resize", measure) }
+  }, [])
+
+  // Always start from the top on mount — prevents browser scroll restoration
+  // from dropping the user mid-animation on refresh
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      history.scrollRestoration = "manual"
+      window.scrollTo(0, 0)
+    }
   }, [])
 
   const { scrollYProgress } = useScroll({

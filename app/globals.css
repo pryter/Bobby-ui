@@ -16,24 +16,19 @@ html.dark body {
   background-color: #080808;
 }
 
-/* Smooth scrolling */
+/* Smooth scrolling + prevent mobile overscroll bounce */
 html {
   scroll-behavior: smooth;
+  overscroll-behavior: none;
 }
 
-/* Scrollbar styling */
+/* Hide scrollbar across all browsers */
 ::-webkit-scrollbar {
-  width: 6px;
+  display: none;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.3);
-  border-radius: 3px;
-}
-.dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+html {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
 }
 
 /* Gradient text utility */
