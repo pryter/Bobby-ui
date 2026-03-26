@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from "react"
 import {
   motion,
+  AnimatePresence,
   useScroll,
   useTransform,
   useAnimation,
@@ -157,69 +158,185 @@ function TileRow({
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 
+const NAV_LINKS = ["Features", "Docs", "Pricing", "FAQ"]
+
 function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
   const router = useRouter()
+  const [menuOpen, setMenuOpen] = useState(false)
+
   return (
-    <motion.div         initial={{ opacity: 0, y: -14 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, ease: [0.22, 0.1, 0.35, 1] }}className="fixed top-5 sm:top-5 inset-x-0 z-50 flex justify-between sm:justify-center px-4">
-      <motion.div
-        className="sm:w-auto flex items-center gap-1 px-2 py-1.5 rounded-full
-                   bg-[#111]/90 backdrop-blur-xl
-                   border border-white/[0.08] shadow-xl shadow-black/30"
-      >
-        <div className="flex items-center gap-1.5 px-2 mr-1">
-          <div className="w-6 h-6 rounded-md flex items-center justify-center"
-               style={{ background: "black" }}>
-            <span className="text-white text-[10px] font-bold leading-none">B</span>
-          </div>
-          <span className="text-white text-sm font-semibold tracking-tight">Bobby</span>
-        </div>
+    <>
+      {/* Backdrop — fades in behind the sidebar */}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            className="fixed inset-0 z-40 sm:hidden bg-black/60 backdrop-blur-sm"
+            onClick={() => setMenuOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
-        {/* Nav links — desktop only */}
-        <div className="hidden sm:block items-center gap-1">
-          {["Features", "Docs", "Pricing", "FAQ"].map((l) => (
-            <button key={l}
-                    className="px-3 py-1.5 text-sm text-gray-400 hover:text-white rounded-full
-                               hover:bg-white/[0.06] transition-colors">
-              {l}
-            </button>
-          ))}
-        </div>
-
-        <div className="sm:hidden block items-center gap-1">
-          {["Features"].map((l) => (
-            <button key={l}
-                    className="px-3 py-1.5 text-sm text-gray-400 hover:text-white rounded-full
-                               hover:bg-white/[0.06] transition-colors">
-              {l}
-            </button>
-          ))}
-        </div>
-
-        {/* Spacer on mobile to push controls to the right */}
-        <div className="flex-1 sm:hidden" />
-
-        <button onClick={onToggle}
+      {/* ── LEFT SIDEBAR (mobile, open state) ─────────────────────────────────
+          Same layoutId as the pill so Framer Motion morphs between them.     */}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            key="sidebar"
+            layoutId="nav-pill"
+            className="fixed top-4 left-4 bottom-4 z-50 w-72 sm:hidden
+                       bg-[#111]/90 backdrop-blur-xl rounded-3xl
+                       border border-white/[0.08] shadow-2xl shadow-black/60
+                       flex flex-col overflow-hidden"
+            style={{ originX: 0, originY: 0 }}
+          >
+            {/* Header */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, delay: 0.14 }}
+              className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]"
+            >
+              <div className="flex items-center gap-1.5">
+                <div className="w-6 h-6 rounded-md bg-black flex items-center justify-center">
+                  <span className="text-white text-[10px] font-bold leading-none">B</span>
+                </div>
+                <span className="text-white text-sm font-semibold tracking-tight">Bobby</span>
+              </div>
+              <button
+                onClick={() => setMenuOpen(false)}
                 className="w-8 h-8 flex items-center justify-center rounded-full
-                           text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors text-xs ml-1"
-                aria-label="Toggle theme">
-          {dark ? "○" : "●"}
-        </button>
+                           text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors text-sm"
+                aria-label="Close menu"
+              >✕</button>
+            </motion.div>
+
+            {/* Nav links */}
+            <div className="flex flex-col px-3 py-4 gap-0.5 flex-1">
+              {NAV_LINKS.map((l, i) => (
+                <motion.button
+                  key={l}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ delay: i * 0.05 + 0.2, duration: 0.22, ease: [0.22, 0.1, 0.35, 1] }}
+                  className="px-4 py-3 text-sm text-gray-300 hover:text-white rounded-xl
+                             hover:bg-white/[0.06] transition-colors text-left font-medium"
+                >{l}</motion.button>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, delay: 0.3 }}
+              className="px-4 pb-8 flex flex-col gap-2"
+            >
+              <button
+                onClick={onToggle}
+                className="px-4 py-3 text-sm text-gray-400 hover:text-white rounded-xl
+                           hover:bg-white/[0.06] transition-colors text-left flex items-center gap-2.5"
+              >
+                <span className="text-base leading-none">{dark ? "○" : "●"}</span>
+                <span>{dark ? "Light mode" : "Dark mode"}</span>
+              </button>
+              <button
+                onClick={() => { router.push("/account"); setMenuOpen(false) }}
+                className="w-full py-2.5 rounded-full text-sm font-bold text-black
+                           transition-all hover:scale-105 active:scale-95"
+                style={{ background: "#a3e635" }}
+              >Get started</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── TOP ROW (entrance animation wrapper) ──────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: -14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 0.1, 0.35, 1] }}
+        className="fixed top-5 inset-x-0 z-50 flex justify-between sm:justify-center px-4 pointer-events-none"
+      >
+        {/* ── PILL (closed state) ───────────────────────────────────────────
+            Unmounts when sidebar opens so layoutId can morph between them.  */}
+        <AnimatePresence>
+          {!menuOpen && (
+            <motion.div
+              key="pill"
+              layoutId="nav-pill"
+              className="pointer-events-auto flex items-center gap-1 px-2 py-1.5 rounded-full
+                         bg-[#111]/90 backdrop-blur-xl
+                         border border-white/[0.08] shadow-xl shadow-black/30"
+            >
+              <div className="flex items-center gap-1.5 px-2 mr-1">
+                <div className="w-6 h-6 rounded-md flex items-center justify-center"
+                     style={{ background: "black" }}>
+                  <span className="text-white text-[10px] font-bold leading-none">B</span>
+                </div>
+                <span className="text-white text-sm font-semibold tracking-tight">Bobby</span>
+              </div>
+
+              {/* Nav links — desktop only */}
+              <div className="hidden sm:block items-center gap-1">
+                {NAV_LINKS.map((l) => (
+                  <button key={l}
+                          className="px-3 py-1.5 text-sm text-gray-400 hover:text-white rounded-full
+                                     hover:bg-white/[0.06] transition-colors">
+                    {l}
+                  </button>
+                ))}
+              </div>
+
+              {/* Theme toggle — desktop only */}
+              <button onClick={onToggle}
+                      className="w-8 h-8 hidden sm:flex items-center justify-center rounded-full
+                                 text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors text-xs ml-1"
+                      aria-label="Toggle theme">
+                {dark ? "○" : "●"}
+              </button>
+
+              {/* Hamburger — mobile only */}
+              <button
+                onClick={() => setMenuOpen(true)}
+                className="sm:hidden w-8 h-8 flex items-center justify-center rounded-full
+                           text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+                aria-label="Open menu"
+              >
+                <svg width="16" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
+                  <rect y="0"  width="16" height="1.5" rx="0.75" fill="currentColor"/>
+                  <rect y="5"  width="11" height="1.5" rx="0.75" fill="currentColor"/>
+                  <rect y="10" width="16" height="1.5" rx="0.75" fill="currentColor"/>
+                </svg>
+              </button>
+
+              {/* Get started — desktop only */}
+              <button onClick={() => router.push("/account")}
+                      className="ml-1 px-4 py-1.5 hidden sm:block rounded-full text-sm font-bold text-black
+                                 transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+                      style={{ background: "#a3e635" }}>
+                Get started
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Get started — mobile only, always visible */}
         <button onClick={() => router.push("/account")}
-                className="ml-1 px-3 sm:px-4 py-1.5 hidden sm:block rounded-full text-xs sm:text-sm font-bold text-black
+                className="pointer-events-auto sm:hidden px-4 py-1.5 rounded-full text-xs font-bold text-black
                            transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
                 style={{ background: "#a3e635" }}>
           Get started
         </button>
       </motion.div>
-      <button onClick={() => router.push("/account")}
-              className="ml-1 px-4 sm:px-4 py-1.5 sm:hidden rounded-full text-xs sm:text-sm font-bold text-black
-                           transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
-              style={{ background: "#a3e635" }}>
-        Get started
-      </button>
-    </motion.div>
+    </>
   )
 }
 
