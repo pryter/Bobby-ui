@@ -111,10 +111,10 @@ function TileRow({
   const countRef  = useRef(count)
   useEffect(() => { countRef.current = count }, [count])
 
-  // Stop swaps during the pop phase
+  // Stop swaps once tiles start rising (Phase 2 begins at 0.26)
   useEffect(() => {
     const unsub = scrollYProgress.on("change", (v) => {
-      pausedRef.current = v > 0.56
+      pausedRef.current = v > 0.26
     })
     return unsub
   }, [scrollYProgress])
@@ -378,13 +378,15 @@ const FEATURES = [
   { icon: "🔗", title: "Git Native",        desc: "Connect any GitHub, GitLab, or Bitbucket repo in one click." },
 ]
 
-function FeatureCard({ icon, title, desc, index }: { icon: string; title: string; desc: string; index: number }) {
+function FeatureCard({ icon, title, desc, index, scrollProgress }: { icon: string; title: string; desc: string; index: number; scrollProgress: MotionValue<number> }) {
+  const start   = 0.12 + index * 0.05
+  const end     = start + 0.15
+  const opacity = useTransform(scrollProgress, [start, end], [0, 1])
+  const y       = useTransform(scrollProgress, [start, end], [100, 0])
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 36 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.5, delay: index * 0.07, ease: [0.25, 0.1, 0.25, 1] }}
+      style={{ opacity, y }}
       className="rounded-2xl p-6 border border-gray-200/80 dark:border-white/[0.07]
                  bg-white/60 dark:bg-white/[0.02]
                  hover:border-indigo-200 dark:hover:border-indigo-500/25
@@ -404,6 +406,8 @@ export default function LandingPage() {
   const [dark, setDark]           = useState(true)
   const heroRef                   = useRef<HTMLDivElement>(null)
   const tilesWrapRef              = useRef<HTMLDivElement>(null)
+  const featuresRef               = useRef<HTMLDivElement>(null)
+  const ctaRef                    = useRef<HTMLDivElement>(null)
   const [riseAmount, setRiseAmount] = useState(140)
   const [tileCount, setTileCount]   = useState(5)   // 3 on mobile, 5 on sm+
 
@@ -428,7 +432,29 @@ export default function LandingPage() {
   })
 
   // Smooth spring follows scroll with inertia — lower stiffness = more lag
-  const smoothProgress = useSpring(scrollYProgress, { stiffness: 60, damping: 20, restDelta: 0.001 })
+  const smoothProgress = useSpring(scrollYProgress, { stiffness: 60, damping: 24, restDelta: 0.001 })
+
+  // ── Features section scroll timeline ──────────────────────────────────────
+  const { scrollYProgress: featuresSYP } = useScroll({
+    target: featuresRef,
+    offset: ["start end", "start 10%"],
+  })
+  // Low stiffness = heavy lag behind fast scroll (momentum absorption feel)
+  // Underdamped (ζ ≈ 0.75) = slight overshoot on settle = springy
+  const featuresProgress = useSpring(featuresSYP, { stiffness: 45, damping: 10, restDelta: 0.001 })
+
+  const featuresHeadingOpacity = useTransform(featuresProgress, [0, 0.3], [0, 1])
+  const featuresHeadingY       = useTransform(featuresProgress, [0, 0.3], [100, 0])
+
+  // ── CTA section scroll timeline ────────────────────────────────────────────
+  const { scrollYProgress: ctaSYP } = useScroll({
+    target: ctaRef,
+    offset: ["start end", "start 20%"],
+  })
+  const ctaProgress = useSpring(ctaSYP, { stiffness: 45, damping: 10, restDelta: 0.001 })
+
+  const ctaOpacity = useTransform(ctaProgress, [0, 0.5], [0, 1])
+  const ctaY       = useTransform(ctaProgress, [0, 0.5], [100, 0])
 
   // ── Phase 1a: title fades first ────────────────────────────────────────────
   const titleOpacity = useTransform(smoothProgress, [0.04, 0.15], [1, 0])
@@ -466,7 +492,7 @@ export default function LandingPage() {
           0.28 – 0.62  │ Phase 2: tiles rise to center, L→R       (~612px)
           0.62 – 0.88  │ Phase 3: tiles pop out,        L→R       (~468px)
         ─────────────────────────────────────────────────────────────────── */}
-      <div ref={heroRef} style={{ height: tileCount === 4 ? "calc(100vh + 7000px)" : "calc(100vh + 10000px)" }}>
+      <div ref={heroRef} style={{ height: tileCount === 4 ? "calc(100vh + 2500px)" : "calc(100vh + 2500px)" }}>
         <div className="sticky top-0 h-screen overflow-hidden">
 
           {/* Background */}
@@ -539,12 +565,9 @@ export default function LandingPage() {
       </div>
 
       {/* ── Features ────────────────────────────────────────────────────────── */}
-      <section className="px-5 md:px-12 pb-32 pt-8">
+      <section ref={featuresRef} className="px-5 md:px-12 pb-32 pt-8">
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.55 }}
+          style={{ opacity: featuresHeadingOpacity, y: featuresHeadingY }}
           className="text-center mb-14"
         >
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-indigo-500 dark:text-indigo-400 mb-3">
@@ -556,17 +579,14 @@ export default function LandingPage() {
           </h2>
         </motion.div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
-          {FEATURES.map((f, i) => <FeatureCard key={f.title} {...f} index={i} />)}
+          {FEATURES.map((f, i) => <FeatureCard key={f.title} {...f} index={i} scrollProgress={featuresProgress} />)}
         </div>
       </section>
 
       {/* ── Bottom CTA ──────────────────────────────────────────────────────── */}
-      <section className="px-5 pb-32">
+      <section ref={ctaRef} className="px-5 pb-32">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          style={{ opacity: ctaOpacity, y: ctaY }}
           className="relative max-w-2xl mx-auto text-center rounded-3xl px-8 py-20 overflow-hidden
                      border border-gray-200/80 dark:border-white/[0.07]
                      bg-gray-50/60 dark:bg-white/[0.02]"
