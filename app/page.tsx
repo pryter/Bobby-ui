@@ -160,12 +160,11 @@ function TileRow({
 function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
   const router = useRouter()
   return (
-    <div className="fixed top-5 sm:top-5 inset-x-0 z-50 flex justify-center px-4">
+    <motion.div         initial={{ opacity: 0, y: -14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, ease: [0.22, 0.1, 0.35, 1] }}className="fixed top-5 sm:top-5 inset-x-0 z-50 flex justify-between sm:justify-center px-4">
       <motion.div
-        initial={{ opacity: 0, y: -14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 0.1, 0.35, 1] }}
-        className="w-full sm:w-auto flex items-center gap-1 px-2 py-1.5 rounded-full
+        className="sm:w-auto flex items-center gap-1 px-2 py-1.5 rounded-full
                    bg-[#111]/90 backdrop-blur-xl
                    border border-white/[0.08] shadow-xl shadow-black/30"
       >
@@ -178,8 +177,18 @@ function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
         </div>
 
         {/* Nav links — desktop only */}
-        <div className="hidden sm:flex items-center gap-1">
+        <div className="hidden sm:block items-center gap-1">
           {["Features", "Docs", "Pricing", "FAQ"].map((l) => (
+            <button key={l}
+                    className="px-3 py-1.5 text-sm text-gray-400 hover:text-white rounded-full
+                               hover:bg-white/[0.06] transition-colors">
+              {l}
+            </button>
+          ))}
+        </div>
+
+        <div className="sm:hidden block items-center gap-1">
+          {["Features"].map((l) => (
             <button key={l}
                     className="px-3 py-1.5 text-sm text-gray-400 hover:text-white rounded-full
                                hover:bg-white/[0.06] transition-colors">
@@ -198,13 +207,19 @@ function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
           {dark ? "○" : "●"}
         </button>
         <button onClick={() => router.push("/account")}
-                className="ml-1 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold text-black
+                className="ml-1 px-3 sm:px-4 py-1.5 hidden sm:block rounded-full text-xs sm:text-sm font-bold text-black
                            transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
                 style={{ background: "#a3e635" }}>
           Get started
         </button>
       </motion.div>
-    </div>
+      <button onClick={() => router.push("/account")}
+              className="ml-1 px-4 sm:px-4 py-1.5 sm:hidden rounded-full text-xs sm:text-sm font-bold text-black
+                           transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+              style={{ background: "#a3e635" }}>
+        Get started
+      </button>
+    </motion.div>
   )
 }
 
@@ -322,7 +337,7 @@ export default function LandingPage() {
           </motion.div>
 
           {/* ── Hero content: text upper, tiles lower ─────────────────── */}
-          <div className="relative h-full flex flex-col justify-center sm:justify-start items-start sm:items-center px-5 md:px-12 pt-[72px] sm:pt-[128px]"
+          <div className="relative h-full flex flex-col justify-center items-start sm:items-center px-5 md:px-12 pt-[72px] sm:pt-[128px]"
                style={{ paddingBottom: "max(28px, 6vh)" }}>
 
             {/* Phase 1 – Text (title and subtext animate independently) */}
@@ -345,7 +360,7 @@ export default function LandingPage() {
               {/* Subtext exits after title */}
               <motion.div
                 style={{ opacity: subtextOpacity, y: subtextY, scale: subtextScale }}
-                className="mt-8 sm:mt-10"
+                className="mt-8 sm:mt-14"
               >
                 <motion.p
                   initial={{ opacity: 0, y: 20 }}
@@ -361,16 +376,13 @@ export default function LandingPage() {
 
             </div>
 
-            {/* Spacer: sm+ only — pushes tiles to bottom on desktop */}
-            <div className="hidden sm:block flex-1" />
-
             {/* Phase 2 & 3 – Tiles */}
             <motion.div
               ref={tilesWrapRef}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.42 }}
-              className="mt-24 sm:mt-0"
+              className="mt-24 sm:mt-28"
             >
               <TileRow scrollYProgress={scrollYProgress} riseAmount={riseAmount} count={tileCount} />
             </motion.div>
