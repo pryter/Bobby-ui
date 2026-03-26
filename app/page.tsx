@@ -55,13 +55,13 @@ function TileItem({
 }) {
   const swapControls = useAnimation()
 
-  // Phase 2 — staggered rise (left → right), all done by ~0.64
-  const riseStart = 0.24 + displayIndex * 0.05
-  const riseEnd   = riseStart + 0.20
+  // Phase 2 — staggered rise, all done by ~0.58
+  const riseStart = 0.26 + displayIndex * 0.04
+  const riseEnd   = riseStart + 0.08
   const tileY = useTransform(scrollYProgress, [riseStart, riseEnd], [0, -riseAmount])
 
-  // Phase 3 — staggered pop, all done by ~0.88 leaving a long empty hold before next page
-  const popStart   = 0.72 + displayIndex * 0.025
+  // Phase 3 — staggered pop, all done by ~0.84 → leaves 16% blank hold
+  const popStart   = 0.70 + displayIndex * 0.025
   const popEnd     = popStart + 0.06
   const popScale   = useTransform(scrollYProgress, [popStart, popEnd], [1, 0])
   const popOpacity = useTransform(scrollYProgress, [popStart, popEnd + 0.01], [1, 0])
@@ -114,7 +114,7 @@ function TileRow({
   // Stop swaps during the pop phase
   useEffect(() => {
     const unsub = scrollYProgress.on("change", (v) => {
-      pausedRef.current = v > 0.66
+      pausedRef.current = v > 0.56
     })
     return unsub
   }, [scrollYProgress])
@@ -431,14 +431,14 @@ export default function LandingPage() {
   const smoothProgress = useSpring(scrollYProgress, { stiffness: 60, damping: 20, restDelta: 0.001 })
 
   // ── Phase 1a: title fades first ────────────────────────────────────────────
-  const titleOpacity = useTransform(smoothProgress, [0.04, 0.18], [1, 0])
-  const titleY       = useTransform(smoothProgress, [0.04, 0.18], [0, -65])
-  const titleScale   = useTransform(smoothProgress, [0.04, 0.18], [1, 0.88])
+  const titleOpacity = useTransform(smoothProgress, [0.04, 0.15], [1, 0])
+  const titleY       = useTransform(smoothProgress, [0.04, 0.15], [0, -65])
+  const titleScale   = useTransform(smoothProgress, [0.04, 0.15], [1, 0.88])
 
   // ── Phase 1b: subtext fades after title ────────────────────────────────────
-  const subtextOpacity = useTransform(smoothProgress, [0.09, 0.23], [1, 0])
-  const subtextY       = useTransform(smoothProgress, [0.09, 0.23], [0, -50])
-  const subtextScale   = useTransform(smoothProgress, [0.09, 0.23], [1, 0.92])
+  const subtextOpacity = useTransform(smoothProgress, [0.12, 0.21], [1, 0])
+  const subtextY       = useTransform(smoothProgress, [0.12, 0.21], [0, -50])
+  const subtextScale   = useTransform(smoothProgress, [0.12, 0.21], [1, 0.92])
 
   // ── Background parallax ────────────────────────────────────────────────────
   const bgScale = useTransform(smoothProgress, [0, 1], [1, 1.2])
@@ -466,7 +466,7 @@ export default function LandingPage() {
           0.28 – 0.62  │ Phase 2: tiles rise to center, L→R       (~612px)
           0.62 – 0.88  │ Phase 3: tiles pop out,        L→R       (~468px)
         ─────────────────────────────────────────────────────────────────── */}
-      <div ref={heroRef} style={{ height: "calc(100vh + 6000px)" }}>
+      <div ref={heroRef} style={{ height: tileCount === 4 ? "calc(100vh + 7000px)" : "calc(100vh + 10000px)" }}>
         <div className="sticky top-0 h-screen overflow-hidden">
 
           {/* Background */}
