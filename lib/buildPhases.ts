@@ -109,11 +109,31 @@ export function applyBuildEvent(
   }
 }
 
-/** Project the internal state into the ordered array BuildConsole expects. */
+/** Project the internal state into the ordered array BuildConsole expects.
+ *
+ *  Builds fold cleanly into phases when the worker emits phase_start /
+ *  phase_end markers around its output. For legacy builds (or any build
+ *  whose log was persisted as plain text and rehydrated via
+ *  `splitLogToEvents`), there are no phase markers at all — every line
+ *  ends up in `orphanLogs` and `phaseOrder` stays empty, which would
+ *  otherwise make BuildConsole render nothing and the page display
+ *  "No log recorded for this build." Wrap those orphans in a single
+ *  synthetic "Build output" phase so they remain visible. */
 export function timelinePhases(state: PhaseTimelineState): BuildPhase[] {
-  return state.phaseOrder
+  const phases = state.phaseOrder
     .map((id) => state.phasesById[id])
     .filter((p): p is BuildPhase => !!p)
+  if (phases.length === 0 && state.orphanLogs.length > 0) {
+    return [
+      {
+        id: "__build_output__",
+        label: "Build output",
+        status: "success",
+        logs: state.orphanLogs,
+      },
+    ]
+  }
+  return phases
 }
 
 /** Normalize a snapshot event into the internal StructuredBuildEvent shape,
