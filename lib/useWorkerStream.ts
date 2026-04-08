@@ -30,10 +30,17 @@ interface UseWorkerStreamResult {
  *     dedup by `seq`, and re-fetch /snapshot if a gap is detected.
  *   - `build_finished` → lock the terminal state.
  *   - On WS reconnect → re-fetch /snapshot and merge events with seq > lastSeq.
+ *
+ * `initialBuild` is the page's prior knowledge of an already-running build
+ * (typically the in-progress row from the builds list endpoint). When set,
+ * the hook immediately latches on to that buildId, seeds `activeBuild`, and
+ * fetches /snapshot — so a page reload in the middle of a live build shows
+ * all phases/logs up to now instead of waiting for the next WS frame.
  */
 export function useWorkerStream(
   setupId: string,
   initialOnline: boolean,
+  initialBuild?: Build | null,
 ): UseWorkerStreamResult {
   const { subscribe, connectionEpoch } = useWorkerStreamContext()
   const { token } = useAuth()
@@ -222,6 +229,30 @@ export function useWorkerStream(
       }
     })
   }, [subscribe, setupId, refetchSnapshot])
+
+  // Seed from a caller-provided in-progress build. This is what makes a page
+  // reload during a live build show the full current state instead of an
+  // empty console. Re-runs if the parent swaps in a different build id
+  // (e.g. new rebuild picked up from the REST list).
+  const initialBuildId = initialBuild?.id ?? null
+  useEffect(() => {
+    if (!initialBuildId) return
+    // If a WS `build_started` has already moved us onto this build, don't
+    // clobber its state — just refetch to merge anything we might have
+    // missed pre-mount.
+    if (activeBuildIdRef.current === initialBuildId) {
+      void refetchSnapshot(initialBuildId)
+      return
+    }
+    activeBuildIdRef.current = initialBuildId
+    setTimeline(emptyPhaseTimeline())
+    if (initialBuild) setActiveBuild(initialBuild)
+    void refetchSnapshot(initialBuildId)
+    // We intentionally key the effect on the build id, not the whole object,
+    // so parents re-creating the Build reference on every render don't
+    // re-trigger a reset. `initialBuild` is read inside for the seed value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialBuildId, refetchSnapshot])
 
   // On every WS (re)open, catch up from /snapshot for whichever build we're
   // currently tracking. This is the fix for "log stream stops updating after

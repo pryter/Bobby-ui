@@ -239,7 +239,18 @@ export default function ProjectDetail({ id }: { id: string }) {
     })
   }, [id, token])
 
-  const { activeBuild, phases } = useWorkerStream(project?.setup_id ?? "", false)
+  // If the DB already knows about an in-progress build (common on page
+  // reload during a live run), seed the stream hook with it so it fetches
+  // /snapshot immediately instead of waiting for the next WS frame.
+  const dbInProgress = useMemo(
+    () => builds.find((b) => !b.conclusion) ?? null,
+    [builds],
+  )
+  const { activeBuild, phases } = useWorkerStream(
+    project?.setup_id ?? "",
+    false,
+    dbInProgress,
+  )
 
   // Worker name lookup (display only — editing lives in Configuration)
   const workerName = (wid: string) => {

@@ -70,7 +70,14 @@ export default function WorkerDetail({ id }: { id: string }) {
     })
   }, [id, token])
 
-  const { online, activeBuild, phases } = useWorkerStream(id, worker?.online ?? false)
+  // Seed the stream hook with a DB in-progress build so /snapshot is fetched
+  // immediately on page reload mid-build.
+  const dbInProgress = builds.find((b) => !b.conclusion) ?? null
+  const { online, activeBuild, phases } = useWorkerStream(
+    id,
+    worker?.online ?? false,
+    dbInProgress,
+  )
 
   // Load persisted log for the most recent completed build when no live stream is active.
   const [persistedPhases, setPersistedPhases] = useState<BuildPhase[]>([])
