@@ -22,6 +22,7 @@ import {
   LinkIcon,
 } from "@heroicons/react/24/solid"
 import Image from "next/image";
+import { useTheme } from "@/lib/useTheme"
 
 // ─── Tile config ──────────────────────────────────────────────────────────────
 
@@ -475,7 +476,7 @@ function FeatureCard({ icon: Icon, title, desc, index, scrollProgress }: { icon:
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const [dark, setDark]           = useState(true)
+  const { dark, toggle: toggleTheme } = useTheme()
   const heroRef                   = useRef<HTMLDivElement>(null)
   const tilesWrapRef              = useRef<HTMLDivElement>(null)
   const featuresRef               = useRef<HTMLDivElement>(null)
@@ -554,20 +555,9 @@ export default function LandingPage() {
   // ── Background parallax ────────────────────────────────────────────────────
   const bgScale = useTransform(smoothProgress, [0, 1], [1, 1.2])
 
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)")
-    setDark(mq.matches)
-  }, [])
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark)
-    const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', dark ? '#080808' : '#ffffff')
-  }, [dark])
-
   return (
     <div className="bg-white dark:bg-[#080808] text-gray-900 dark:text-white transition-colors">
-      <Navbar dark={dark} onToggle={() => setDark((d) => !d)} />
+      <Navbar dark={dark} onToggle={toggleTheme} />
       <HeroScrollRing progress={smoothProgress} dark={dark} />
 
       {/*

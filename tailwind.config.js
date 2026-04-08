@@ -13,6 +13,19 @@ module.exports = {
         "t-pink": "#ffafcc",
         "t-pink-2": "#ffc8dd",
         "t-purple": "#cdb4db",
+        // ── Bobby theme ────────────────────────────────────────────────
+        // Tile palette from the landing hero (app/page.tsx TILE_CONFIGS)
+        bobby: {
+          green:  "#1db954", // code tile
+          orange: "#f5a623", // bobby tile
+          blue:   "#2563eb", // rocket tile
+          red:    "#f04e30", // bolt tile
+          purple: "#7c3aed", // shield tile
+          // Brand accents
+          lime:    "#a3e635", // primary CTA (landing "Get started")
+          bg:      "#080808", // page background (dark)
+          surface: "#111111", // nav pill / elevated surfaces
+        },
       },
       keyframes: {
         orbFloat: {
