@@ -47,6 +47,7 @@ const SHAPE_STYLE: Record<string, React.CSSProperties> = {
   pentagon:  { clipPath: "polygon(0 0, 78% 0, 100% 50%, 78% 100%, 0 100%)", borderRadius: "clamp(12px, 10%, 20px) 0 0 clamp(12px, 10%, 20px)" },
 }
 
+
 type TileConfig = typeof TILE_CONFIGS[number]
 
 // ─── Single tile ──────────────────────────────────────────────────────────────
