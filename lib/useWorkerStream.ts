@@ -49,6 +49,15 @@ export function useWorkerStream(
   const [activeBuild, setActiveBuild] = useState<Build | null>(null)
   const [timeline, setTimeline] = useState<PhaseTimelineState>(emptyPhaseTimeline)
 
+  // Sync `online` with the prop. `useState(initialOnline)` only captures the
+  // first value, so when the parent page first mounts with the worker still
+  // loading (worker?.online → undefined → false) and then the fetch resolves,
+  // the display needs to catch up. Without this effect, `online` stays at
+  // the stale initial value until a worker_online/_offline event fires.
+  useEffect(() => {
+    setOnline(initialOnline)
+  }, [initialOnline])
+
   // Refs for values we need to read inside the WS callback without
   // re-subscribing on every change.
   const activeBuildIdRef = useRef<string | null>(null)
@@ -81,21 +90,42 @@ export function useWorkerStream(
       return s
     })
 
-    if (snap.conclusion) {
-      setActiveBuild((prev) =>
-        prev && prev.id === buildId
-          ? {
-              ...prev,
-              status: "completed",
-              conclusion: snap.conclusion ?? prev.conclusion,
-              finished_at: snap.finishedAt ?? prev.finished_at,
-            }
-          : prev,
-      )
-    }
+    // Seed (or refresh) activeBuild from the snapshot metadata. Previously we
+    // only did this when the build was already concluded, which meant a page
+    // that latched onto a live build purely via a WS fallback path ended up
+    // with phases in the timeline but `activeBuild` stuck at null — breaking
+    // the "is this build live?" checks in the page components.
+    setActiveBuild((prev) => {
+      if (prev && prev.id !== buildId) return prev
+      const repoId = typeof snap.repoId === "number" ? snap.repoId : prev?.repo_id ?? 0
+      const repoName = (snap.repoName as string | undefined) ?? prev?.repo_name ?? ""
+      const headSha = (snap.headSha as string | undefined) ?? prev?.head_sha ?? ""
+      const startedAt = (snap.startedAt as string | undefined) ?? prev?.started_at ?? new Date().toISOString()
+      const status = snap.conclusion ? "completed" : prev?.status ?? "in_progress"
+      const conclusion = (snap.conclusion as string | undefined) ?? prev?.conclusion ?? null
+      const finishedAt = (snap.finishedAt as string | undefined) ?? prev?.finished_at ?? null
+      return {
+        id: buildId,
+        setup_id: prev?.setup_id ?? "",
+        repo_id: repoId,
+        repo_name: repoName,
+        head_sha: headSha,
+        status,
+        conclusion,
+        artifact_url: prev?.artifact_url ?? null,
+        check_run_url: prev?.check_run_url ?? null,
+        started_at: startedAt,
+        finished_at: finishedAt,
+      }
+    })
   }, [])
 
   useEffect(() => {
+    // Don't subscribe until we actually know which worker to watch for.
+    // Callers like ProjectDetail pass `project?.setup_id ?? ""` on first
+    // render, and we must not install a handler that silently drops every
+    // event because its closure captures setupId="".
+    if (!setupId) return
     return subscribe((evt) => {
       const p = evt.payload as Record<string, unknown>
       if (p?.setupId !== setupId) return
