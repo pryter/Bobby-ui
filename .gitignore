@@ -13,3 +13,7 @@ bun.lockb
 # Next.js
 /.next/
 /out/
+/.claude
+
+*.lock
+*.lockb
