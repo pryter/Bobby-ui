@@ -33,7 +33,7 @@ export default function AccountPage() {
       const base =
         window.location.hostname === "localhost"
           ? "http://localhost:3000"
-          : "https://bobby.pryter.me"
+          : "https://bobby.host"
       return new URL("/auth/callback", base).href
     }
 
