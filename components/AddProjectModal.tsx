@@ -106,7 +106,7 @@ export default function AddProjectModal({
   function connectGitHub() {
     const supabase = createClient()
     const getUrl = () => {
-      const base = window.location.hostname === "localhost" ? "http://localhost:3000" : "https://bobby.pryter.me"
+      const base = window.location.hostname === "localhost" ? "http://localhost:3000" : "https://bobby.host"
       return new URL("/auth/callback", base).href
     }
     const redirectTo =
