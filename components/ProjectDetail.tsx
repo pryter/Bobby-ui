@@ -67,13 +67,13 @@ function timeAgo(dateStr: string): string {
 function StatusBadge({ status, conclusion }: { status: string; conclusion: string | null }) {
   const label = conclusion || status
   const styles: Record<string, string> = {
-    success: "bg-green-100 text-green-800",
-    failure: "bg-red-100 text-red-800",
-    in_progress: "bg-yellow-100 text-yellow-800",
-    cancelled: "bg-gray-100 text-gray-600",
+    success: "bg-green-100 text-green-800 dark:bg-green-500/[0.12] dark:text-green-300",
+    failure: "bg-red-100 text-red-800 dark:bg-red-500/[0.12] dark:text-red-300",
+    in_progress: "bg-yellow-100 text-yellow-800 dark:bg-yellow-500/[0.12] dark:text-yellow-300",
+    cancelled: "bg-gray-100 text-gray-600 dark:bg-white/[0.06] dark:text-gray-400",
   }
   return (
-    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[label] ?? "bg-gray-100 text-gray-600"}`}>
+    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[label] ?? "bg-gray-100 text-gray-600 dark:bg-white/[0.06] dark:text-gray-400"}`}>
       {label}
     </span>
   )
@@ -84,16 +84,16 @@ function StatusBadge({ status, conclusion }: { status: string; conclusion: strin
 function StatusDot({ status, conclusion }: { status: string; conclusion: string | null }) {
   const label = conclusion || status
   if (label === "success")
-    return <CheckCircleSolid className="h-4 w-4 shrink-0 text-green-500" />
+    return <CheckCircleSolid className="h-4 w-4 shrink-0 text-green-500 dark:text-green-400" />
   if (label === "failure")
-    return <XCircleSolid className="h-4 w-4 shrink-0 text-red-500" />
+    return <XCircleSolid className="h-4 w-4 shrink-0 text-red-500 dark:text-red-400" />
   if (label === "in_progress")
     return (
       <span className="flex h-4 w-4 shrink-0 items-center justify-center">
         <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-yellow-400" />
       </span>
     )
-  return <span className="h-4 w-4 shrink-0 rounded-full bg-gray-300" />
+  return <span className="h-4 w-4 shrink-0 rounded-full bg-gray-300 dark:bg-white/[0.15]" />
 }
 
 // ── MetricCard ────────────────────────────────────────────────────────────────
@@ -112,21 +112,23 @@ function MetricCard({
   accent?: "green" | "red" | "yellow" | "gray"
 }) {
   const accentMap = {
-    green: "text-green-500",
-    red: "text-red-500",
-    yellow: "text-yellow-500",
-    gray: "text-gray-400",
+    green: "text-green-500 dark:text-green-400",
+    red: "text-red-500 dark:text-red-400",
+    yellow: "text-yellow-500 dark:text-yellow-400",
+    gray: "text-gray-400 dark:text-gray-500",
   }
   return (
-    <div className="flex flex-col gap-1.5 rounded-2xl bg-white px-4 py-4 shadow-md">
+    <div className="flex flex-col gap-1.5 rounded-2xl border px-4 py-4
+                    border-gray-200/80 bg-white/60
+                    dark:border-white/[0.07] dark:bg-white/[0.02]">
       <div className="flex items-center gap-1.5">
         <Icon className={`h-3.5 w-3.5 shrink-0 ${accentMap[accent]}`} strokeWidth={2} />
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400 dark:text-gray-500">
           {label}
         </span>
       </div>
-      <p className="text-xl font-bold leading-none text-gray-900">{value}</p>
-      {sub && <p className="text-[11px] text-gray-400">{sub}</p>}
+      <p className="text-xl font-bold leading-none text-gray-900 dark:text-white">{value}</p>
+      {sub && <p className="text-[11px] text-gray-400 dark:text-gray-500">{sub}</p>}
     </div>
   )
 }
@@ -134,7 +136,7 @@ function MetricCard({
 // ── Sparkline ─────────────────────────────────────────────────────────────────
 
 function Sparkline({ values, color = "#374151" }: { values: number[]; color?: string }) {
-  if (values.length < 2) return <span className="text-xs text-gray-300">Not enough data</span>
+  if (values.length < 2) return <span className="text-xs text-gray-300 dark:text-gray-600">Not enough data</span>
   const max = Math.max(...values)
   const min = Math.min(...values)
   const range = max - min || 1
@@ -170,21 +172,25 @@ function Sparkline({ values, color = "#374151" }: { values: number[]; color?: st
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 
 function ProjectDetailSkeleton() {
+  const skel = "bg-gray-200 dark:bg-white/[0.06]"
+  const skelSoft = "bg-gray-100 dark:bg-white/[0.04]"
+  const card =
+    "border border-gray-200/80 bg-white/60 dark:border-white/[0.07] dark:bg-white/[0.02]"
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-5xl animate-pulse flex-col px-4 py-6 sm:px-8 sm:py-10">
-      <div className="h-4 w-24 rounded bg-gray-200" />
+      <div className={`h-4 w-24 rounded ${skel}`} />
       <div className="mt-4">
-        <div className="h-7 w-56 rounded-lg bg-gray-200" />
-        <div className="mt-2 h-4 w-32 rounded bg-gray-100" />
+        <div className={`h-7 w-56 rounded-lg ${skel}`} />
+        <div className={`mt-2 h-4 w-32 rounded ${skelSoft}`} />
       </div>
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-20 rounded-2xl bg-white shadow-md" />
+          <div key={i} className={`h-20 rounded-2xl ${card}`} />
         ))}
       </div>
       <div className="mt-8">
-        <div className="mb-3 h-6 w-32 rounded bg-gray-200" />
-        <div className="h-20 rounded-2xl bg-white shadow-md" />
+        <div className={`mb-3 h-6 w-32 rounded ${skel}`} />
+        <div className={`h-20 rounded-2xl ${card}`} />
       </div>
     </div>
   )
@@ -323,31 +329,36 @@ export default function ProjectDetail({ id }: { id: string }) {
   if (notFound || !project) {
     return (
       <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-8 py-10">
-        <Link href="/dashboard/project" className="text-sm text-gray-500 hover:text-gray-900">
+        <Link href="/dashboard/project" className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
           ← Back to projects
         </Link>
-        <p className="mt-8 text-gray-500">Project not found.</p>
+        <p className="mt-8 text-gray-500 dark:text-gray-400">Project not found.</p>
       </div>
     )
   }
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-8 sm:py-10">
-      <Link href="/dashboard/project" className="text-sm text-gray-500 hover:text-gray-900">
+      <Link href="/dashboard/project" className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
         ← Back to projects
       </Link>
 
       {/* ── Header + Quick Actions ─────────────────────────────────────────── */}
       <div className="mt-4 flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold sm:text-2xl">{project.repo_full_name}</h1>
-          <p className="mt-1 font-mono text-sm text-gray-400">{project.repo_name}</p>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl text-gray-900 dark:text-white">
+            {project.repo_full_name}
+          </h1>
+          <p className="mt-1 font-mono text-sm text-gray-400 dark:text-gray-500">{project.repo_name}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2 pt-1">
           <button
             disabled
             title="Coming soon"
-            className="flex items-center gap-1.5 rounded-xl bg-gray-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold
+                       bg-bobby-lime text-black shadow-lg shadow-bobby-lime/20
+                       transition-all hover:scale-[1.02] active:scale-[0.98]
+                       disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
           >
             <PlayIcon className="h-3.5 w-3.5" strokeWidth={2.5} />
             Run Build
@@ -356,7 +367,10 @@ export default function ProjectDetail({ id }: { id: string }) {
             disabled={!latestBuild || rebuildLoading}
             title={latestBuild ? "Rebuild last commit" : "No builds yet"}
             onClick={() => setRebuildModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors
+                       border border-gray-200 bg-white text-gray-700 hover:bg-gray-50
+                       dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:hover:bg-white/[0.08]
+                       disabled:cursor-not-allowed disabled:opacity-40"
           >
             <ArrowPathIcon className={`h-3.5 w-3.5 ${rebuildLoading ? "animate-spin" : ""}`} strokeWidth={2.5} />
             {rebuildLoading ? "Rebuilding…" : "Rebuild Last"}
@@ -421,18 +435,22 @@ export default function ProjectDetail({ id }: { id: string }) {
       {/* ── Latest Build ───────────────────────────────────────────────────── */}
       {latestBuild && (
         <div className="mt-6 sm:mt-8">
-          <h2 className="mb-3 text-lg font-semibold">Latest Build</h2>
-          <div className="overflow-hidden rounded-2xl bg-white shadow-md">
+          <h2 className="mb-3 text-lg font-bold tracking-tight text-gray-900 dark:text-white">Latest Build</h2>
+          <div className="overflow-hidden rounded-2xl border
+                          border-gray-200/80 bg-white/60
+                          dark:border-white/[0.07] dark:bg-white/[0.02]">
             <div className="px-4 pt-4 sm:px-6">
               <div className="flex items-start justify-between gap-3">
                 {/* Left: SHA, branch, status, meta */}
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <code className="font-mono text-sm font-semibold text-gray-800">
+                    <code className="font-mono text-sm font-semibold text-gray-800 dark:text-gray-200">
                       {latestBuild.head_sha?.slice(0, 7)}
                     </code>
                     {(latestBuild as any).branch && (
-                      <span className="flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-600">
+                      <span className="flex items-center gap-1 rounded-md px-2 py-0.5 font-mono text-xs
+                                       bg-gray-100 text-gray-600
+                                       dark:bg-white/[0.06] dark:text-gray-300">
                         <CodeBracketIcon className="h-3 w-3" />
                         {(latestBuild as any).branch}
                       </span>
@@ -440,7 +458,9 @@ export default function ProjectDetail({ id }: { id: string }) {
                     <StatusDot status={latestBuild.status} conclusion={latestBuild.conclusion} />
                     <StatusBadge status={latestBuild.status} conclusion={latestBuild.conclusion} />
                     {(latestBuild as any).trigger && (
-                      <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-xs font-medium text-indigo-600">
+                      <span className="rounded px-1.5 py-0.5 text-xs font-medium
+                                       bg-indigo-50 text-indigo-600
+                                       dark:bg-indigo-500/[0.12] dark:text-indigo-300">
                         {(latestBuild as any).trigger}
                       </span>
                     )}
@@ -448,21 +468,21 @@ export default function ProjectDetail({ id }: { id: string }) {
 
                   {/* Meta row */}
                   <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-                    <span className="flex items-center gap-1 text-xs text-gray-400">
+                    <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
                       <CalendarIcon className="h-3 w-3 shrink-0" />
                       {timeAgo(latestBuild.started_at)}
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-gray-400">
+                    <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
                       <ClockIcon className="h-3 w-3 shrink-0" />
                       {formatDuration(getDurationSecs(latestBuild))}
                     </span>
                     {(latestBuild as any).commit_author && (
-                      <span className="flex items-center gap-1 text-xs text-gray-400">
+                      <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
                         <UserIcon className="h-3 w-3 shrink-0" />
                         {(latestBuild as any).commit_author}
                       </span>
                     )}
-                    <span className="flex items-center gap-1 text-xs text-gray-400">
+                    <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
                       <WrenchScrewdriverIcon className="h-3 w-3 shrink-0" />
                       {workerName(latestBuild.setup_id)}
                     </span>
@@ -470,7 +490,7 @@ export default function ProjectDetail({ id }: { id: string }) {
 
                   {/* Commit message */}
                   {(latestBuild as any).commit_message && (
-                    <p className="mt-1.5 max-w-lg truncate text-xs italic text-gray-500">
+                    <p className="mt-1.5 max-w-lg truncate text-xs italic text-gray-500 dark:text-gray-400">
                       &ldquo;{(latestBuild as any).commit_message}&rdquo;
                     </p>
                   )}
@@ -480,26 +500,29 @@ export default function ProjectDetail({ id }: { id: string }) {
                 <div className="flex shrink-0 items-center gap-2">
                   <button
                     onClick={() => setShowLatestConsole((v) => !v)}
-                    className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+                    className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors
+                               border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900
+                               dark:border-white/[0.10] dark:text-gray-300 dark:hover:bg-white/[0.06] dark:hover:text-white"
                   >
                     <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
                     {showLatestConsole ? "Hide Logs" : "View Logs"}
                   </button>
                   {showLatestConsole ? (
-                    <ChevronDownIcon className="h-4 w-4 text-gray-400" />
+                    <ChevronDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                   ) : (
-                    <ChevronRightIcon className="h-4 w-4 text-gray-400" />
+                    <ChevronRightIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                   )}
                 </div>
               </div>
             </div>
 
             {showLatestConsole ? (
-              <div className="mt-4 border-t border-gray-100 px-4 pb-4 sm:px-6">
+              <div className="mt-4 border-t px-4 pb-4 sm:px-6
+                              border-gray-100 dark:border-white/[0.06]">
                 {latestBuildPhases.length > 0 ? (
                   <BuildConsole phases={latestBuildPhases} active={!latestBuild.conclusion} />
                 ) : (
-                  <p className="pt-3 text-xs text-gray-400">
+                  <p className="pt-3 text-xs text-gray-400 dark:text-gray-500">
                     {activeBuild ? "Waiting for build output…" : "No log recorded for this build."}
                   </p>
                 )}
@@ -525,7 +548,9 @@ export default function ProjectDetail({ id }: { id: string }) {
               const dur = getDurationSecs(b)
 
               return (
-                <div key={b.id} className="overflow-hidden rounded-2xl bg-white shadow-md">
+                <div key={b.id} className="overflow-hidden rounded-2xl border
+                                              border-gray-200/80 bg-white/60
+                                              dark:border-white/[0.07] dark:bg-white/[0.02]">
                   <button
                     onClick={() => toggleBuildLog(b.id)}
                     className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left sm:px-6"
@@ -533,50 +558,51 @@ export default function ProjectDetail({ id }: { id: string }) {
                     <StatusDot status={b.status} conclusion={b.conclusion} />
 
                     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1">
-                      <code className="font-mono text-xs font-semibold text-gray-700">
+                      <code className="font-mono text-xs font-semibold text-gray-700 dark:text-gray-200">
                         {b.head_sha?.slice(0, 7)}
                       </code>
                       {(b as any).branch && (
                         <>
-                          <span className="text-gray-300">·</span>
-                          <span className="font-mono text-xs text-indigo-500">
+                          <span className="text-gray-300 dark:text-white/20">·</span>
+                          <span className="font-mono text-xs text-indigo-500 dark:text-indigo-400">
                             {(b as any).branch}
                           </span>
                         </>
                       )}
-                      <span className="text-gray-300">·</span>
-                      <span className="text-xs text-gray-400">{timeAgo(b.started_at)}</span>
-                      <span className="text-gray-300">·</span>
-                      <span className="flex items-center gap-0.5 text-xs text-gray-400">
+                      <span className="text-gray-300 dark:text-white/20">·</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">{timeAgo(b.started_at)}</span>
+                      <span className="text-gray-300 dark:text-white/20">·</span>
+                      <span className="flex items-center gap-0.5 text-xs text-gray-400 dark:text-gray-500">
                         <ClockIcon className="h-3 w-3 shrink-0" />
                         {formatDuration(dur)}
                       </span>
-                      <span className="text-gray-300">·</span>
-                      <span className="text-xs text-gray-400">{workerName(b.setup_id)}</span>
+                      <span className="text-gray-300 dark:text-white/20">·</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">{workerName(b.setup_id)}</span>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2">
                       <StatusBadge status={b.status} conclusion={b.conclusion} />
                       {isExpanded ? (
-                        <ChevronDownIcon className="h-4 w-4 text-gray-400" />
+                        <ChevronDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       ) : (
-                        <ChevronRightIcon className="h-4 w-4 text-gray-400" />
+                        <ChevronRightIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       )}
                     </div>
                   </button>
 
                   {isExpanded && (
-                    <div className="border-t border-gray-100 px-4 pb-4 sm:px-6">
+                    <div className="border-t px-4 pb-4 sm:px-6
+                                    border-gray-100 dark:border-white/[0.06]">
                       {pastPhases ? (
                         pastPhases.length > 0 ? (
                           <BuildConsole phases={pastPhases} active={false} />
                         ) : (
-                          <p className="pt-3 text-xs text-gray-400">
+                          <p className="pt-3 text-xs text-gray-400 dark:text-gray-500">
                             No log recorded for this build.
                           </p>
                         )
                       ) : (
-                        <p className="animate-pulse pt-3 text-xs text-gray-400">Loading log…</p>
+                        <p className="animate-pulse pt-3 text-xs text-gray-400 dark:text-gray-500">Loading log…</p>
                       )}
                     </div>
                   )}
@@ -592,32 +618,36 @@ export default function ProjectDetail({ id }: { id: string }) {
         <div className="mt-6 sm:mt-8">
           <h2 className="mb-3 text-lg font-semibold">Build Trends</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl bg-white px-5 py-4 shadow-md">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+            <div className="rounded-2xl border px-5 py-4
+                            border-gray-200/80 bg-white/60
+                            dark:border-white/[0.07] dark:bg-white/[0.02]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400 dark:text-gray-500">
                 Success Rate
               </p>
-              <p className="mt-0.5 text-xs text-gray-400">Last {last20.length} builds</p>
+              <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Last {last20.length} builds</p>
               <div className="mt-3 flex items-end justify-between">
                 <Sparkline
                   values={successTrend}
                   color={successRate !== null && successRate >= 80 ? "#16a34a" : "#f59e0b"}
                 />
-                <span className="text-2xl font-bold text-gray-800">
+                <span className="text-2xl font-bold text-gray-800 dark:text-white">
                   {successRate !== null ? `${successRate}%` : "—"}
                 </span>
               </div>
             </div>
 
-            <div className="rounded-2xl bg-white px-5 py-4 shadow-md">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+            <div className="rounded-2xl border px-5 py-4
+                            border-gray-200/80 bg-white/60
+                            dark:border-white/[0.07] dark:bg-white/[0.02]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400 dark:text-gray-500">
                 Build Duration
               </p>
-              <p className="mt-0.5 text-xs text-gray-400">
+              <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
                 Last {durationTrend.length} completed builds
               </p>
               <div className="mt-3 flex items-end justify-between">
-                <Sparkline values={durationTrend} color="#6366f1" />
-                <span className="text-2xl font-bold text-gray-800">
+                <Sparkline values={durationTrend} color="#818cf8" />
+                <span className="text-2xl font-bold text-gray-800 dark:text-white">
                   {formatDuration(avgDuration)}
                 </span>
               </div>
@@ -627,35 +657,40 @@ export default function ProjectDetail({ id }: { id: string }) {
       )}
 
       {buildList.length === 0 && (
-        <p className="mt-8 text-sm text-gray-500">
+        <p className="mt-8 text-sm text-gray-500 dark:text-gray-400">
           No builds yet. Push to this repo to trigger a build.
         </p>
       )}
 
       {/* ── Rebuild Modal ──────────────────────────────────────────────────── */}
       {rebuildModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-base font-semibold text-gray-900">Rebuild Last Commit</h3>
-            <p className="mt-2 text-sm text-gray-500">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm rounded-2xl border p-6 shadow-xl
+                          border-gray-200/80 bg-white
+                          dark:border-white/[0.08] dark:bg-bobby-surface dark:backdrop-blur-xl">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">Rebuild Last Commit</h3>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
               Do you want to keep the existing container cache, or wipe it and start fresh?
             </p>
             <div className="mt-5 flex flex-col gap-2">
               <button
                 onClick={() => handleRebuild(false)}
-                className="w-full rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-700"
+                className="w-full rounded-full px-4 py-2.5 text-sm font-semibold transition-colors
+                           bg-bobby-lime text-black hover:bg-bobby-lime/90"
               >
                 Keep Cache
               </button>
               <button
                 onClick={() => handleRebuild(true)}
-                className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-100"
+                className="w-full rounded-full border px-4 py-2.5 text-sm font-semibold transition-colors
+                           border-red-200 bg-red-50 text-red-700 hover:bg-red-100
+                           dark:border-red-500/20 dark:bg-red-500/[0.08] dark:text-red-300 dark:hover:bg-red-500/[0.12]"
               >
                 Reset Cache (reprovision container)
               </button>
               <button
                 onClick={() => setRebuildModalOpen(false)}
-                className="mt-1 text-sm text-gray-400 hover:text-gray-600"
+                className="mt-1 text-sm text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
               >
                 Cancel
               </button>

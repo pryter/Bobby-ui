@@ -26,8 +26,11 @@ export default function BlockNode({ data, selected }: NodeProps) {
 
   return (
     <div
-      className={`relative w-52 overflow-hidden rounded-xl border bg-white shadow-sm transition-shadow ${
-        selected ? "border-gray-400 shadow-md" : "border-gray-200"
+      className={`relative w-52 overflow-hidden rounded-xl border shadow-sm transition-shadow
+                  bg-white dark:bg-[#141414] dark:shadow-none ${
+        selected
+          ? "border-gray-400 shadow-md dark:border-white/[0.25]"
+          : "border-gray-200 dark:border-white/[0.08]"
       }`}
     >
       {/* Category accent bar */}
@@ -36,7 +39,7 @@ export default function BlockNode({ data, selected }: NodeProps) {
       <Handle
         type="target"
         position={Position.Top}
-        className="!h-3 !w-3 !border-2 !border-white !bg-gray-400"
+        className="!h-3 !w-3 !border-2 !border-white !bg-gray-400 dark:!border-[#141414] dark:!bg-white/40"
       />
 
       <div className="px-4 py-3 pl-5">
@@ -45,8 +48,8 @@ export default function BlockNode({ data, selected }: NodeProps) {
             <Icon className={`h-4 w-4 ${colors.text}`} />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-gray-800">{node.label}</p>
-            <p className="truncate text-xs text-gray-400">{summary}</p>
+            <p className="truncate text-sm font-semibold text-gray-800 dark:text-white">{node.label}</p>
+            <p className="truncate text-xs text-gray-400 dark:text-gray-500">{summary}</p>
           </div>
         </div>
       </div>
@@ -54,7 +57,7 @@ export default function BlockNode({ data, selected }: NodeProps) {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!h-3 !w-3 !border-2 !border-white !bg-gray-400"
+        className="!h-3 !w-3 !border-2 !border-white !bg-gray-400 dark:!border-[#141414] dark:!bg-white/40"
       />
     </div>
   )

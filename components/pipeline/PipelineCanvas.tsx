@@ -25,6 +25,7 @@ import BlockNode from "./nodes/BlockNode"
 import TriggerNode from "./nodes/TriggerNode"
 import BlockPalette from "./BlockPalette"
 import NodeConfigPanel from "./NodeConfigPanel"
+import { useTheme } from "@/lib/useTheme"
 
 // ── React Flow node type registry ─────────────────────────────────────────────
 
@@ -45,14 +46,28 @@ function toRFNode(pn: PipelineNode): Node {
   }
 }
 
-function toRFEdge(pe: PipelineEdge): Edge {
+// ── Theme-aware edge color ───────────────────────────────────────────────────
+// React Flow edges are SVG — can't use CSS classes for dark mode, so we build
+// the style objects from a single color variable that flips with the theme.
+const EDGE_COLOR_LIGHT = "#D1D5DB"
+const EDGE_COLOR_DARK = "rgba(255,255,255,0.25)"
+
+function makeEdgeStyle(color: string) {
+  return { stroke: color, strokeWidth: 2 }
+}
+
+function makeMarkerEnd(color: string) {
+  return { type: "arrowclosed" as const, color }
+}
+
+function toRFEdge(pe: PipelineEdge, color: string): Edge {
   return {
     id: pe.id,
     source: pe.source,
     target: pe.target,
     type: "smoothstep",
-    style: { stroke: "#D1D5DB", strokeWidth: 2 },
-    markerEnd: { type: "arrowclosed" as const, color: "#D1D5DB" },
+    style: makeEdgeStyle(color),
+    markerEnd: makeMarkerEnd(color),
   }
 }
 
@@ -98,12 +113,26 @@ export default function PipelineCanvas({
   onExpand,
   ref,
 }: Props) {
+  const { dark } = useTheme()
+  const edgeColor = dark ? EDGE_COLOR_DARK : EDGE_COLOR_LIGHT
+
   const defaultPipeline = buildDefaultPipeline(preset, customInit, customBuild, artifactPath)
   const seed = initialPipeline ?? defaultPipeline
 
   const [rfNodes, setRfNodes, onNodesChange] = useNodesState(seed.nodes.map(toRFNode))
-  const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState(seed.edges.map(toRFEdge))
+  const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState(seed.edges.map((e) => toRFEdge(e, edgeColor)))
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+
+  // Recolor existing edges whenever the theme changes
+  useEffect(() => {
+    setRfEdges((eds) =>
+      eds.map((e) => ({
+        ...e,
+        style: makeEdgeStyle(edgeColor),
+        markerEnd: makeMarkerEnd(edgeColor),
+      })),
+    )
+  }, [edgeColor]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep track of nodes by id for the config panel
   const nodeMap = useMemo(
@@ -127,7 +156,7 @@ export default function PipelineCanvas({
     if (isFirstRender.current) { isFirstRender.current = false; return }
     const p = initialPipeline ?? defaultPipeline
     setRfNodes(p.nodes.map(toRFNode))
-    setRfEdges(p.edges.map(toRFEdge))
+    setRfEdges(p.edges.map((e) => toRFEdge(e, edgeColor)))
   }, [initialPipeline]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Handlers ─────────────────────────────────────────────────────────────
@@ -139,14 +168,14 @@ export default function PipelineCanvas({
           {
             ...connection,
             type: "smoothstep",
-            style: { stroke: "#D1D5DB", strokeWidth: 2 },
-            markerEnd: { type: "arrowclosed" as const, color: "#D1D5DB" },
+            style: makeEdgeStyle(edgeColor),
+            markerEnd: makeMarkerEnd(edgeColor),
           },
           eds,
         ),
       )
     },
-    [setRfEdges],
+    [setRfEdges, edgeColor],
   )
 
   const handleNodesChange = useCallback(
@@ -210,12 +239,17 @@ export default function PipelineCanvas({
   )
 
   return (
-    <div className={`flex overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm ${fullscreen ? "h-full" : "h-[640px]"}`}>
+    <div
+      className={`flex overflow-hidden rounded-xl border
+                  border-gray-200 bg-white shadow-sm
+                  dark:border-white/[0.08] dark:bg-white/[0.02] dark:shadow-none
+                  ${fullscreen ? "h-full" : "h-[640px]"}`}
+    >
       {/* Left: Block palette */}
       <BlockPalette onAddBlock={handleAddBlock} />
 
       {/* Center: Canvas */}
-      <div className="relative flex-1">
+      <div className="relative flex-1 bg-white dark:bg-[#0c0c0c]">
         <ReactFlow
           nodes={rfNodes}
           edges={rfEdges}
@@ -229,30 +263,38 @@ export default function PipelineCanvas({
           fitViewOptions={{ padding: 0.2 }}
           proOptions={{ hideAttribution: true }}
           deleteKeyCode="Delete"
+          colorMode={dark ? "dark" : "light"}
         >
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#E5E7EB" />
-          <Controls className="!border-gray-200 !bg-white !shadow-sm" />
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={20}
+            size={1}
+            color={dark ? "rgba(255,255,255,0.08)" : "#E5E7EB"}
+          />
+          {/* Controls + MiniMap are themed natively by React Flow's `colorMode`
+              prop above — don't apply conflicting className/style overrides. */}
+          <Controls />
           <MiniMap
             nodeColor={(n) => {
               const pn = (n.data as { node: PipelineNode })?.node
-              if (!pn) return "#E5E7EB"
+              const fallback = dark ? "rgba(255,255,255,0.12)" : "#E5E7EB"
+              if (!pn) return fallback
               const def = BLOCK_DEF_MAP[pn.type]
-              if (!def) return "#E5E7EB"
+              if (!def) return fallback
               const colorMap: Record<string, string> = {
                 git: "#60A5FA", bun: "#FB923C", npm: "#F87171",
                 yarn: "#22D3EE", go: "#38BDF8", shell: "#9CA3AF", artifact: "#34D399",
               }
-              return colorMap[def.category] ?? "#E5E7EB"
+              return colorMap[def.category] ?? fallback
             }}
-            maskColor="rgba(255,255,255,0.7)"
-            className="!border-gray-200"
+            maskColor={dark ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.7)"}
           />
           <Panel position="top-right">
             <div className="flex items-center gap-2">
               {onReset && (
                 <button
                   onClick={onReset}
-                  className="text-xs text-gray-400 hover:text-gray-600"
+                  className="text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
                 >
                   Reset to default
                 </button>
@@ -260,7 +302,9 @@ export default function PipelineCanvas({
               {onExpand && (
                 <button
                   onClick={onExpand}
-                  className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                  className="rounded-lg p-1.5 transition-colors
+                             text-gray-400 hover:bg-gray-100 hover:text-gray-700
+                             dark:text-gray-500 dark:hover:bg-white/[0.08] dark:hover:text-white"
                   title={fullscreen ? "Exit full screen (Esc)" : "Full screen"}
                 >
                   {fullscreen

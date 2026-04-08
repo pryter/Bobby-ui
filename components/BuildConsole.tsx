@@ -35,8 +35,10 @@ function StepDot({ status, index }: { status: BuildPhase["status"]; index: numbe
   }
   // pending
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-gray-200 bg-white z-10">
-      <span className="text-[11px] font-semibold text-gray-400">{index + 1}</span>
+    <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2
+                    border-gray-200 bg-white
+                    dark:border-white/[0.10] dark:bg-white/[0.04]">
+      <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500">{index + 1}</span>
     </div>
   )
 }
@@ -45,10 +47,10 @@ function StepDot({ status, index }: { status: BuildPhase["status"]; index: numbe
 function Connector({ status }: { status: BuildPhase["status"] }) {
   const color =
     status === "success"
-      ? "bg-green-400"
+      ? "bg-green-400 dark:bg-green-500/60"
       : status === "running"
-      ? "bg-gradient-to-b from-green-400 to-gray-200"
-      : "bg-gray-200"
+      ? "bg-gradient-to-b from-green-400 to-gray-200 dark:from-green-500/60 dark:to-white/[0.08]"
+      : "bg-gray-200 dark:bg-white/[0.08]"
   return <div className={`w-0.5 min-h-[1.5rem] flex-1 ${color} transition-colors duration-500 mx-auto`} />
 }
 
@@ -73,12 +75,12 @@ function PhaseStep({
 
   const titleColor =
     phase.status === "success"
-      ? "text-gray-800"
+      ? "text-gray-800 dark:text-gray-200"
       : phase.status === "failure"
-      ? "text-red-600"
+      ? "text-red-600 dark:text-red-400"
       : phase.status === "running"
-      ? "text-gray-900"
-      : "text-gray-400"
+      ? "text-gray-900 dark:text-white"
+      : "text-gray-400 dark:text-gray-500"
 
   const subtitleText =
     phase.status === "running"
@@ -91,12 +93,12 @@ function PhaseStep({
 
   const subtitleColor =
     phase.status === "running"
-      ? "text-yellow-600"
+      ? "text-yellow-600 dark:text-yellow-400"
       : phase.status === "success"
-      ? "text-gray-400"
+      ? "text-gray-400 dark:text-gray-500"
       : phase.status === "failure"
-      ? "text-red-400"
-      : "text-gray-300"
+      ? "text-red-400 dark:text-red-400"
+      : "text-gray-300 dark:text-gray-600"
 
   return (
     <div className="flex gap-4">
@@ -118,30 +120,34 @@ function PhaseStep({
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {phase.status === "running" && (
-              <span className="flex items-center gap-1 rounded-full bg-yellow-50 border border-yellow-200 px-2 py-0.5 text-[10px] font-semibold text-yellow-700">
+              <span className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold
+                               border-yellow-200 bg-yellow-50 text-yellow-700
+                               dark:border-yellow-500/20 dark:bg-yellow-500/[0.08] dark:text-yellow-300">
                 <span className="h-1.5 w-1.5 rounded-full bg-yellow-500 animate-pulse" />
                 Live
               </span>
             )}
             {(phase.logs.length > 0 || phase.status !== "pending") && (
               open
-                ? <ChevronDownIcon className="h-3.5 w-3.5 text-gray-400 group-hover:text-gray-600" />
-                : <ChevronRightIcon className="h-3.5 w-3.5 text-gray-400 group-hover:text-gray-600" />
+                ? <ChevronDownIcon className="h-3.5 w-3.5 text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300" />
+                : <ChevronRightIcon className="h-3.5 w-3.5 text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300" />
             )}
           </div>
         </button>
 
         {open && (
-          <div className="mt-2 rounded-xl bg-gray-950 border border-gray-800 px-4 py-3 overflow-x-auto">
+          <div className="mt-2 overflow-x-auto rounded-xl border px-4 py-3
+                          border-gray-800 bg-gray-950
+                          dark:border-white/[0.06] dark:bg-black/60">
             {phase.logs.length === 0 ? (
-              <span className="text-gray-500 text-xs font-mono italic">
+              <span className="font-mono text-xs italic text-gray-500">
                 Waiting for output…
               </span>
             ) : (
               phase.logs.map((line, i) => (
                 <div
                   key={i}
-                  className="text-green-400 text-xs font-mono leading-5 whitespace-pre-wrap break-all"
+                  className="whitespace-pre-wrap break-all font-mono text-xs leading-5 text-green-400"
                 >
                   {line}
                 </div>
@@ -179,16 +185,18 @@ export default function BuildConsole({ phases, active }: BuildConsoleProps) {
       {/* Header row */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <h3 className="text-sm font-semibold text-gray-700">Build Log</h3>
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Build Log</h3>
           {active && (
-            <span className="flex items-center gap-1.5 rounded-full bg-green-50 border border-green-200 px-2.5 py-0.5 text-[11px] font-semibold text-green-700">
+            <span className="flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold
+                             border-green-200 bg-green-50 text-green-700
+                             dark:border-green-500/20 dark:bg-green-500/[0.08] dark:text-green-300">
               <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
               Live
             </span>
           )}
         </div>
         {phases.length > 0 && (
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-gray-400 dark:text-gray-500">
             {completedCount} / {phases.length} steps
           </span>
         )}
@@ -197,12 +205,16 @@ export default function BuildConsole({ phases, active }: BuildConsoleProps) {
       {/* Stepper card */}
       <div
         ref={scrollRef}
-        className="max-h-[32rem] overflow-y-auto rounded-2xl bg-white border border-gray-100 shadow-sm px-5 pt-5 pb-1"
+        className="max-h-[32rem] overflow-y-auto rounded-2xl border px-5 pt-5 pb-1
+                   border-gray-200/80 bg-white/60
+                   dark:border-white/[0.07] dark:bg-white/[0.02]"
       >
         {phases.length === 0 ? (
           <div className="flex items-center gap-4 pb-5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-gray-200 bg-gray-50 animate-pulse" />
-            <p className="text-sm text-gray-400 italic">Waiting for build output…</p>
+            <div className="flex h-8 w-8 shrink-0 animate-pulse items-center justify-center rounded-full border-2
+                            border-gray-200 bg-gray-50
+                            dark:border-white/[0.10] dark:bg-white/[0.04]" />
+            <p className="text-sm italic text-gray-400 dark:text-gray-500">Waiting for build output…</p>
           </div>
         ) : (
           phases.map((phase, i) => (

@@ -23,8 +23,10 @@ import type { PipelineCanvasHandle } from "@/components/pipeline/PipelineCanvas"
 const PipelineCanvas = dynamic(() => import("./pipeline/PipelineCanvas"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-[640px] items-center justify-center rounded-xl border border-gray-200 bg-gray-50">
-      <p className="text-sm text-gray-400">Loading pipeline editor…</p>
+    <div className="flex h-[640px] items-center justify-center rounded-xl border
+                    border-gray-200 bg-gray-50
+                    dark:border-white/[0.08] dark:bg-white/[0.02]">
+      <p className="text-sm text-gray-400 dark:text-gray-500">Loading pipeline editor…</p>
     </div>
   ),
 })
@@ -32,15 +34,18 @@ const PipelineCanvas = dynamic(() => import("./pipeline/PipelineCanvas"), {
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 
 function ConfigSkeleton() {
+  const skel = "bg-gray-200 dark:bg-white/[0.08]"
+  const skelSoft = "bg-gray-100 dark:bg-white/[0.05]"
+  const card = "border border-gray-200/80 bg-white/60 dark:border-white/[0.07] dark:bg-white/[0.02]"
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-5xl animate-pulse flex-col px-4 py-6 sm:px-8 sm:py-10">
-      <div className="mb-1 h-7 w-40 rounded-lg bg-gray-200" />
-      <div className="h-4 w-72 rounded bg-gray-100" />
-      <div className="mt-6 rounded-2xl bg-white px-6 py-5 shadow-md">
-        <div className="mb-4 h-5 w-32 rounded bg-gray-200" />
-        <div className="h-4 w-48 rounded bg-gray-100" />
+      <div className={`mb-1 h-7 w-40 rounded-lg ${skel}`} />
+      <div className={`h-4 w-72 rounded ${skelSoft}`} />
+      <div className={`mt-6 rounded-2xl px-6 py-5 ${card}`}>
+        <div className={`mb-4 h-5 w-32 rounded ${skel}`} />
+        <div className={`h-4 w-48 rounded ${skelSoft}`} />
       </div>
-      <div className="mt-4 h-[640px] rounded-2xl bg-white shadow-md" />
+      <div className={`mt-4 h-[640px] rounded-2xl ${card}`} />
     </div>
   )
 }
@@ -217,31 +222,36 @@ export default function ProjectConfiguration({ id }: { id: string }) {
   if (notFound || !project) {
     return (
       <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-8 py-10">
-        <p className="text-gray-500">Project not found.</p>
+        <p className="text-gray-500 dark:text-gray-400">Project not found.</p>
       </div>
     )
   }
+
+  const card = "rounded-2xl border border-gray-200/80 bg-white/60 dark:border-white/[0.07] dark:bg-white/[0.02]"
+  const inputBase = "rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 border-gray-200 bg-white text-gray-900 focus:ring-bobby-lime dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-bobby-lime/60"
+  const primaryBtn = "rounded-full bg-bobby-lime px-4 py-1.5 text-sm font-semibold text-black hover:bg-bobby-lime/90 disabled:opacity-50"
+  const ghostBtn = "rounded-full px-4 py-1.5 text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col px-4 py-6 sm:px-8 sm:py-10">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <WrenchScrewdriverIcon className="h-6 w-6 text-gray-400" />
-        <h1 className="text-2xl font-semibold">Configuration</h1>
+        <WrenchScrewdriverIcon className="h-6 w-6 text-gray-400 dark:text-gray-500" />
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Configuration</h1>
       </div>
-      <p className="mt-1 text-sm text-gray-500">
+      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
         Build pipeline and worker assignment for{" "}
-        <span className="font-medium text-gray-700">{project.repo_full_name}</span>.
+        <span className="font-medium text-gray-700 dark:text-gray-200">{project.repo_full_name}</span>.
       </p>
 
       {/* ── Linked Worker ──────────────────────────────────────────────────── */}
-      <div className="mt-6 rounded-2xl bg-white px-4 py-5 shadow-md sm:px-6">
+      <div className={`mt-6 px-4 py-5 sm:px-6 ${card}`}>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold">Linked Worker</h2>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white">Linked Worker</h2>
           {!editingWorker && (
             <button
               onClick={() => { setSelectedWorker(currentSetupId); setEditingWorker(true) }}
-              className="text-sm text-gray-500 hover:text-gray-900"
+              className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             >
               Change
             </button>
@@ -250,15 +260,15 @@ export default function ProjectConfiguration({ id }: { id: string }) {
 
         {!editingWorker ? (
           <p className="text-sm">
-            <span className="mr-2 text-gray-500">Worker</span>
-            <span className="font-medium">{workerName(currentSetupId)}</span>
+            <span className="mr-2 text-gray-500 dark:text-gray-400">Worker</span>
+            <span className="font-medium text-gray-900 dark:text-white">{workerName(currentSetupId)}</span>
           </p>
         ) : (
           <div className="space-y-3">
             <select
               value={selectedWorker}
               onChange={(e) => setSelectedWorker(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-900"
+              className={`w-full ${inputBase}`}
             >
               {workers.map((w) => (
                 <option key={w.setupId} value={w.setupId}>
@@ -266,19 +276,12 @@ export default function ProjectConfiguration({ id }: { id: string }) {
                 </option>
               ))}
             </select>
-            {workerError && <p className="text-sm text-red-600">{workerError}</p>}
+            {workerError && <p className="text-sm text-red-600 dark:text-red-400">{workerError}</p>}
             <div className="flex gap-2">
-              <button
-                onClick={saveWorker}
-                disabled={savingWorker}
-                className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
-              >
+              <button onClick={saveWorker} disabled={savingWorker} className={primaryBtn}>
                 {savingWorker ? "Saving…" : "Save"}
               </button>
-              <button
-                onClick={() => { setEditingWorker(false); setWorkerError(null) }}
-                className="rounded-lg px-4 py-1.5 text-sm text-gray-500 hover:text-gray-900"
-              >
+              <button onClick={() => { setEditingWorker(false); setWorkerError(null) }} className={ghostBtn}>
                 Cancel
               </button>
             </div>
@@ -287,11 +290,11 @@ export default function ProjectConfiguration({ id }: { id: string }) {
       </div>
 
       {/* ── Container Environment ──────────────────────────────────────────── */}
-      <div className="mt-4 rounded-2xl bg-white px-4 py-5 shadow-md sm:px-6">
+      <div className={`mt-4 px-4 py-5 sm:px-6 ${card}`}>
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-base font-semibold">Container Environment</h2>
-            <p className="mt-0.5 text-xs text-gray-400">
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Container Environment</h2>
+            <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
               Run builds inside a Podman container for a deterministic, isolated environment.
               Leave blank to build directly on the worker host.
             </p>
@@ -299,7 +302,7 @@ export default function ProjectConfiguration({ id }: { id: string }) {
           {!editingContainer && (
             <button
               onClick={() => { setEditingContainer(true); setContainerError(null) }}
-              className="shrink-0 text-sm text-gray-500 hover:text-gray-900"
+              className="shrink-0 text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             >
               {containerConfig ? "Edit" : "Configure"}
             </button>
@@ -310,18 +313,20 @@ export default function ProjectConfiguration({ id }: { id: string }) {
           containerConfig ? (
             <div className="space-y-1 text-sm">
               <p>
-                <span className="mr-2 text-gray-500">Image</span>
-                <span className="font-mono font-medium">{containerConfig.image}</span>
+                <span className="mr-2 text-gray-500 dark:text-gray-400">Image</span>
+                <span className="font-mono font-medium text-gray-900 dark:text-white">{containerConfig.image}</span>
               </p>
               {containerConfig.env && Object.keys(containerConfig.env).length > 0 && (
                 <div className="mt-2">
-                  <p className="mb-1 text-xs text-gray-400">Environment variables</p>
-                  <div className="divide-y divide-gray-100 rounded-lg border border-gray-100">
+                  <p className="mb-1 text-xs text-gray-400 dark:text-gray-500">Environment variables</p>
+                  <div className="divide-y rounded-lg border
+                                  divide-gray-100 border-gray-100
+                                  dark:divide-white/[0.05] dark:border-white/[0.06]">
                     {Object.entries(containerConfig.env).map(([k, v]) => (
                       <div key={k} className="flex gap-2 px-3 py-1.5 font-mono text-xs">
-                        <span className="text-gray-700">{k}</span>
-                        <span className="text-gray-400">=</span>
-                        <span className="text-gray-600">{v}</span>
+                        <span className="text-gray-700 dark:text-gray-200">{k}</span>
+                        <span className="text-gray-400 dark:text-gray-500">=</span>
+                        <span className="text-gray-600 dark:text-gray-300">{v}</span>
                       </div>
                     ))}
                   </div>
@@ -329,12 +334,12 @@ export default function ProjectConfiguration({ id }: { id: string }) {
               )}
             </div>
           ) : (
-            <p className="text-sm text-gray-400">No container configured — builds run on the host.</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">No container configured — builds run on the host.</p>
           )
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">
+              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">
                 OCI Image
               </label>
               <input
@@ -342,9 +347,9 @@ export default function ProjectConfiguration({ id }: { id: string }) {
                 placeholder="e.g. node:20-alpine or golang:1.22"
                 value={containerImage}
                 onChange={(e) => setContainerImage(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                className={`w-full font-mono ${inputBase}`}
               />
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                 Clear to disable container isolation and run builds on the host.
               </p>
             </div>
@@ -352,10 +357,10 @@ export default function ProjectConfiguration({ id }: { id: string }) {
             {/* Env vars */}
             <div>
               <div className="mb-1 flex items-center justify-between">
-                <label className="text-xs font-medium text-gray-600">Environment Variables</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Environment Variables</label>
                 <button
                   onClick={addEnvRow}
-                  className="text-xs text-gray-500 hover:text-gray-900"
+                  className="text-xs text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
                 >
                   + Add variable
                 </button>
@@ -369,18 +374,22 @@ export default function ProjectConfiguration({ id }: { id: string }) {
                         placeholder="KEY"
                         value={row.key}
                         onChange={(e) => updateEnvRow(i, "key", e.target.value)}
-                        className="w-2/5 rounded-lg border border-gray-200 px-3 py-1.5 font-mono text-xs outline-none focus:ring-2 focus:ring-gray-900"
+                        className="w-2/5 rounded-lg border px-3 py-1.5 font-mono text-xs outline-none focus:ring-2
+                                   border-gray-200 bg-white text-gray-900 focus:ring-bobby-lime
+                                   dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-bobby-lime/60"
                       />
                       <input
                         type="text"
                         placeholder="value"
                         value={row.value}
                         onChange={(e) => updateEnvRow(i, "value", e.target.value)}
-                        className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 font-mono text-xs outline-none focus:ring-2 focus:ring-gray-900"
+                        className="flex-1 rounded-lg border px-3 py-1.5 font-mono text-xs outline-none focus:ring-2
+                                   border-gray-200 bg-white text-gray-900 focus:ring-bobby-lime
+                                   dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-bobby-lime/60"
                       />
                       <button
                         onClick={() => removeEnvRow(i)}
-                        className="px-2 text-gray-400 hover:text-red-500"
+                        className="px-2 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400"
                         aria-label="Remove"
                       >
                         ×
@@ -391,20 +400,13 @@ export default function ProjectConfiguration({ id }: { id: string }) {
               )}
             </div>
 
-            {containerError && <p className="text-sm text-red-600">{containerError}</p>}
+            {containerError && <p className="text-sm text-red-600 dark:text-red-400">{containerError}</p>}
 
             <div className="flex gap-2">
-              <button
-                onClick={saveContainer}
-                disabled={savingContainer}
-                className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
-              >
+              <button onClick={saveContainer} disabled={savingContainer} className={primaryBtn}>
                 {savingContainer ? "Saving…" : "Save"}
               </button>
-              <button
-                onClick={() => { setEditingContainer(false); setContainerError(null) }}
-                className="rounded-lg px-4 py-1.5 text-sm text-gray-500 hover:text-gray-900"
-              >
+              <button onClick={() => { setEditingContainer(false); setContainerError(null) }} className={ghostBtn}>
                 Cancel
               </button>
             </div>
@@ -416,20 +418,22 @@ export default function ProjectConfiguration({ id }: { id: string }) {
       <div className="mt-6">
         <div className="mb-3 flex items-start justify-between">
           <div>
-            <h2 className="text-base font-semibold">Build Pipeline</h2>
-            <p className="mt-0.5 text-xs text-gray-400">
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Build Pipeline</h2>
+            <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
               Drag blocks from the left panel · connect nodes to define flow ·
               click a block to configure · press{" "}
-              <kbd className="rounded bg-gray-100 px-1 font-mono text-[10px]">Delete</kbd> to remove
+              <kbd className="rounded px-1 font-mono text-[10px]
+                              bg-gray-100 text-gray-700
+                              dark:bg-white/[0.08] dark:text-gray-300">Delete</kbd> to remove
             </p>
           </div>
           <button
             onClick={() => triggerSave(canvasRef)}
             disabled={saving}
-            className={`shrink-0 rounded-lg px-4 py-1.5 text-sm font-medium shadow-sm transition-colors ${
+            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
               saved
                 ? "bg-green-500 text-white"
-                : "bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-50"
+                : "bg-bobby-lime text-black hover:bg-bobby-lime/90 disabled:opacity-50"
             }`}
           >
             {saving ? "Saving…" : saved ? "Saved ✓" : "Save Pipeline"}
@@ -450,19 +454,20 @@ export default function ProjectConfiguration({ id }: { id: string }) {
 
       {/* ── Pipeline fullscreen overlay ────────────────────────────────────── */}
       {pipelineFullscreen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-white">
-          <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-3">
+        <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-bobby-bg">
+          <div className="flex shrink-0 items-center justify-between border-b px-6 py-3
+                          border-gray-200 dark:border-white/[0.08]">
             <div>
-              <h2 className="text-base font-semibold">Build Pipeline</h2>
-              <p className="mt-0.5 text-xs text-gray-400">{project.repo_full_name}</p>
+              <h2 className="text-base font-semibold text-gray-900 dark:text-white">Build Pipeline</h2>
+              <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{project.repo_full_name}</p>
             </div>
             <button
               onClick={() => triggerSave(fsCanvasRef)}
               disabled={saving}
-              className={`rounded-lg px-4 py-1.5 text-sm font-medium shadow-sm transition-colors ${
+              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
                 saved
                   ? "bg-green-500 text-white"
-                  : "bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-50"
+                  : "bg-bobby-lime text-black hover:bg-bobby-lime/90 disabled:opacity-50"
               }`}
             >
               {saving ? "Saving…" : saved ? "Saved ✓" : "Save Pipeline"}
