@@ -27,11 +27,15 @@ import {
   getRepo,
   getRepoBuilds,
   getWorkers,
-  getBuildLog,
+  getBuildSnapshot,
   rebuildLast,
 } from "@/lib/api"
 import { useWorkerStream } from "@/lib/useWorkerStream"
-import { parseLogPhases } from "@/lib/buildPhases"
+import {
+  BuildPhase,
+  timelineFromSnapshotEvents,
+  timelinePhases,
+} from "@/lib/buildPhases"
 import BuildConsole from "@/components/BuildConsole"
 import { useAuth } from "@/components/AuthProvider"
 
@@ -287,15 +291,15 @@ export default function ProjectDetail({ id }: { id: string }) {
     [last20],
   )
 
-  // ── Latest build: load persisted log on mount (for completed builds) ─────
+  // ── Latest build: load snapshot on mount (for completed builds) ─────────
 
-  const [persistedLatestPhases, setPersistedLatestPhases] = useState<import("@/lib/buildPhases").BuildPhase[] | null>(null)
+  const [persistedLatestPhases, setPersistedLatestPhases] = useState<BuildPhase[] | null>(null)
 
   useEffect(() => {
     if (!latestBuild?.conclusion || !token) return
     setPersistedLatestPhases(null)
-    getBuildLog(latestBuild.id, token).then((text) => {
-      if (text) setPersistedLatestPhases(parseLogPhases(text.split("\n").filter(Boolean)))
+    getBuildSnapshot(latestBuild.id, token).then((snap) => {
+      if (snap) setPersistedLatestPhases(timelinePhases(timelineFromSnapshotEvents(snap.events)))
     })
   }, [latestBuild?.id, latestBuild?.conclusion, token])
 
@@ -311,14 +315,17 @@ export default function ProjectDetail({ id }: { id: string }) {
   // ── Past build log expansion ──────────────────────────────────────────────
 
   const [expandedBuildId, setExpandedBuildId] = useState<string | null>(null)
-  const [buildLogCache, setBuildLogCache] = useState<Record<string, string>>({})
+  const [buildPhasesCache, setBuildPhasesCache] = useState<Record<string, BuildPhase[] | null>>({})
 
   async function toggleBuildLog(buildId: string) {
     if (expandedBuildId === buildId) { setExpandedBuildId(null); return }
     setExpandedBuildId(buildId)
-    if (!buildLogCache[buildId]) {
-      const text = await getBuildLog(buildId, token)
-      setBuildLogCache((prev) => ({ ...prev, [buildId]: text }))
+    if (!(buildId in buildPhasesCache)) {
+      // null = loading; array = loaded
+      setBuildPhasesCache((prev) => ({ ...prev, [buildId]: null }))
+      const snap = await getBuildSnapshot(buildId, token)
+      const phases = snap ? timelinePhases(timelineFromSnapshotEvents(snap.events)) : []
+      setBuildPhasesCache((prev) => ({ ...prev, [buildId]: phases }))
     }
   }
 
@@ -541,10 +548,7 @@ export default function ProjectDetail({ id }: { id: string }) {
           <div className="space-y-2">
             {previousBuilds.map((b) => {
               const isExpanded = expandedBuildId === b.id
-              const cachedLog = buildLogCache[b.id]
-              const pastPhases = cachedLog
-                ? parseLogPhases(cachedLog.split("\n").filter(Boolean))
-                : null
+              const pastPhases = buildPhasesCache[b.id] ?? null
               const dur = getDurationSecs(b)
 
               return (

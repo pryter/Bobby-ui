@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Worker, Build, getWorker, getBuilds, updateWorkerName, getArtifactDownloadURL, getBuildLog } from "@/lib/api"
+import { Worker, Build, getWorker, getBuilds, updateWorkerName, getArtifactDownloadURL, getBuildSnapshot } from "@/lib/api"
 import { useWorkerStream } from "@/lib/useWorkerStream"
-import { parseLogPhases } from "@/lib/buildPhases"
+import { timelineFromSnapshotEvents, timelinePhases } from "@/lib/buildPhases"
 import type { BuildPhase } from "@/lib/buildPhases"
 import BuildConsole from "@/components/BuildConsole"
 import { useAuth } from "@/components/AuthProvider"
@@ -80,8 +80,8 @@ export default function WorkerDetail({ id }: { id: string }) {
   useEffect(() => {
     if (activeBuild) { setPersistedPhases([]); return }
     if (!latestDbBuild?.conclusion || !token) return
-    getBuildLog(latestDbBuild.id, token).then((text) => {
-      if (text) setPersistedPhases(parseLogPhases(text.split("\n").filter(Boolean)))
+    getBuildSnapshot(latestDbBuild.id, token).then((snap) => {
+      if (snap) setPersistedPhases(timelinePhases(timelineFromSnapshotEvents(snap.events)))
     })
   }, [latestDbBuild?.id, latestDbBuild?.conclusion, activeBuild?.id, token])
 

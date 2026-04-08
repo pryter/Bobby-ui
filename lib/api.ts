@@ -146,11 +146,42 @@ export function getArtifactDownloadURL(url: string | null): string | null {
   }
 }
 
-/** Fetches the persisted build log text for a completed build. Returns empty string on 404. */
-export function getBuildLog(buildId: string, token: string): Promise<string> {
-  return fetch(`${SERVICE_URL}/api/builds/${buildId}/log`, {
+/** One entry in a BuildSnapshot's event timeline.
+ *  Note: the snapshot endpoint uses `"log"` (not `"build_log"`) as the log type. */
+export interface BuildSnapshotEvent {
+  seq: number
+  ts: string
+  type: "phase_start" | "phase_end" | "log"
+  phaseId?: string
+  label?: string
+  status?: "success" | "failure"
+  line?: string
+}
+
+/** Structured snapshot of a build timeline — the catch-up path used on first
+ *  load and after any WS reconnect. For legacy (pre-rewrite) builds the service
+ *  synthesizes this shape from the plain-text log, with `seq = 0`. */
+export interface BuildSnapshot {
+  buildId: string
+  setupId: string
+  repoId: number
+  repoName: string
+  headSha: string
+  startedAt: string
+  finishedAt?: string | null
+  conclusion?: string | null
+  lastSeq: number
+  events: BuildSnapshotEvent[]
+}
+
+/** Fetches the structured snapshot for a build. Returns null on 404. */
+export function getBuildSnapshot(
+  buildId: string,
+  token: string,
+): Promise<BuildSnapshot | null> {
+  return fetch(`${SERVICE_URL}/api/builds/${buildId}/snapshot`, {
     headers: { Authorization: `Bearer ${token}` },
-  }).then((res) => (res.ok ? res.text() : ""))
+  }).then((res) => (res.ok ? (res.json() as Promise<BuildSnapshot>) : null))
 }
 
 /** Reassigns a monitored repo to a different worker. */

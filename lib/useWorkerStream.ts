@@ -1,29 +1,97 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { Build } from "./api"
-import { BuildPhase, parseLogPhases } from "./buildPhases"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Build, getBuildSnapshot } from "./api"
+import {
+  BuildPhase,
+  PhaseTimelineState,
+  StructuredBuildEvent,
+  applyBuildEvent,
+  emptyPhaseTimeline,
+  normalizeSnapshotEvent,
+  timelinePhases,
+} from "./buildPhases"
 import { useWorkerStreamContext } from "@/components/WorkerStreamProvider"
+import { useAuth } from "@/components/AuthProvider"
 
 interface UseWorkerStreamResult {
   online: boolean
   activeBuild: Build | null
-  logs: string[]
   phases: BuildPhase[]
 }
 
+/**
+ * Subscribes to the worker stream for a given `setupId` and folds its
+ * structured build events into a phase timeline suitable for BuildConsole.
+ *
+ * Implements the UI state machine from STREAMING_API.md §4:
+ *   - `build_started`  → full reset of this build's state.
+ *   - `phase_start` / `build_log` / `phase_end` → fold into the timeline,
+ *     dedup by `seq`, and re-fetch /snapshot if a gap is detected.
+ *   - `build_finished` → lock the terminal state.
+ *   - On WS reconnect → re-fetch /snapshot and merge events with seq > lastSeq.
+ */
 export function useWorkerStream(
   setupId: string,
-  initialOnline: boolean
+  initialOnline: boolean,
 ): UseWorkerStreamResult {
-  const { subscribe } = useWorkerStreamContext()
+  const { subscribe, connectionEpoch } = useWorkerStreamContext()
+  const { token } = useAuth()
+
   const [online, setOnline] = useState(initialOnline)
   const [activeBuild, setActiveBuild] = useState<Build | null>(null)
-  const [logs, setLogs] = useState<string[]>([])
+  const [timeline, setTimeline] = useState<PhaseTimelineState>(emptyPhaseTimeline)
+
+  // Refs for values we need to read inside the WS callback without
+  // re-subscribing on every change.
+  const activeBuildIdRef = useRef<string | null>(null)
+  const timelineRef = useRef<PhaseTimelineState>(timeline)
+  timelineRef.current = timeline
+  const tokenRef = useRef(token)
+  tokenRef.current = token
+
+  /** Fetch /snapshot for a build and merge any events we haven't seen. */
+  const refetchSnapshot = useCallback(async (buildId: string) => {
+    const t = tokenRef.current
+    if (!t) return
+    let snap
+    try {
+      snap = await getBuildSnapshot(buildId, t)
+    } catch {
+      return
+    }
+    if (!snap) return
+    // The user may have navigated away or a new build started while we were
+    // waiting — ignore the response if it's no longer relevant.
+    if (activeBuildIdRef.current !== buildId) return
+
+    setTimeline((cur) => {
+      let s = cur
+      for (const e of snap.events) {
+        const ne = normalizeSnapshotEvent(e)
+        if (ne) s = applyBuildEvent(s, ne)
+      }
+      return s
+    })
+
+    if (snap.conclusion) {
+      setActiveBuild((prev) =>
+        prev && prev.id === buildId
+          ? {
+              ...prev,
+              status: "completed",
+              conclusion: snap.conclusion ?? prev.conclusion,
+              finished_at: snap.finishedAt ?? prev.finished_at,
+            }
+          : prev,
+      )
+    }
+  }, [])
 
   useEffect(() => {
     return subscribe((evt) => {
-      if (evt.payload?.setupId !== setupId) return
+      const p = evt.payload as Record<string, unknown>
+      if (p?.setupId !== setupId) return
 
       switch (evt.type) {
         case "worker_online":
@@ -32,10 +100,33 @@ export function useWorkerStream(
         case "worker_offline":
           setOnline(false)
           break
+
+        case "build_started": {
+          // Explicit lifecycle reset — do NOT merge with prior state even if
+          // the buildId happens to match (rebuilds reuse ids).
+          const buildId = p.buildId as string
+          activeBuildIdRef.current = buildId
+          setTimeline(emptyPhaseTimeline())
+          setActiveBuild({
+            id: buildId,
+            setup_id: setupId,
+            repo_id: (p.repoId as number) ?? 0,
+            repo_name: (p.repoName as string) ?? "",
+            head_sha: (p.headSha as string) ?? "",
+            status: "in_progress",
+            conclusion: null,
+            artifact_url: null,
+            check_run_url: null,
+            started_at: (p.startedAt as string) ?? new Date().toISOString(),
+            finished_at: null,
+          })
+          break
+        }
+
         case "build_update": {
-          const p = evt.payload
+          const buildId = p.buildId as string
           setActiveBuild((prev) => {
-            if (prev && prev.id !== p.buildId) return prev
+            if (prev && prev.id !== buildId) return prev
             if (prev) {
               return {
                 ...prev,
@@ -45,9 +136,13 @@ export function useWorkerStream(
                 finished_at: (p.finishedAt ?? prev.finished_at) as string | null,
               }
             }
-            setLogs([])
+            // Build is in progress but we haven't seen build_started (e.g. we
+            // mounted mid-build). Synthesize the Build and catch up via
+            // /snapshot.
+            activeBuildIdRef.current = buildId
+            void refetchSnapshot(buildId)
             return {
-              id: p.buildId as string,
+              id: buildId,
               setup_id: setupId,
               repo_id: (p.repoId as number) ?? 0,
               repo_name: (p.repoName as string) ?? "",
@@ -62,16 +157,82 @@ export function useWorkerStream(
           })
           break
         }
-        case "build_log":
-          if (evt.payload.line) {
-            setLogs((prev) => [...prev.slice(-999), evt.payload.line as string])
+
+        case "phase_start":
+        case "phase_end":
+        case "build_log": {
+          const buildId = p.buildId as string
+          if (!buildId) break
+          // Only fold events that belong to the build we're currently showing.
+          // If we don't yet have an active build, latch on — build_update /
+          // snapshot will catch up the rest.
+          if (activeBuildIdRef.current && activeBuildIdRef.current !== buildId) {
+            break
+          }
+          if (!activeBuildIdRef.current) {
+            activeBuildIdRef.current = buildId
+            void refetchSnapshot(buildId)
+          }
+
+          const seq = typeof p.seq === "number" ? p.seq : 0
+          // Gap detection — if the worker skipped ahead, the WS lost frames
+          // during a hiccup. Re-seed from /snapshot.
+          if (seq > 0 && seq > timelineRef.current.lastSeq + 1) {
+            void refetchSnapshot(buildId)
+          }
+
+          let structured: StructuredBuildEvent | null = null
+          if (evt.type === "phase_start" && typeof p.phaseId === "string") {
+            structured = {
+              kind: "phase_start",
+              seq,
+              phaseId: p.phaseId,
+              label: (p.label as string) ?? p.phaseId,
+            }
+          } else if (evt.type === "phase_end" && typeof p.phaseId === "string") {
+            structured = {
+              kind: "phase_end",
+              seq,
+              phaseId: p.phaseId,
+              status: (p.status as "success" | "failure") ?? "success",
+            }
+          } else if (evt.type === "build_log" && typeof p.line === "string") {
+            structured = { kind: "log", seq, line: p.line }
+          }
+          if (structured) {
+            const s0 = structured
+            setTimeline((s) => applyBuildEvent(s, s0))
           }
           break
+        }
+
+        case "build_finished": {
+          const buildId = p.buildId as string
+          setActiveBuild((prev) => {
+            if (!prev || prev.id !== buildId) return prev
+            return {
+              ...prev,
+              status: "completed",
+              conclusion: (p.conclusion as string) ?? prev.conclusion,
+              finished_at: (p.finishedAt as string) ?? prev.finished_at,
+            }
+          })
+          break
+        }
       }
     })
-  }, [subscribe, setupId])
+  }, [subscribe, setupId, refetchSnapshot])
 
-  const phases = useMemo(() => parseLogPhases(logs), [logs])
+  // On every WS (re)open, catch up from /snapshot for whichever build we're
+  // currently tracking. This is the fix for "log stream stops updating after
+  // a while" — any events dropped while the socket was dead are replayed.
+  useEffect(() => {
+    if (connectionEpoch === 0) return
+    const bid = activeBuildIdRef.current
+    if (bid) void refetchSnapshot(bid)
+  }, [connectionEpoch, refetchSnapshot])
 
-  return { online, activeBuild, logs, phases }
+  const phases = useMemo(() => timelinePhases(timeline), [timeline])
+
+  return { online, activeBuild, phases }
 }
