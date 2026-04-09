@@ -11,10 +11,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ results: [] })
   }
 
-  const url = `https://hub.docker.com/v2/search/repositories/?query=${encodeURIComponent(query)}&page_size=${encodeURIComponent(pageSize)}`
+  // Use the legacy v1 search endpoint — it remains anonymous-accessible.
+  // The newer /v2/search/repositories/ endpoint now requires authentication and
+  // returns 401/403 for unauthenticated requests, which silently breaks the UI.
+  const url = `https://index.docker.io/v1/search?q=${encodeURIComponent(query)}&n=${encodeURIComponent(pageSize)}`
 
   try {
-    const res = await fetch(url, { headers: { Accept: "application/json" } })
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+      // Cache search results for 5 minutes — Docker Hub's index is slow
+      // and the same queries get re-issued whenever the picker remounts.
+      next: { revalidate: 300 },
+    })
     if (!res.ok) {
       return NextResponse.json(
         { error: `Docker Hub search failed (${res.status})` },
@@ -22,7 +30,17 @@ export async function GET(request: Request) {
       )
     }
     const data = await res.json()
-    return NextResponse.json(data)
+    // Normalize v1 result shape → the shape ImagePicker expects (repo_name, short_description, …)
+    const results = Array.isArray(data.results)
+      ? data.results.map((r: { name: string; description?: string; star_count?: number; is_official?: boolean; is_automated?: boolean }) => ({
+          repo_name: r.name,
+          short_description: r.description,
+          star_count: r.star_count,
+          is_official: r.is_official,
+          is_automated: r.is_automated,
+        }))
+      : []
+    return NextResponse.json({ results })
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Search failed" },
