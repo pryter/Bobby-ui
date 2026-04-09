@@ -328,6 +328,15 @@ export default function ProjectDetail({ id }: { id: string }) {
   const [expandedBuildId, setExpandedBuildId] = useState<string | null>(null)
   const [buildPhasesCache, setBuildPhasesCache] = useState<Record<string, BuildPhase[] | null>>({})
 
+  // Previous builds are capped at 5 by default so the page stays skimmable —
+  // users with a long history can click "View more" to reveal the rest.
+  const PREVIOUS_BUILDS_INITIAL_LIMIT = 5
+  const [showAllPrevious, setShowAllPrevious] = useState(false)
+  const visiblePreviousBuilds = showAllPrevious
+    ? previousBuilds
+    : previousBuilds.slice(0, PREVIOUS_BUILDS_INITIAL_LIMIT)
+  const hiddenPreviousCount = previousBuilds.length - visiblePreviousBuilds.length
+
   async function toggleBuildLog(buildId: string) {
     if (expandedBuildId === buildId) { setExpandedBuildId(null); return }
     setExpandedBuildId(buildId)
@@ -557,7 +566,7 @@ export default function ProjectDetail({ id }: { id: string }) {
         <div className="mt-6 sm:mt-8">
           <h2 className="mb-3 text-lg font-semibold">Previous Builds</h2>
           <div className="space-y-2">
-            {previousBuilds.map((b) => {
+            {visiblePreviousBuilds.map((b) => {
               const isExpanded = expandedBuildId === b.id
               const pastPhases = buildPhasesCache[b.id] ?? null
               const dur = getDurationSecs(b)
@@ -625,6 +634,18 @@ export default function ProjectDetail({ id }: { id: string }) {
               )
             })}
           </div>
+          {hiddenPreviousCount > 0 && (
+            <div className="mt-3 flex justify-center">
+              <button
+                onClick={() => setShowAllPrevious(true)}
+                className="rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors
+                           border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900
+                           dark:border-white/[0.10] dark:text-gray-300 dark:hover:bg-white/[0.06] dark:hover:text-white"
+              >
+                View {hiddenPreviousCount} more
+              </button>
+            </div>
+          )}
         </div>
       )}
 
