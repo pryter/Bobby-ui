@@ -119,7 +119,7 @@ export default function ImagePicker({ value, onChange, placeholder, className }:
       setSearching(true)
       setSearchError(null)
       try {
-        const url = `https://hub.docker.com/v2/search/repositories/?query=${encodeURIComponent(q)}&page_size=15`
+        const url = `/api/dockerhub/search?query=${encodeURIComponent(q)}&page_size=15`
         const res = await fetch(url, { signal: ctrl.signal })
         if (!res.ok) throw new Error(`Search failed (${res.status})`)
         const data = await res.json()
@@ -145,11 +145,7 @@ export default function ImagePicker({ value, onChange, placeholder, className }:
     setTagsError(null)
     setTags([])
     try {
-      // Docker Hub requires namespace/name; official images use "library" namespace
-      const parts = repoName.split("/")
-      const ns = parts.length === 1 ? "library" : parts[0]
-      const name = parts.length === 1 ? parts[0] : parts.slice(1).join("/")
-      const url = `https://hub.docker.com/v2/repositories/${encodeURIComponent(ns)}/${encodeURIComponent(name)}/tags/?page_size=50&ordering=last_updated`
+      const url = `/api/dockerhub/tags?repo=${encodeURIComponent(repoName)}&page_size=50`
       const res = await fetch(url, { signal: ctrl.signal })
       if (!res.ok) throw new Error(`Could not load tags (${res.status})`)
       const data = await res.json()
