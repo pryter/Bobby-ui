@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from "react"
 import dynamic from "next/dynamic"
 import { WrenchScrewdriverIcon } from "@heroicons/react/24/outline"
+import ImagePicker from "./ImagePicker"
 import {
   MonitoredRepo,
   Worker,
@@ -342,14 +343,13 @@ export default function ProjectConfiguration({ id }: { id: string }) {
               <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">
                 OCI Image
               </label>
-              <input
-                type="text"
-                placeholder="e.g. node:20-alpine or golang:1.22"
+              <ImagePicker
                 value={containerImage}
-                onChange={(e) => setContainerImage(e.target.value)}
-                className={`w-full font-mono ${inputBase}`}
+                onChange={setContainerImage}
+                placeholder="Search Docker Hub… e.g. node, golang, postgres"
               />
-              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+                Search Docker Hub or type any image reference (including private registries).
                 Clear to disable container isolation and run builds on the host.
               </p>
             </div>
