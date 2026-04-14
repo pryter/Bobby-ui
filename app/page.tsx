@@ -9,6 +9,8 @@ import {
   useTransform,
   useMotionValueEvent,
   useMotionTemplate,
+  useMotionValue,
+  animate,
   MotionValue,
 } from "framer-motion"
 import { useRouter } from "next/navigation"
@@ -990,7 +992,9 @@ function DeepDiveSection() {
     return () => io.disconnect()
   }, [])
   useMotionValueEvent(morphProgress, "change", (v) => {
-    setMorphPastShape(v >= 0.88)
+    // Threshold sits just under SHAPE (0.65) so the nav compacts in sync with
+    // the pill fully forming.
+    setMorphPastShape(v >= 0.63)
   })
   useEffect(() => {
     setCompact(sectionInView && morphPastShape)
@@ -1029,7 +1033,7 @@ function DeepDiveSection() {
   }
 
   return (
-    <section ref={sectionRef} className="relative px-5 md:px-12 pt-20 pb-72">
+    <section ref={sectionRef} className="relative px-5 md:px-12 pt-28 md:pt-20 pb-72">
       <div className="max-w-6xl mx-auto">
         {/* Section heading — desktop only. On mobile the heading is
             rendered inside the sticky morph frame below so it stays
@@ -1081,6 +1085,7 @@ function DeepDiveSection() {
             features={DEEP_FEATURES}
             active={active}
             morphProgress={morphProgress}
+            morphRawProgress={morphRawProgress}
             onJump={scrollTo}
           />
         </MobileStickyWrapper>
@@ -1258,16 +1263,31 @@ function DeepFeatureDetail({
   )
   // Image width grows from a compact ~60% of the column to full width — the
   // growth is held off until after the pause so the normal size has a moment
-  // to breathe before the focus lift.
+  // to breathe before the focus lift. On mobile the detail column is already
+  // full-viewport and the compact→grow choreography reads as the image
+  // shrinking away then puffing back; instead, start full-width and stay
+  // full-width the whole way through.
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const mm = window.matchMedia("(max-width: 767px)")
+    setIsMobile(mm.matches)
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mm.addEventListener("change", onChange)
+    return () => mm.removeEventListener("change", onChange)
+  }, [])
   const imgWidth    = useTransform(
     local,
     [0.22, 0.48, 0.62, 0.74, 0.93],
-    ["62%", "62%", "62%", "100%", "100%"],
+    isMobile
+      ? ["100%", "100%", "100%", "100%", "100%"]
+      : ["62%",  "62%",  "62%",  "100%", "100%"],
   )
   // Scale settles at 1 by 0.48 and stays there through the pause + freeze.
   const imgScale    = useTransform(local, [0.22, 0.48, 0.93], [0.88, 1, 1])
-  // Reveal mask — wipes from left to right during the entry phase.
-  const imgClip     = useTransform(local, [0.25, 0.50],      ["inset(0 100% 0 0)", "inset(0 0% 0 0)"])
+  // Prior left-to-right clip-path reveal removed — the opacity+y+scale
+  // entry already does enough work on its own, and stacking the wipe on top
+  // made the visual entry feel overwhelming. Now it's a plain in/out fade
+  // (imgOp) with the subtle rise + scale.
 
   // Focus phase — only for sections that actually have a visual. The text
   // block fades and drifts upward just as the image begins its focus lift,
@@ -1366,7 +1386,7 @@ function DeepFeatureDetail({
             mockups. */}
         {index === 0 ? (
           <motion.div
-            style={{ opacity: imgOp, y: imgY, scale: imgScale, clipPath: imgClip, width: imgWidth }}
+            style={{ opacity: imgOp, y: imgY, scale: imgScale, width: imgWidth }}
           >
             <ZeroConfigStartCard />
           </motion.div>
@@ -1374,7 +1394,7 @@ function DeepFeatureDetail({
           // No-Code — video capped in width so the sticky content never
           // outgrows the viewport and bleeds into the next section.
           <motion.video
-            style={{ opacity: imgOp, y: imgY, scale: imgScale, clipPath: imgClip, width: imgWidth }}
+            style={{ opacity: imgOp, y: imgY, scale: imgScale, width: imgWidth }}
             src="/showcase.webm"
             autoPlay
             loop
@@ -1386,7 +1406,7 @@ function DeepFeatureDetail({
         ) : index === 2 ? (
           // Self-Hosted — custom mockup inside its own card frame.
           <motion.div
-            style={{ opacity: imgOp, y: imgY, scale: imgScale, clipPath: imgClip, width: imgWidth }}
+            style={{ opacity: imgOp, y: imgY, scale: imgScale, width: imgWidth }}
             className="relative aspect-[16/10]"
           >
             <ImageSearchMockup />
@@ -1395,10 +1415,13 @@ function DeepFeatureDetail({
           // Integrations — 3D orb, rendered without any card frame and without
           // the grow/freeze/center choreography. Wide/short aspect so the
           // ellipsoid reads as a horizontal band of platform logos, centred
-          // in the column.
+          // in the column. `overflow-hidden` contains the orb's 640px-wide
+          // orbit rings + tile bleed (rx=260 + tile halfwidth means tiles
+          // can extend ~290px from centre, wider than a mobile viewport) so
+          // the orb doesn't push horizontal scroll on small screens.
           <motion.div
             style={{ opacity: imgOp }}
-            className="relative mx-auto aspect-[16/6] w-full"
+            className="relative mx-auto aspect-[16/6] w-full overflow-hidden"
           >
             <IntegrationsOrb />
           </motion.div>
@@ -1421,11 +1444,16 @@ function MobileStickyWrapper({
   children: React.ReactNode
 }) {
   // Phased after the heading finishes collapsing (heading's gridTemplateRows
-  // hits 0fr at morphProgress ≈ 0.90) and after the nav's compact signal
-  // fires (~0.88). Doing the climb in the final [0.90 → 1.00] window means
+  // hits 0fr at morphProgress ≈ 0.65 = SHAPE) and after the nav's compact
+  // signal fires (~0.63). Doing the climb in the [0.65 → 0.80] window means
   // the pill only migrates up once there's nothing above it to collide with
-  // the nav — no fleeting overlap during the transition.
-  const top = useTransform(morphProgress, [0.90, 1.0], [80, 20])
+  // the nav — no fleeting overlap during the transition — and finishes well
+  // before the buffer ends so the pill is locked in place by the time the
+  // user reaches the first detail section.
+  // Pre-morph top is 112 (pt-28) to match the section's mobile top padding
+  // so the sticky pin is seamless — no jump from flow position to pinned
+  // position — and gives the heading extra breathing room below the nav.
+  const top = useTransform(morphProgress, [0.65, 0.80], [112, 20])
   return (
     <motion.div
       style={{ top, position: "sticky", zIndex: 50 }}
@@ -1444,8 +1472,8 @@ function MobileStickyWrapper({
 function MobileSectionHeading({ morphProgress }: { morphProgress: MotionValue<number> }) {
   // Match the MobileTimeline's PRE/RETRACT/SHAPE beats so the heading fades
   // alongside the list retract and finishes collapsing as the pill takes shape.
-  const opacity = useTransform(morphProgress, [0.10, 0.45], [1, 0])
-  const rows    = useTransform(morphProgress, [0.45, 0.90], ["1fr", "0fr"])
+  const opacity = useTransform(morphProgress, [0.05, 0.30], [1, 0])
+  const rows    = useTransform(morphProgress, [0.30, 0.65], ["1fr", "0fr"])
   return (
     <motion.div style={{ gridTemplateRows: rows }} className="grid">
       <motion.div style={{ opacity }} className="overflow-hidden min-h-0">
@@ -1472,13 +1500,20 @@ function MobileTimeline({
   features,
   active,
   morphProgress,
+  morphRawProgress,
   onJump,
 }: {
   features: typeof DEEP_FEATURES
   active: number
-  /** 0 → 1 as the user scrolls through the dedicated mobile morph buffer.
-   *  Drives the inline-list → pill transition over real scroll distance. */
+  /** Spring-smoothed morph progress (0 → 1). Drives the pill chrome — bg,
+   *  radius, padding, maxWidth — so those flow in smoothly. */
   morphProgress: MotionValue<number>
+  /** Raw, un-smoothed scroll progress (0 → 1). Used to trigger pillReady
+   *  without spring lag — the text/dot compaction runs its own time-based
+   *  animation and doesn't want to wait for the spring to catch up, which
+   *  would fire the trigger way late (user scrolled into step 2 before
+   *  the smoothed value crossed the threshold). */
+  morphRawProgress: MotionValue<number>
   onJump: (i: number) => void
 }) {
   // ── Morph choreography ────────────────────────────────────────────────
@@ -1494,9 +1529,16 @@ function MobileTimeline({
   // After SHAPE the container IS the pill — same DOM node, same active row
   // content — just wrapped in pill-shaped chrome. Tapping it expands the
   // height back out to reveal all rows as a dropdown.
-  const PRE     = 0.10
-  const RETRACT = 0.45
-  const SHAPE   = 0.90
+  // Beats are intentionally biased toward the early/mid portion of the buffer
+  // scroll (rather than ending at ~0.90) so the morph visually completes well
+  // before the user reaches the first detail section. The remaining ~35% of
+  // buffer scroll after SHAPE gives the spring plenty of room to settle —
+  // previously the morph finishing at 0.90 left only 14% of buffer for the
+  // spring to catch up, so on fast scrolls the pill would still be shrinking
+  // as the user entered step 2.
+  const PRE     = 0.05
+  const RETRACT = 0.30
+  const SHAPE   = 0.65
 
   // Inactive rows collapse + fade first.
   const inactiveOpacity = useTransform(morphProgress, [PRE, RETRACT], [1, 0])
@@ -1552,17 +1594,27 @@ function MobileTimeline({
   const chevOpacity  = useTransform(morphProgress, [RETRACT, SHAPE], [0, 1])
 
   // ── Row-level compaction ──────────────────────────────────────────────
-  // The full timeline keeps the larger dot / text / spacing of the desktop
-  // style. Once the container starts shaping into the pill, each row tightens
-  // its own dimensions so the final pill is a single compact line — without
-  // changing how the full list looks before the morph.
-  const rowPadY        = useTransform(morphProgress, [RETRACT, SHAPE], [8, 4])   // py-2 → py-1
-  const dotSize        = useTransform(morphProgress, [RETRACT, SHAPE], [18, 14])
-  const dotCheckSize   = useTransform(morphProgress, [RETRACT, SHAPE], [10, 8])
-  const haloPx         = useTransform(morphProgress, [RETRACT, SHAPE], [6, 4])
-  const eyebrowFont    = useTransform(morphProgress, [RETRACT, SHAPE], [10, 9])
-  const eyebrowMB      = useTransform(morphProgress, [RETRACT, SHAPE], [4, 0])   // mb-1 → 0
-  const titleFont      = useTransform(morphProgress, [RETRACT, SHAPE], [16, 14]) // base → sm
+  // Pre-morph values are tuned to match the DESKTOP timeline's typography +
+  // spacing (dot 18px, eyebrow 10px, title 18px/text-lg, ~28px row gap via
+  // 14px paddingY on each row). That way the mobile full-size list reads
+  // exactly like the desktop one before the morph kicks in. During the
+  // morph (RETRACT → SHAPE) each dimension tweens down to its compact pill
+  // value so the finished pill is a single tight line.
+  // Row-level compaction runs as its OWN time-based animation keyed off
+  // `pillReady` rather than off scroll-driven morphProgress. The moment the
+  // pill is formed, everything tweens to its compact target over ~0.3s,
+  // independent of scroll velocity or spring settle.
+  //
+  // Two flavours for the two consumer patterns:
+  //   • `dotSize` / `haloPx` stay motion values because `railLeft` and
+  //     `activeHalo` read them reactively via motion-value computations.
+  //     We drive them imperatively with framer's `animate()` in an effect.
+  //   • Everything else is consumed once as a style prop, so we skip the
+  //     motion-value plumbing and let the JSX use declarative `animate`
+  //     props directly — simpler, obviously correct, no motion-value
+  //     subscription to debug.
+  const dotSize = useMotionValue(18)
+  const haloPx  = useMotionValue(6)
   // Halo shadow for the active dot — amplitude shrinks with haloPx so it
   // matches the smaller compact dot.
   const activeHalo     = useMotionTemplate`0 0 0 ${haloPx}px rgba(163,230,53,0.18)`
@@ -1573,7 +1625,13 @@ function MobileTimeline({
   // Expand state (user taps the pill to see all rows as a dropdown).
   const [expanded, setExpanded] = useState(false)
   const [pillReady, setPillReady] = useState(false)
-  useMotionValueEvent(morphProgress, "change", (v) => {
+  // Trigger off RAW progress, not the spring. The spring lags by hundreds of
+  // ms on fast scrolls, which would push pillReady's flip well past the
+  // buffer and into detail step 1/2 — so the text animation would kick off
+  // after the user is already deep in the content, feeling like a late pop.
+  // Raw progress fires the instant scroll crosses the threshold, so the
+  // 0.3s shrink animation runs in sync with the pill chrome filling in.
+  useMotionValueEvent(morphRawProgress, "change", (v) => {
     setPillReady(v >= SHAPE - 0.05)
   })
   // Auto-collapse if we scroll back out of the pill state, so the dropdown
@@ -1581,6 +1639,17 @@ function MobileTimeline({
   useEffect(() => {
     if (!pillReady) setExpanded(false)
   }, [pillReady])
+
+  // Drive the two motion values (dotSize, haloPx) imperatively — they're the
+  // ones consumed reactively by railLeft/activeHalo so they can't be plain
+  // animate-prop targets. The rest are consumed declaratively in the JSX
+  // below via `animate={{ ... }}` bound to `pillReady`.
+  useEffect(() => {
+    const tween = { duration: 0.3, ease: [0.22, 1, 0.36, 1] as const }
+    const a1 = animate(dotSize, pillReady ? 10 : 18, tween)
+    const a2 = animate(haloPx,  pillReady ? 3  : 6,  tween)
+    return () => { a1.stop(); a2.stop() }
+  }, [pillReady, dotSize, haloPx])
 
 
   return (
@@ -1636,7 +1705,12 @@ function MobileTimeline({
               // midline regardless of current text size.
               <motion.button
                 onClick={() => onJump(i)}
-                style={{ paddingTop: rowPadY, paddingBottom: rowPadY }}
+                initial={false}
+                animate={{
+                  paddingTop:    pillReady ? 3 : 14,
+                  paddingBottom: pillReady ? 3 : 14,
+                }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                 className="flex w-full items-center gap-3 text-left"
                 aria-label={`Jump to ${f.title}`}
               >
@@ -1655,7 +1729,12 @@ function MobileTimeline({
                   {isDone && (
                     <motion.svg
                       viewBox="0 0 12 12"
-                      style={{ width: dotCheckSize, height: dotCheckSize }}
+                      initial={false}
+                      animate={{
+                        width:  pillReady ? 7 : 10,
+                        height: pillReady ? 7 : 10,
+                      }}
+                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                       className="fill-gray-900"
                     >
                       <path d="M4.5 8.5 2 6l.9-.9 1.6 1.6L9.1 2 10 2.9z" />
@@ -1663,19 +1742,33 @@ function MobileTimeline({
                   )}
                 </motion.span>
                 <span className="min-w-0 flex-1">
+                  {/* Eyebrow collapses to zero rows in pill state — grid row
+                      hits 0fr and opacity hits 0, so it leaves no baseline
+                      gap and the title sits centered on the dot. */}
                   <motion.span
-                    style={{ fontSize: eyebrowFont, marginBottom: eyebrowMB }}
-                    className={
-                      "block font-bold uppercase tracking-[0.18em] leading-none " +
-                      (isActive
-                        ? "text-[#7ba320] dark:text-[#a3e635]"
-                        : "text-gray-400 dark:text-gray-600")
-                    }
+                    initial={false}
+                    animate={{ gridTemplateRows: "1fr" }}
+                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    className="grid"
                   >
-                    {f.eyebrow}
+                    <motion.span
+                      initial={false}
+                      animate={{
+                        fontSize: 10
+                      }}
+                      className={
+                        "block font-bold uppercase tracking-[0.18em] leading-none overflow-hidden min-h-0 mb-1 " +
+                        (isActive
+                          ? "text-[#7ba320] dark:text-[#a3e635]"
+                          : "text-gray-400 dark:text-gray-600")
+                      }
+                    >
+                      {f.eyebrow}
+                    </motion.span>
                   </motion.span>
                   <motion.span
-                    style={{ fontSize: titleFont }}
+                    initial={false}
+                    animate={{ fontSize: 14 }}
                     className={
                       "block font-bold tracking-tight truncate leading-tight " +
                       (isActive
