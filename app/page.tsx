@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useEffect, useLayoutEffect } from "react"
+import { useRef, useState, useEffect, useLayoutEffect, createContext, useContext } from "react"
 import {
   motion,
   AnimatePresence,
@@ -197,27 +197,36 @@ function TileRow({
 
 const NAV_LINKS = ["Features", "Docs", "Pricing", "FAQ"]
 
+// Shared state between DeepDiveSection (producer) and Navbar (consumer). When
+// the mobile timeline has fully morphed into its pill AND the deep-dive
+// section is still on-screen, we ask the mobile nav to collapse to just
+// [logo | menu button] and hide the floating "Get started" CTA — this gives
+// the centered pill timeline room to breathe and turns the nav row into a
+// three-part composition: logo · pill · menu.
+const DeepDiveNavContext = createContext<{
+  compact: boolean
+  setCompact: (v: boolean) => void
+}>({
+  compact: false,
+  setCompact: () => {},
+})
+
 function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
   const router    = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
-  const pillRef   = useRef<HTMLDivElement>(null)
-  const [pillW, setPillW]   = useState(0)
-  const [pillH, setPillH]   = useState(36)
   const [winH,  setWinH]    = useState(844)
 
+  // When the deep-dive section's timeline pill is in its formed + pinned
+  // state, we compact the mobile nav to [logo | menu] only so the centered
+  // timeline pill has room to breathe.
+  const { compact } = useContext(DeepDiveNavContext)
+
   useEffect(() => {
-    const measure = () => {
-      // offsetWidth is 0 when display:none (sm:hidden on desktop) — skip to avoid overwriting with 0
-      if (pillRef.current && pillRef.current.offsetWidth > 0) {
-        setPillW(pillRef.current.offsetWidth)
-        setPillH(pillRef.current.offsetHeight)
-      }
-      setWinH(window.innerHeight)
-    }
+    const measure = () => setWinH(window.innerHeight)
     measure()
     window.addEventListener("resize", measure)
     return () => window.removeEventListener("resize", measure)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   const spring = { type: "spring", stiffness: 320, damping: 32 } as const
 
@@ -276,15 +285,17 @@ function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
 
       {/* ── MOBILE morphing element ────────────────────────────────────────────
           Single persistent div. Animates its own dimensions between pill and
-          sidebar states — no mount/unmount, so no scale glitch.              */}
+          sidebar states — no mount/unmount, so no scale glitch.
+          Width/height use Framer's "auto" so the pill always hugs its current
+          content. When `compact` drops the wordmark + theme toggle, the auto
+          width re-measures to the smaller natural size and springs in.     */}
       <motion.div
-        ref={pillRef}
         initial={{ opacity: 0, y: -14, borderRadius: 9999 }}
         animate={{
           opacity: 1,
           y:            0,
-          width:        menuOpen ? 288        : (pillW || undefined),
-          height:       menuOpen ? winH - 32  : pillH,
+          width:        menuOpen ? 288        : "auto",
+          height:       menuOpen ? winH - 32  : "auto",
           borderRadius: menuOpen ? 24         : 100,
           top:          menuOpen ? 16         : 20,
         }}
@@ -300,31 +311,70 @@ function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
                    bg-[#111]/90 backdrop-blur-xl
                    border border-white/[0.08] shadow-xl shadow-black/40"
       >
-        {/* ── Pill content layer (normal flow — sizes the container) */}
+        {/* ── Pill content layer (normal flow — sizes the container).
+            In `compact` mode (deep-dive timeline pill is live) we drop the
+            "Bobby" wordmark + theme toggle, leaving [logo | menu] only, and
+            tighten the surrounding padding / logo margin so the pill really
+            contracts rather than leaving an empty interior.
+            The AnimatePresence wrappers let the absent elements collapse
+            smoothly rather than pop. */}
         <motion.div
           animate={{ opacity: menuOpen ? 0 : 1 }}
           transition={{ duration: menuOpen ? 0.08 : 0.18, delay: menuOpen ? 0 : 0.22 }}
-          className="flex items-center gap-1 pl-2 pr-1 py-1.5"
+          className={
+            "flex items-center gap-1 py-1.5 " +
+            (compact ? "pl-1.5 pr-1" : "pl-2 pr-1")
+          }
           style={{ pointerEvents: menuOpen ? "none" : "auto" }}
         >
-          <div className="flex items-center gap-0.5 px-2 mr-1">
+          <div
+            className={
+              "flex items-center gap-0.5 " +
+              (compact ? "px-1 mr-0" : "px-2 mr-1")
+            }
+          >
             <div className="w-6 h-6 flex items-center justify-center ">
               <svg width={20} height={20} viewBox="0 0 106 102" xmlns="http://www.w3.org/2000/svg">
                 <path id="Path" fill="white" stroke="none" d="M 95.59375 67.023438 L 95.609375 17.179688 C 95.610001 12.229996 91.550003 8.239998 86.589996 8.339996 C 81.720001 8.43 77.919998 12.610001 77.919998 17.470001 L 77.921875 32.132813 C 77.919998 36.360001 74.559998 39.91 70.330002 39.950001 L 68.539063 39.84375 C 64.690002 39.32 61.84 35.979996 61.84 32.089996 L 61.84375 18.078125 C 61.84 14.139999 59.560001 10.470001 55.919998 8.959999 C 52.259998 7.440002 49.66 9.010002 47.189999 10.520004 C 44.529999 12.129997 36.509998 16.379997 36.509998 16.379997 L 36.03125 16.640625 L 35.546875 16.382813 C 35.549999 16.379997 27.440001 12.099998 25.32 10.770004 C 22.82 9.199997 20.280001 7.440002 16.540001 8.870003 C 12.78 10.309998 10.39 14.050003 10.39 18.089996 L 10.390625 67.023438 C 10.84 79.970001 21.459999 90.339996 34.509998 90.339996 L 71.492188 90.34375 C 84.540001 90.339996 95.160004 79.970001 95.59375 67.023438 Z M 23.25 40.460938 C 21.219999 39.689999 19.780001 37.729996 19.780001 35.419998 C 19.780001 33.110001 21.219999 31.150002 23.25 30.370003 C 23.860001 30.129997 24.52 30 25.200001 30 C 26.26 30 27.24 30.309998 28.08 30.839996 C 29.6 31.800003 30.610001 33.490005 30.610001 35.419998 C 30.610001 37.349998 29.6 39.049999 28.08 40 C 27.24 40.529999 26.26 40.830002 25.200001 40.830002 C 24.52 40.830002 23.860001 40.700001 23.25 40.460938 Z M 44.15625 39.609375 C 42.939999 38.619999 42.169998 37.110001 42.169998 35.419998 C 42.169998 33.729996 42.939999 32.220001 44.16 31.229996 C 45.09 30.459999 46.279999 30 47.580002 30 C 49.07 30 50.41 30.599998 51.389999 31.57 C 52.389999 32.559998 53 33.919998 53 35.419998 C 53 36.93 52.389999 38.279999 51.389999 39.259998 C 50.41 40.240002 49.07 40.830002 47.580002 40.830002 C 46.279999 40.830002 45.09 40.369999 44.15625 39.609375 Z M 34.507813 81.492188 C 26.360001 81.489998 19.68 75.07 19.26 67.019997 L 29.6875 67.023438 L 29.6875 60.148438 C 29.690001 58.169998 31.290001 56.57 33.27 56.57 L 42.1875 56.570313 C 44.169998 56.57 45.77 58.169998 45.77 60.150002 L 45.773438 67.023438 L 58.632813 67.023438 L 58.632813 60.148438 C 58.630001 58.169998 60.23 56.57 62.209999 56.57 L 71.132813 56.570313 C 73.110001 56.57 74.709999 58.169998 74.709999 60.150002 L 74.710938 67.023438 L 86.742188 67.023438 C 86.32 75.07 79.639999 81.489998 71.489998 81.489998 Z"/>
               </svg>
             </div>
-            <span className="text-white text-sm font-semibold mt-0.5">Bobby</span>
+            <AnimatePresence initial={false}>
+              {!compact && (
+                <motion.span
+                  key="wordmark"
+                  initial={{ opacity: 0, width: 0, marginLeft: 0 }}
+                  animate={{ opacity: 1, width: "auto", marginLeft: 0 }}
+                  exit={{ opacity: 0, width: 0, marginLeft: 0 }}
+                  transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  className="text-white text-sm font-semibold mt-0.5 overflow-hidden whitespace-nowrap"
+                >
+                  Bobby
+                </motion.span>
+              )}
+            </AnimatePresence>
           </div>
-          <button
-            onClick={onToggle}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors text-xs"
-            aria-label="Toggle theme"
-          >
-            {dark ? "○" : "●"}
-          </button>
+          <AnimatePresence initial={false}>
+            {!compact && (
+              <motion.button
+                key="theme"
+                onClick={onToggle}
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 32 }}
+                exit={{ opacity: 0, width: 0 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                className="h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors text-xs overflow-hidden"
+                aria-label="Toggle theme"
+              >
+                {dark ? "○" : "●"}
+              </motion.button>
+            )}
+          </AnimatePresence>
           <button
             onClick={() => setMenuOpen(true)}
-            className="w-12 h-8 flex items-center justify-center rounded-full text-white bg-white/[0.12] hover:bg-white/20 transition-colors ml-0.5 mr-1"
+            className={
+              "h-8 flex items-center justify-center rounded-full text-white bg-white/[0.12] hover:bg-white/20 transition-colors " +
+              (compact ? "w-8 ml-0 mr-0" : "w-12 ml-0.5 mr-1")
+            }
             aria-label="Open menu"
           >
             <svg width="15" height="11" viewBox="0 0 15 11" fill="none" aria-hidden="true">
@@ -391,19 +441,70 @@ function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
         </motion.div>
       </motion.div>
 
-      {/* ── MOBILE CTA — top right, hides when sidebar opens */}
+      {/* ── MOBILE CTA — top right, hides when sidebar opens.
+          In `compact` mode (deep-dive timeline pill live) the button
+          shrinks to a circular icon so the pill timeline + shrunken left
+          nav breathe on the same row.
+
+          Layout strategy — both children are ALWAYS mounted (no
+          AnimatePresence). That way Framer's `width: "auto"` always
+          resolves to the same natural width (the text span's intrinsic
+          size), no matter which state we're transitioning to. Previously
+          the text was conditionally mounted, so in the compact→expanded
+          direction the measurement raced with the mount — the button
+          would briefly settle at a too-small width before the text showed
+          up, producing the "shrinks then pops" glitch.
+
+          - Height fixed at h-11 (44) in both states.
+          - Width: `44` when compact, `"auto"` otherwise.
+          - Text sits in-flow, right-anchored (`justify-end`), so when the
+            button is at 44 the text overflows leftward under overflow-hidden.
+            As the button expands the text slides into view from the right.
+          - Icon is absolutely placed over the 44×44 right-edge footprint,
+            so it never contributes to intrinsic width and never drifts
+            during the width spring.
+          - Both children cross-fade via opacity/scale tied directly to
+            `compact` — no mount/unmount race. */}
       <motion.button
         initial={{ opacity: 0, y: -14 }}
-        animate={{ opacity: menuOpen ? 0 : 1, y: 0 }}
+        animate={{
+          opacity: menuOpen ? 0 : 1,
+          y:       0,
+          width:   compact ? 44 : "auto",
+        }}
         transition={{
           opacity: { duration: 0.12 },
           y:       { duration: 0.5, ease: [0.22, 0.1, 0.35, 1] },
+          width:   spring,
         }}
         onClick={() => router.push("/account")}
-        className="fixed top-5 right-4 z-50 sm:hidden px-4 py-3.5 shadow-md rounded-full text-xs font-bold text-black whitespace-nowrap"
+        className="fixed top-5 right-4 z-50 sm:hidden h-11 shadow-md rounded-full font-bold text-black flex items-center justify-end overflow-hidden"
         style={{ background: "#a3e635", pointerEvents: menuOpen ? "none" : "auto" }}
+        aria-label="Get started"
       >
-        Get started
+        {/* Text — always mounted, drives intrinsic (auto) width. */}
+        <motion.span
+          animate={{ opacity: compact ? 0 : 1 }}
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          className="px-4 text-xs whitespace-nowrap"
+          aria-hidden={compact}
+        >
+          Get started
+        </motion.span>
+        {/* Icon — always mounted, absolute overlay on the right-edge 44×44
+            footprint. pointer-events-none so clicks pass through to the
+            button itself. */}
+        <motion.span
+          animate={{
+            opacity: compact ? 1 : 0,
+            scale:   compact ? 1 : 0.6,
+          }}
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          className="pointer-events-none absolute right-0 top-0 h-11 w-11 flex items-center justify-center"
+          aria-hidden={!compact}
+        >
+          <RocketLaunchIcon className="w-5 h-5" />
+        </motion.span>
       </motion.button>
     </>
   )
@@ -841,6 +942,7 @@ const DEEP_FEATURES: {
 function DeepDiveSection() {
   const sectionRef = useRef<HTMLDivElement>(null)
   const detailsColRef = useRef<HTMLDivElement>(null)
+  const { setCompact } = useContext(DeepDiveNavContext)
   // Mobile-only scroll-pin buffer. A tall (~120vh) wrapper whose only job is
   // to consume scroll distance while the inline timeline morphs into the
   // pill. The MobileTimeline is rendered sticky inside it, so the user sees
@@ -867,6 +969,37 @@ function DeepDiveSection() {
   const morphProgress = useSpring(morphRawProgress, {
     stiffness: 120, damping: 24, restDelta: 0.001,
   })
+
+  // ── Nav-compact signal ──────────────────────────────────────────────────
+  // We want the mobile nav to collapse only while the timeline pill is
+  // fully formed AND the deep-dive section is still on-screen. That's the
+  // intersection of two independent signals:
+  //   1. `morphPastShape` — morph progress has crossed ~0.88 (pill is formed)
+  //   2. `sectionInView`  — section is still in viewport (so the pill is
+  //      actually visible; once we scroll past, the pill exits with the
+  //      sticky parent and the nav should come back in full form).
+  const [sectionInView, setSectionInView] = useState(false)
+  const [morphPastShape, setMorphPastShape] = useState(false)
+  useEffect(() => {
+    if (!sectionRef.current) return
+    const io = new IntersectionObserver(
+      ([entry]) => setSectionInView(entry.isIntersecting),
+      { threshold: 0 },
+    )
+    io.observe(sectionRef.current)
+    return () => io.disconnect()
+  }, [])
+  useMotionValueEvent(morphProgress, "change", (v) => {
+    setMorphPastShape(v >= 0.88)
+  })
+  useEffect(() => {
+    setCompact(sectionInView && morphPastShape)
+  }, [sectionInView, morphPastShape, setCompact])
+  // Safety: if DeepDiveSection unmounts mid-state, make sure the nav isn't
+  // left stuck in compact mode.
+  useEffect(() => {
+    return () => setCompact(false)
+  }, [setCompact])
 
   // Track which detail section is currently on stage. Each slice visually
   // hands off to the next at the lift-off point (local ≈ 0.72 → 1.0), which
@@ -930,13 +1063,19 @@ function DeepDiveSection() {
         </motion.div>
 
         {/* ── Mobile sticky pill wrapper ───────────────────────────────────
-            Direct child of `max-w-6xl` so it pins at top-32 across the
-            whole section — through the morph buffer *and* the details
-            column below — instead of releasing when the morph finishes.
-            The heading is rendered here too and fades/collapses during
-            the morph, leaving the pill alone in the pinned row for the
-            rest of the section. */}
-        <div className="md:hidden sticky top-20 z-30">
+            Direct child of `max-w-6xl` so it pins across the whole section
+            — through the morph buffer *and* the details column below —
+            instead of releasing when the morph finishes.
+            The heading is rendered here too and fades/collapses during the
+            morph, leaving the pill alone in the pinned row for the rest of
+            the section.
+            `top` is scroll-animated: starts at 80px (top-20) so the
+            full-width list sits safely below the nav during PRE, then
+            glides up to 20px (top-5) as the pill forms — landing on the
+            nav's Y line by the time the wordmark + theme toggle have
+            dropped out of the shrunken left pill, filling the empty
+            space between [logo] and [Get started]. */}
+        <MobileStickyWrapper morphProgress={morphProgress}>
           <MobileSectionHeading morphProgress={morphProgress} />
           <MobileTimeline
             features={DEEP_FEATURES}
@@ -944,7 +1083,7 @@ function DeepDiveSection() {
             morphProgress={morphProgress}
             onJump={scrollTo}
           />
-        </div>
+        </MobileStickyWrapper>
 
         {/* Morph buffer spacer — empty element that consumes the scroll
             distance used to drive `morphProgress`. Sits immediately after
@@ -1269,6 +1408,34 @@ function DeepFeatureDetail({
   )
 }
 
+// ─── Mobile sticky wrapper ───────────────────────────────────────────────────
+// Wraps the heading + timeline in one scroll-pinned container. Its sticky
+// `top` is animated over morph progress so the pill migrates from the
+// heading-safe 80px drop-down to the nav's 20px Y line — it glides into
+// the gap the shrunken nav has just opened up in the middle of the row.
+function MobileStickyWrapper({
+  morphProgress,
+  children,
+}: {
+  morphProgress: MotionValue<number>
+  children: React.ReactNode
+}) {
+  // Phased after the heading finishes collapsing (heading's gridTemplateRows
+  // hits 0fr at morphProgress ≈ 0.90) and after the nav's compact signal
+  // fires (~0.88). Doing the climb in the final [0.90 → 1.00] window means
+  // the pill only migrates up once there's nothing above it to collide with
+  // the nav — no fleeting overlap during the transition.
+  const top = useTransform(morphProgress, [0.90, 1.0], [80, 20])
+  return (
+    <motion.div
+      style={{ top, position: "sticky", zIndex: 50 }}
+      className="md:hidden"
+    >
+      {children}
+    </motion.div>
+  )
+}
+
 // ─── Mobile section heading ──────────────────────────────────────────────────
 // Shown inside the mobile sticky pill wrapper. Fades and collapses its own
 // height as the morph progresses so once the pill is formed, the heading
@@ -1417,11 +1584,14 @@ function MobileTimeline({
 
 
   return (
-    // Outer row: right-aligns the morphing container so its right edge is
-    // pinned while the left edge pulls in as the container shrinks.
+    // Outer row: centers the morphing container horizontally. As the maxWidth
+    // tween drops from the parent's full width down to PILL_W the container
+    // pulls in symmetrically from both sides, landing the finished pill in
+    // the middle of the nav row — flanked by the compacted [logo] on the
+    // left and [menu] on the right.
     <div
       ref={wrapperRef}
-      className="md:hidden flex justify-end"
+      className="md:hidden flex justify-center"
     >
       <motion.div
         style={{
@@ -1655,6 +1825,9 @@ export default function LandingPage() {
   const ctaRef                    = useRef<HTMLDivElement>(null)
   const [riseAmount, setRiseAmount] = useState(140)
   const [tileCount, setTileCount]   = useState(5)   // 4 on mobile, 5 on sm+
+  // Compact mobile nav flag — flipped by DeepDiveSection when its timeline
+  // has morphed into its pill AND the section is still on-screen.
+  const [deepDiveCompact, setDeepDiveCompact] = useState(false)
 
   // Set correct tile count before first paint — prevents flash of wrong count
   useLayoutEffect(() => {
@@ -1728,6 +1901,7 @@ export default function LandingPage() {
   const bgScale = useTransform(smoothProgress, [0, 1], [1, 1.2])
 
   return (
+    <DeepDiveNavContext.Provider value={{ compact: deepDiveCompact, setCompact: setDeepDiveCompact }}>
     <div className="bg-white dark:bg-[#080808] text-gray-900 dark:text-white transition-colors">
       <Navbar dark={dark} onToggle={toggleTheme} />
       <HeroScrollRing progress={smoothProgress} dark={dark} />
@@ -1887,5 +2061,6 @@ export default function LandingPage() {
         </div>
       </footer>
     </div>
+    </DeepDiveNavContext.Provider>
   )
 }
