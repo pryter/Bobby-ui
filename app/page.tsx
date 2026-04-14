@@ -254,7 +254,7 @@ function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
         initial={{ opacity: 0, y: -14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 0.1, 0.35, 1] }}
-        className="fixed top-5 inset-x-0 z-50 hidden sm:flex sm:justify-center px-4"
+        className="fixed top-5 inset-x-0 z-[60] hidden sm:flex sm:justify-center px-4"
       >
         <div className="flex items-center gap-1 px-2 py-1.5 rounded-full
                         bg-[#111]/90 backdrop-blur-xl
@@ -309,7 +309,7 @@ function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
           borderRadius: spring,
           top:          spring,
         }}
-        className="fixed left-4 z-50 sm:hidden overflow-hidden
+        className="fixed left-4 z-[60] sm:hidden overflow-hidden
                    bg-[#111]/90 backdrop-blur-xl
                    border border-white/[0.08] shadow-xl shadow-black/40"
       >
@@ -480,7 +480,7 @@ function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
           width:   spring,
         }}
         onClick={() => router.push("/account")}
-        className="fixed top-5 right-4 z-50 sm:hidden h-11 shadow-md rounded-full font-bold text-black flex items-center justify-end overflow-hidden"
+        className="fixed top-5 right-4 z-[60] sm:hidden h-11 shadow-md rounded-full font-bold text-black flex items-center justify-end overflow-hidden"
         style={{ background: "#a3e635", pointerEvents: menuOpen ? "none" : "auto" }}
         aria-label="Get started"
       >
@@ -780,8 +780,8 @@ function OrbitVisual() {
         className="absolute w-20 h-20 rounded-full"
         style={{ background: "radial-gradient(circle, rgba(163,230,53,0.55) 0%, transparent 70%)", filter: "blur(8px)" }}
       />
-      <div className="relative z-10 w-14 h-14 rounded-full bg-gradient-to-br from-[#a3e635] to-[#7ba320] shadow-xl shadow-[#a3e635]/40 flex items-center justify-center ring-4 ring-[#a3e635]/20">
-        <BobbyIcon className=" size-8 text-gray-900" />
+      <div className="relative z-10 w-14 h-14 p-2 rounded-full bg-gradient-to-br from-[#a3e635] to-[#7ba320] shadow-xl shadow-[#a3e635]/40 flex items-center justify-center ring-4 ring-[#a3e635]/20">
+        <BobbyIcon className="text-gray-900" />
       </div>
       {/* orbit chips */}
       <div className="absolute top-6 left-10 w-11 h-11 rounded-xl bg-gray-900 dark:bg-white/[0.06] border border-black/5 dark:border-white/10 flex items-center justify-center shadow-lg shadow-black/10">
@@ -982,6 +982,14 @@ function DeepDiveSection() {
   //      sticky parent and the nav should come back in full form).
   const [sectionInView, setSectionInView] = useState(false)
   const [morphPastShape, setMorphPastShape] = useState(false)
+  // `pastDeepDive` flips true once the reader has scrolled past the end of
+  // step 4's content (the last DeepFeatureDetail's scroll spacer). From that
+  // point on — even though the section itself still has pb-72 of trailing
+  // padding — the mobile timeline pill should fade out and the nav should
+  // return to its full (non-compact) form, since there's nothing more in the
+  // timeline for the pill to navigate between.
+  const [pastDeepDive, setPastDeepDive] = useState(false)
+  const endSentinelRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!sectionRef.current) return
     const io = new IntersectionObserver(
@@ -991,14 +999,37 @@ function DeepDiveSection() {
     io.observe(sectionRef.current)
     return () => io.disconnect()
   }, [])
+  useEffect(() => {
+    const el = endSentinelRef.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        // True once the sentinel is in view (we've scrolled down far enough
+        // to see it at the bottom of the viewport, which happens right as
+        // step 4's 340vh spacer ends) OR we've scrolled past it (top < 0).
+        // Staying true in the "above" case matters so the pill doesn't
+        // reappear if the user scrolls all the way to the next section.
+        const crossed =
+          entry.isIntersecting || entry.boundingClientRect.top < 0
+        setPastDeepDive(crossed)
+      },
+      { threshold: 0 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
   useMotionValueEvent(morphProgress, "change", (v) => {
     // Threshold sits just under SHAPE (0.65) so the nav compacts in sync with
     // the pill fully forming.
     setMorphPastShape(v >= 0.63)
   })
   useEffect(() => {
-    setCompact(sectionInView && morphPastShape)
-  }, [sectionInView, morphPastShape, setCompact])
+    // Nav goes compact only while the pill is live: section must be in view,
+    // morph past the shape threshold, AND we haven't yet scrolled past step
+    // 4's end (otherwise the pill is fading out and nav should already be
+    // recovering).
+    setCompact(sectionInView && morphPastShape && !pastDeepDive)
+  }, [sectionInView, morphPastShape, pastDeepDive, setCompact])
   // Safety: if DeepDiveSection unmounts mid-state, make sure the nav isn't
   // left stuck in compact mode.
   useEffect(() => {
@@ -1079,7 +1110,10 @@ function DeepDiveSection() {
             nav's Y line by the time the wordmark + theme toggle have
             dropped out of the shrunken left pill, filling the empty
             space between [logo] and [Get started]. */}
-        <MobileStickyWrapper morphProgress={morphProgress}>
+        <MobileStickyWrapper
+          morphProgress={morphProgress}
+          pastDeepDive={pastDeepDive}
+        >
           <MobileSectionHeading morphProgress={morphProgress} />
           <MobileTimeline
             features={DEEP_FEATURES}
@@ -1193,6 +1227,11 @@ function DeepDiveSection() {
                 registerRef={(el) => { detailRefs.current[i] = el }}
               />
             ))}
+            {/* End-of-timeline sentinel — IntersectionObserver above watches
+                this div. Once it comes into view (i.e., step 4's scroll
+                spacer has finished) the pill fades out and the nav exits
+                compact mode. */}
+            <div ref={endSentinelRef} aria-hidden className="h-0" />
           </div>
         </div>
       </div>
@@ -1293,10 +1332,11 @@ function DeepFeatureDetail({
   // block fades and drifts upward just as the image begins its focus lift,
   // giving a brief pause at 0.48–0.62 where text + normal-size image both sit
   // fully loaded before anything moves.
-  // Only steps 0–2 run the freeze/center focus choreography. Step 3
-  // (Integrations) is a decorative 3D orb — it doesn't need the text block to
-  // clear out or the visual to grow full-width.
-  const hasVisual = index < 3
+  // Only steps 1 (No-Code video) and 2 (Self-Hosted video) run the freeze/
+  // center focus choreography. Step 0 (Zero Config card) and step 3
+  // (Integrations orb) are decorative — their visual sits alongside the text
+  // rather than taking over, so no grow/fade-out of the text block.
+  const hasVisual = index === 1 || index === 2
   const textBlockOp = useTransform(
     local,
     hasVisual ? [0.62, 0.72] : [0, 0.01],
@@ -1382,12 +1422,14 @@ function DeepFeatureDetail({
 
         {/* Visual slot — index 0 (Zero Config) shows a "Start now" card that
             links to the docs, index 1 (No-Code Pipelines) embeds the
-            showcase video running a passive loop, and the rest show custom
-            mockups. */}
+            showcase video, index 2 (Self-Hosted) plays a recorded Docker
+            session as video, and index 3 (Integrations) renders a 3D orb. */}
         {index === 0 ? (
-          <motion.div
-            style={{ opacity: imgOp, y: imgY, scale: imgScale, width: imgWidth }}
-          >
+          // Zero Config — card sits alongside the text, no grow/freeze/center
+          // choreography (matches the Integrations orb treatment at step 4).
+          // The reader reads the copy and the card is simply there as a CTA,
+          // not a spotlighted visual to transition into.
+          <motion.div style={{ opacity: imgOp }}>
             <ZeroConfigStartCard />
           </motion.div>
         ) : index === 1 ? (
@@ -1404,13 +1446,20 @@ function DeepFeatureDetail({
                        border border-gray-200/80 dark:border-white/[0.07]"
           />
         ) : index === 2 ? (
-          // Self-Hosted — custom mockup inside its own card frame.
-          <motion.div
+          // Self-Hosted — recorded Docker container-finder session. Video
+          // replaces the previous animated ImageSearchMockup since playback
+          // is cheaper than running the mockup's framer-motion animation
+          // tree on every scroll frame.
+          <motion.video
             style={{ opacity: imgOp, y: imgY, scale: imgScale, width: imgWidth }}
-            className="relative aspect-[16/10]"
-          >
-            <ImageSearchMockup />
-          </motion.div>
+            src="/container-finder.webm"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="block h-auto rounded-2xl
+                       border border-gray-200/80 dark:border-white/[0.07]"
+          />
         ) : (
           // Integrations — 3D orb, rendered without any card frame and without
           // the grow/freeze/center choreography. Wide/short aspect so the
@@ -1438,9 +1487,14 @@ function DeepFeatureDetail({
 // the gap the shrunken nav has just opened up in the middle of the row.
 function MobileStickyWrapper({
   morphProgress,
+  pastDeepDive,
   children,
 }: {
   morphProgress: MotionValue<number>
+  /** True once step 4 has been fully scrolled through. Fades the pill out
+   *  so the reader isn't staring at a now-useless timeline stub through
+   *  the section's trailing padding. */
+  pastDeepDive: boolean
   children: React.ReactNode
 }) {
   // Phased after the heading finishes collapsing (heading's gridTemplateRows
@@ -1455,11 +1509,24 @@ function MobileStickyWrapper({
   // position — and gives the heading extra breathing room below the nav.
   const top = useTransform(morphProgress, [0.65, 0.80], [112, 20])
   return (
+    // zIndex 30 sits below the fixed nav (z-60) so the timeline pill passes
+    // under the nav rather than on top of it — the nav's logo and CTA stay
+    // the dominant layer even when the pill shares their Y line.
     <motion.div
-      style={{ top, position: "sticky", zIndex: 50 }}
+      style={{ top, position: "sticky", zIndex: 30 }}
       className="md:hidden"
+      // Fade + lift out once the reader has finished step 4. pointerEvents
+      // disable prevents stray taps on the invisible pill stub.
+      animate={{
+        opacity: pastDeepDive ? 0 : 1,
+        y:       pastDeepDive ? -8 : 0,
+      }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      initial={false}
     >
-      {children}
+      <div style={{ pointerEvents: pastDeepDive ? "none" : "auto" }}>
+        {children}
+      </div>
     </motion.div>
   )
 }
@@ -1482,12 +1549,192 @@ function MobileSectionHeading({ morphProgress }: { morphProgress: MotionValue<nu
             Deep Dive
           </p>
           <h2 className="text-3xl font-bold tracking-tight">
-            How Bobby works{" "}
+            How Bobby works<br/>
             <span className="text-gray-400 dark:text-gray-500">end to end.</span>
           </h2>
         </div>
       </motion.div>
     </motion.div>
+  )
+}
+
+// ─── Single timeline row ─────────────────────────────────────────────────────
+// One row of the mobile timeline. Used to be inlined inside MobileTimeline's
+// features.map(), but pulling it out into its own component (and rendering 4
+// explicit instances) gives each row a stable identity, makes the animate
+// props obviously bound to local props, and removes the indexed-closure
+// edge cases that made the shrink behaviour unpredictable when the active
+// step changed mid-morph.
+function TimelineRow({
+  step,
+  feature,
+  active,
+  pillReady,
+  expanded,
+  dotSize,
+  activeHalo,
+  inactiveOpacity,
+  inactiveRows,
+  chevOpacity,
+  onJump,
+  onToggleExpand,
+}: {
+  step: number
+  feature: typeof DEEP_FEATURES[number]
+  active: number
+  pillReady: boolean
+  expanded: boolean
+  dotSize: MotionValue<number>
+  activeHalo: MotionValue<string>
+  inactiveOpacity: MotionValue<number>
+  inactiveRows: MotionValue<string>
+  chevOpacity: MotionValue<number>
+  onJump: (i: number) => void
+  onToggleExpand: () => void
+}) {
+  const isActive = active === step
+  const isDone = active > step
+  const tween = { duration: 0.3, ease: [0.22, 1, 0.36, 1] as const }
+
+  // The button content is the same regardless of wrapper. Defining it once
+  // here keeps the active/inactive branches identical apart from their
+  // wrapper chrome — no chance of the two branches drifting in their
+  // animate targets.
+  const rowButton = (
+    <motion.button
+      onClick={() => onJump(step)}
+      initial={false}
+      animate={{
+        paddingTop:    pillReady ? 3 : 14,
+        paddingBottom: pillReady ? 3 : 14,
+      }}
+      transition={tween}
+      className="flex w-full items-center gap-3 text-left"
+      aria-label={`Jump to ${feature.title}`}
+    >
+      <motion.span
+        className="flex-none rounded-full flex items-center justify-center"
+        style={{
+          width: dotSize,
+          height: dotSize,
+          background: isActive || isDone ? "#a3e635" : "transparent",
+          borderWidth: 2,
+          borderStyle: "solid",
+          borderColor: isActive || isDone ? "#a3e635" : "rgb(229 231 235)",
+          boxShadow: isActive ? activeHalo : "none",
+        }}
+      >
+        {isDone && (
+          <motion.svg
+            viewBox="0 0 12 12"
+            initial={false}
+            animate={{
+              width:  pillReady ? 7 : 10,
+              height: pillReady ? 7 : 10,
+            }}
+            transition={tween}
+            className="fill-gray-900"
+          >
+            <path d="M4.5 8.5 2 6l.9-.9 1.6 1.6L9.1 2 10 2.9z" />
+          </motion.svg>
+        )}
+      </motion.span>
+      <span className="min-w-0 flex-1">
+        {/* Eyebrow collapses to zero rows in pill state — grid row hits
+            0fr, opacity hits 0, font goes to 0, so it leaves no baseline
+            gap and the title sits centered on the dot. */}
+        <motion.span
+          initial={false}
+          style={{gridTemplateRows: "1fr"}}
+          transition={tween}
+          className="grid"
+        >
+          <motion.span
+            initial={false}
+            style={{
+              fontSize: pillReady ? 6 : 10,
+            }}
+            transition={tween}
+            className={
+              "block font-bold uppercase tracking-[0.18em] leading-none overflow-hidden min-h-0 mb-1 " +
+              (isActive
+                ? "text-[#7ba320] dark:text-[#a3e635]"
+                : "text-gray-400 dark:text-gray-600")
+            }
+          >
+            {feature.eyebrow}
+          </motion.span>
+        </motion.span>
+        <motion.span
+          initial={false}
+          style={{ fontSize: pillReady ? 14 : 18 }}
+          transition={tween}
+          className={
+            "block font-bold tracking-tight truncate leading-tight " +
+            (isActive
+              ? "text-gray-900 dark:text-white"
+              : "text-gray-500 dark:text-gray-400")
+          }
+        >
+          {feature.title}
+        </motion.span>
+      </span>
+    </motion.button>
+  )
+
+  // Inactive row, post-pill: hand-off to expand-toggle driven dropdown.
+  if (!isActive && pillReady) {
+    return (
+      <motion.li
+        initial={false}
+        animate={{
+          gridTemplateRows: expanded ? "1fr" : "0fr",
+          opacity: expanded ? 1 : 0,
+        }}
+        transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+        className="grid"
+      >
+        <div className="overflow-hidden min-h-0">{rowButton}</div>
+      </motion.li>
+    )
+  }
+
+  // Inactive row, pre-pill: scroll-driven retract.
+  if (!isActive) {
+    return (
+      <motion.li
+        style={{ opacity: inactiveOpacity, gridTemplateRows: inactiveRows }}
+        className="grid"
+      >
+        <div className="overflow-hidden min-h-0">{rowButton}</div>
+      </motion.li>
+    )
+  }
+
+  // Active row: always visible. Once the pill is formed the chevron on the
+  // right becomes the tap target for expand/collapse.
+  return (
+    <li className="relative">
+      {rowButton}
+      <motion.button
+        type="button"
+        style={{ opacity: chevOpacity }}
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggleExpand()
+        }}
+        disabled={!pillReady}
+        aria-label={expanded ? "Collapse section navigation" : "Expand section navigation"}
+        className="absolute right-0 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+      >
+        <svg
+          viewBox="0 0 12 12"
+          className={"h-3 w-3 fill-current transition-transform " + (expanded ? "rotate-180" : "")}
+        >
+          <path d="M6 8.5 1.5 4l1.1-1.1L6 6.3l3.4-3.4L10.5 4z" />
+        </svg>
+      </motion.button>
+    </li>
   )
 }
 
@@ -1637,8 +1884,18 @@ function MobileTimeline({
   // Auto-collapse if we scroll back out of the pill state, so the dropdown
   // doesn't reappear half-open next time.
   useEffect(() => {
+    console.log(pillReady)
     if (!pillReady) setExpanded(false)
   }, [pillReady])
+
+  // Wrap the external onJump so every row tap also collapses the dropdown
+  // back to the single-line pill. Without this, tapping a step in the
+  // expanded dropdown would scroll the viewport but leave the dropdown
+  // covering the detail the user just jumped to.
+  const handleJump = (i: number) => {
+    setExpanded(false)
+    onJump(i)
+  }
 
   // Drive the two motion values (dotSize, haloPx) imperatively — they're the
   // ones consumed reactively by railLeft/activeHalo so they can't be plain
@@ -1692,162 +1949,32 @@ function MobileTimeline({
         />
 
         <ul className="relative flex flex-col">
-          {features.map((f, i) => {
-            const isActive = active === i
-            const isDone = active > i
-            // Row layout: inline flex so the dot lives inside the container
-            // and moves with it as the pill shrinks. (The old absolute
-            // `-left-8` placement would have leaked out of the pill.)
-            const row = (
-              // Button uses motion for paddingY so the row breathes more in
-              // full-timeline mode and tightens as the pill forms. Alignment
-              // is items-center so the dot sits on the row's vertical
-              // midline regardless of current text size.
-              <motion.button
-                onClick={() => onJump(i)}
-                initial={false}
-                animate={{
-                  paddingTop:    pillReady ? 3 : 14,
-                  paddingBottom: pillReady ? 3 : 14,
-                }}
-                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                className="flex w-full items-center gap-3 text-left"
-                aria-label={`Jump to ${f.title}`}
-              >
-                <motion.span
-                  className="flex-none rounded-full flex items-center justify-center"
-                  style={{
-                    width: dotSize,
-                    height: dotSize,
-                    background: isActive || isDone ? "#a3e635" : "transparent",
-                    borderWidth: 2,
-                    borderStyle: "solid",
-                    borderColor: isActive || isDone ? "#a3e635" : "rgb(229 231 235)",
-                    boxShadow: isActive ? activeHalo : "none",
-                  }}
-                >
-                  {isDone && (
-                    <motion.svg
-                      viewBox="0 0 12 12"
-                      initial={false}
-                      animate={{
-                        width:  pillReady ? 7 : 10,
-                        height: pillReady ? 7 : 10,
-                      }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="fill-gray-900"
-                    >
-                      <path d="M4.5 8.5 2 6l.9-.9 1.6 1.6L9.1 2 10 2.9z" />
-                    </motion.svg>
-                  )}
-                </motion.span>
-                <span className="min-w-0 flex-1">
-                  {/* Eyebrow collapses to zero rows in pill state — grid row
-                      hits 0fr and opacity hits 0, so it leaves no baseline
-                      gap and the title sits centered on the dot. */}
-                  <motion.span
-                    initial={false}
-                    animate={{ gridTemplateRows: "1fr" }}
-                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                    className="grid"
-                  >
-                    <motion.span
-                      initial={false}
-                      animate={{
-                        fontSize: 10
-                      }}
-                      className={
-                        "block font-bold uppercase tracking-[0.18em] leading-none overflow-hidden min-h-0 mb-1 " +
-                        (isActive
-                          ? "text-[#7ba320] dark:text-[#a3e635]"
-                          : "text-gray-400 dark:text-gray-600")
-                      }
-                    >
-                      {f.eyebrow}
-                    </motion.span>
-                  </motion.span>
-                  <motion.span
-                    initial={false}
-                    animate={{ fontSize: 14 }}
-                    className={
-                      "block font-bold tracking-tight truncate leading-tight " +
-                      (isActive
-                        ? "text-gray-900 dark:text-white"
-                        : "text-gray-500 dark:text-gray-400")
-                    }
-                  >
-                    {f.title}
-                  </motion.span>
-                </span>
-              </motion.button>
-            )
-
-            // Non-active rows: two driving modes sharing the same DOM node.
-            //
-            //  • Before the pill is formed, the row's height + opacity are
-            //    scroll-driven via `morphProgress` so the list smoothly
-            //    retracts as the user scrolls through the morph buffer.
-            //
-            //  • Once `pillReady` flips, we hand off to an `animate`-prop
-            //    driven state tied to the user's expand toggle, so tapping
-            //    the chevron eases the rows open/closed. At the hand-off
-            //    the motion value's current state (0, "0fr") matches the
-            //    collapsed animate target, so the switch is invisible.
-            if (!isActive) {
-              if (pillReady) {
-                return (
-                  <motion.li
-                    key={i}
-                    initial={false}
-                    animate={{
-                      gridTemplateRows: expanded ? "1fr" : "0fr",
-                      opacity: expanded ? 1 : 0,
-                    }}
-                    transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-                    className="grid"
-                  >
-                    <div className="overflow-hidden min-h-0">{row}</div>
-                  </motion.li>
-                )
-              }
-              return (
-                <motion.li
-                  key={i}
-                  style={{ opacity: inactiveOpacity, gridTemplateRows: inactiveRows }}
-                  className="grid"
-                >
-                  <div className="overflow-hidden min-h-0">{row}</div>
-                </motion.li>
-              )
-            }
-
-            // Active row: sits in place, always visible. In pill mode the
-            // chevron on the right becomes the tap target for expand/
-            // collapse — same row, just gains an affordance.
-            return (
-              <li key={i} className="relative">
-                {row}
-                <motion.button
-                  type="button"
-                  style={{ opacity: chevOpacity }}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setExpanded((v) => !v)
-                  }}
-                  disabled={!pillReady}
-                  aria-label={expanded ? "Collapse section navigation" : "Expand section navigation"}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                >
-                  <svg
-                    viewBox="0 0 12 12"
-                    className={"h-3 w-3 fill-current transition-transform " + (expanded ? "rotate-180" : "")}
-                  >
-                    <path d="M6 8.5 1.5 4l1.1-1.1L6 6.3l3.4-3.4L10.5 4z" />
-                  </svg>
-                </motion.button>
-              </li>
-            )
-          })}
+          {/* Rows are unrolled — one explicit <TimelineRow /> per step —
+              rather than rendered via features.map(). The static layout makes
+              each row a stable, predictable element across renders: no key
+              reconciliation, no conditional early returns inside a loop
+              scope, no indexed closures over `i`. Each instance gets fresh
+              dedicated props for its step index.
+              `handleJump` wraps the parent `onJump` with an auto-collapse:
+              tapping any row to navigate should always close the dropdown
+              back to the single-line pill — leaving it open after a jump
+              would obscure the detail view the user is jumping to. */}
+          <TimelineRow step={0} feature={features[0]} active={active} pillReady={pillReady} expanded={expanded}
+            dotSize={dotSize} activeHalo={activeHalo}
+            inactiveOpacity={inactiveOpacity} inactiveRows={inactiveRows}
+            chevOpacity={chevOpacity} onJump={handleJump} onToggleExpand={() => setExpanded((v) => !v)} />
+          <TimelineRow step={1} feature={features[1]} active={active} pillReady={pillReady} expanded={expanded}
+            dotSize={dotSize} activeHalo={activeHalo}
+            inactiveOpacity={inactiveOpacity} inactiveRows={inactiveRows}
+            chevOpacity={chevOpacity} onJump={handleJump} onToggleExpand={() => setExpanded((v) => !v)} />
+          <TimelineRow step={2} feature={features[2]} active={active} pillReady={pillReady} expanded={expanded}
+            dotSize={dotSize} activeHalo={activeHalo}
+            inactiveOpacity={inactiveOpacity} inactiveRows={inactiveRows}
+            chevOpacity={chevOpacity} onJump={handleJump} onToggleExpand={() => setExpanded((v) => !v)} />
+          <TimelineRow step={3} feature={features[3]} active={active} pillReady={pillReady} expanded={expanded}
+            dotSize={dotSize} activeHalo={activeHalo}
+            inactiveOpacity={inactiveOpacity} inactiveRows={inactiveRows}
+            chevOpacity={chevOpacity} onJump={handleJump} onToggleExpand={() => setExpanded((v) => !v)} />
         </ul>
       </motion.div>
     </div>
