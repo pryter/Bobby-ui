@@ -8,6 +8,7 @@ import {
   useSpring,
   useTransform,
   useMotionValueEvent,
+  useMotionTemplate,
   MotionValue,
 } from "framer-motion"
 import { useRouter } from "next/navigation"
@@ -795,11 +796,11 @@ const DEEP_FEATURES: {
     eyebrow: "Step 01",
     title: "Zero Config Setup",
     desc:
-      "Install the Bobby binary and you're done. It auto-detects your codebase, provisions secure build environments, and starts running pipelines directly on your machine. No YAML, no dashboards to wire up, no secrets to sync — Bobby manages the state, runtime, and orchestration so you only ever have to push code.",
+      "Run one command and Bobby is live. No network config, no port forwarding, no firewall holes, no reverse proxies to stand up. Bobby punches out to the control plane for you, so your laptop or homelab box becomes a first-class build runner the moment the binary lands — even behind NAT or a corporate VPN.",
     bullets: [
-      "Single-binary install, no daemon zoo",
-      "Auto-detects language, framework, and entrypoint",
-      "Encrypted local state — nothing leaves your box",
+      "Single-binary install — no daemon zoo",
+      "No port forwarding, NAT traversal, or firewall rules",
+      "Works behind VPNs, CGNAT, and restrictive networks",
     ],
   },
   {
@@ -839,14 +840,33 @@ const DEEP_FEATURES: {
 
 function DeepDiveSection() {
   const sectionRef = useRef<HTMLDivElement>(null)
+  const detailsColRef = useRef<HTMLDivElement>(null)
+  // Mobile-only scroll-pin buffer. A tall (~120vh) wrapper whose only job is
+  // to consume scroll distance while the inline timeline morphs into the
+  // pill. The MobileTimeline is rendered sticky inside it, so the user sees
+  // the morph unfold without any detail content scrolling past.
+  const morphBufferRef = useRef<HTMLDivElement>(null)
   const detailRefs = useRef<(HTMLDivElement | null)[]>([])
   const [active, setActive] = useState(0)
 
+  // Section progress — now tracked over the details column only, so the
+  // mobile morph buffer above doesn't skew the per-step math.
   const { scrollYProgress } = useScroll({
-    target: sectionRef,
+    target: detailsColRef,
     offset: ["start start", "end end"],
   })
   const progress = useSpring(scrollYProgress, { stiffness: 80, damping: 22, restDelta: 0.001 })
+
+  // Dedicated scroll tracker for the mobile morph. Goes 0 → 1 as the user
+  // scrolls through the buffer, giving the inline→pill transition real
+  // scroll distance instead of firing instantly behind the detail content.
+  const { scrollYProgress: morphRawProgress } = useScroll({
+    target: morphBufferRef,
+    offset: ["start start", "end start"],
+  })
+  const morphProgress = useSpring(morphRawProgress, {
+    stiffness: 120, damping: 24, restDelta: 0.001,
+  })
 
   // Track which detail section is currently on stage. Each slice visually
   // hands off to the next at the lift-off point (local ≈ 0.72 → 1.0), which
@@ -860,27 +880,29 @@ function DeepDiveSection() {
   })
 
   const scrollTo = (i: number) => {
-    const section = sectionRef.current
-    if (!section) return
+    const col = detailsColRef.current
+    if (!col) return
     // Land the user at the "fully unfolded" moment of this step — after the
     // entry cascade has completed but before the lift-off/exit kicks in.
-    // Local progress ≈ 0.60 sits cleanly in that plateau.
+    // Local progress ≈ 0.55 sits cleanly in the pause plateau.
     const slice = 1 / DEEP_FEATURES.length
-    const targetLocal = 0.60
+    const targetLocal = 0.55
     // local maps [start - 0.07*slice, end + 0.07*slice] → [0,1], so invert:
     const targetSectionProgress = (i - 0.07) * slice + targetLocal * 1.14 * slice
-    const sectionTop = section.getBoundingClientRect().top + window.scrollY
-    const scrollRange = section.offsetHeight - window.innerHeight
-    const targetY = sectionTop + targetSectionProgress * scrollRange
+    const colTop = col.getBoundingClientRect().top + window.scrollY
+    const scrollRange = col.offsetHeight - window.innerHeight
+    const targetY = colTop + targetSectionProgress * scrollRange
     window.scrollTo({ top: targetY, behavior: "smooth" })
   }
 
   return (
-    <section ref={sectionRef} className="relative px-5 md:px-12 pt-20 pb-48">
+    <section ref={sectionRef} className="relative px-5 md:px-12 pt-20 pb-72">
       <div className="max-w-6xl mx-auto">
-        {/* Section heading — staggered entry when it scrolls into view */}
+        {/* Section heading — desktop only. On mobile the heading is
+            rendered inside the sticky morph frame below so it stays
+            visible, frozen, while the timeline morphs into the pill. */}
         <motion.div
-          className="max-w-2xl mb-20"
+          className="hidden md:block max-w-2xl mb-20"
           initial="hidden"
           whileInView="shown"
           viewport={{ once: true, margin: "-15% 0px -15% 0px" }}
@@ -907,9 +929,32 @@ function DeepDiveSection() {
           </motion.h2>
         </motion.div>
 
+        {/* ── Mobile sticky pill wrapper ───────────────────────────────────
+            Direct child of `max-w-6xl` so it pins at top-32 across the
+            whole section — through the morph buffer *and* the details
+            column below — instead of releasing when the morph finishes.
+            The heading is rendered here too and fades/collapses during
+            the morph, leaving the pill alone in the pinned row for the
+            rest of the section. */}
+        <div className="md:hidden sticky top-20 z-30">
+          <MobileSectionHeading morphProgress={morphProgress} />
+          <MobileTimeline
+            features={DEEP_FEATURES}
+            active={active}
+            morphProgress={morphProgress}
+            onJump={scrollTo}
+          />
+        </div>
+
+        {/* Morph buffer spacer — empty element that consumes the scroll
+            distance used to drive `morphProgress`. Sits immediately after
+            the sticky so the morph starts ~1 pill-height after the pill
+            first pins. Desktop collapses it to zero. */}
+        <div ref={morphBufferRef} className="md:hidden h-[140vh] mb-8" />
+
         <div className="grid md:grid-cols-12 gap-x-12 gap-y-16">
-          {/* ── Left: sticky interactive timeline ─────────────────────────── */}
-          <div className="md:col-span-4">
+          {/* ── Left: sticky interactive timeline (desktop only) ──────────── */}
+          <div className="hidden md:block md:col-span-4">
             <div className="md:sticky md:top-28">
               <div className="relative pl-8">
                 {/* Vertical rail */}
@@ -993,7 +1038,7 @@ function DeepDiveSection() {
           </div>
 
           {/* ── Right: scrolling feature details ──────────────────────────── */}
-          <div className="md:col-span-8">
+          <div ref={detailsColRef} className="col-span-full md:col-span-8">
             {DEEP_FEATURES.map((f, i) => (
               <DeepFeatureDetail
                 key={i}
@@ -1035,11 +1080,10 @@ function DeepFeatureDetail({
   // page section).
   const local = useTransform(sectionProgress, [start - slice * 0.07, end + slice * 0.07], [0, 1])
 
-  // Outer block fade + lift-off — once the entry animation completes the
-  // block starts drifting up and fading out so the next section can take over
-  // without a dead pause between them.
-  const outerOpacity = useTransform(local, [0, 0.15, 0.85, 1],    [0, 1, 1, 0])
-  const outerY       = useTransform(local, [0, 0.15, 0.85, 1],    [40, 0, 0, -90])
+  // Outer block fade + lift-off — lift-off pushed all the way to local 0.93
+  // so the freeze window owns the bulk of the middle/late slice.
+  const outerOpacity = useTransform(local, [0, 0.15, 0.93, 1],    [0, 1, 1, 0])
+  const outerY       = useTransform(local, [0, 0.15, 0.93, 1],    [40, 0, 0, -90])
 
   // Per-element staggered reveals, keyed off localProgress.
   // Each element enters over its own window, stays, then fades with the block.
@@ -1059,11 +1103,51 @@ function DeepFeatureDetail({
   const bullet2Op   = useTransform(local, [0.40, 0.48],      [0, 1])
   const bullet2X    = useTransform(local, [0.40, 0.48],      [-24, 0])
 
-  const imgOp       = useTransform(local, [0.28, 0.50],      [0, 1])
-  const imgY        = useTransform(local, [0.28, 0.55],      [80, 0])
-  const imgScale    = useTransform(local, [0.28, 0.70, 1],   [0.88, 1, 1.04])
-  // Reveal mask — wipes from left to right as you scroll through the slice.
-  const imgClip     = useTransform(local, [0.30, 0.60],      ["inset(0 100% 0 0)", "inset(0 0% 0 0)"])
+  const imgOp       = useTransform(local, [0.25, 0.45],      [0, 1])
+  // Image y choreography:
+  //   [0.22 → 0.48]  entry rise  80 → 0 (at "normal" compact width)
+  //   [0.48 → 0.62]  ░░ PAUSE ░░ — text is fully loaded and image sits at its
+  //                               normal compact size so the eye can land
+  //   [0.62 → 0.74]  focus lift  0 → -296 (glides up to viewport centre as
+  //                               it simultaneously expands to full width)
+  //   [0.74 → 0.93]  ████ FREEZE ████ — locked at -296, full width, centred
+  //   [0.93 → 1.00]  outerY lift-off carries the whole block out
+  const imgY        = useTransform(
+    local,
+    [0.22, 0.48, 0.62, 0.74, 0.93],
+    [80,    0,    0,   -296, -296],
+  )
+  // Image width grows from a compact ~60% of the column to full width — the
+  // growth is held off until after the pause so the normal size has a moment
+  // to breathe before the focus lift.
+  const imgWidth    = useTransform(
+    local,
+    [0.22, 0.48, 0.62, 0.74, 0.93],
+    ["62%", "62%", "62%", "100%", "100%"],
+  )
+  // Scale settles at 1 by 0.48 and stays there through the pause + freeze.
+  const imgScale    = useTransform(local, [0.22, 0.48, 0.93], [0.88, 1, 1])
+  // Reveal mask — wipes from left to right during the entry phase.
+  const imgClip     = useTransform(local, [0.25, 0.50],      ["inset(0 100% 0 0)", "inset(0 0% 0 0)"])
+
+  // Focus phase — only for sections that actually have a visual. The text
+  // block fades and drifts upward just as the image begins its focus lift,
+  // giving a brief pause at 0.48–0.62 where text + normal-size image both sit
+  // fully loaded before anything moves.
+  // Only steps 0–2 run the freeze/center focus choreography. Step 3
+  // (Integrations) is a decorative 3D orb — it doesn't need the text block to
+  // clear out or the visual to grow full-width.
+  const hasVisual = index < 3
+  const textBlockOp = useTransform(
+    local,
+    hasVisual ? [0.62, 0.72] : [0, 0.01],
+    hasVisual ? [1,    0]    : [1, 1],
+  )
+  const textBlockY = useTransform(
+    local,
+    hasVisual ? [0.62, 0.72] : [0, 0.01],
+    hasVisual ? [0,   -40]   : [0, 0],
+  )
 
   // Accent rail on the left of the text block — grows as you scroll through.
   const railScaleY  = useTransform(local, [0.10, 0.55],      [0, 1])
@@ -1078,7 +1162,7 @@ function DeepFeatureDetail({
     // animation plays rather than scrolling past it.
     <div
       ref={registerRef}
-      className="relative min-h-[220vh]"
+      className="relative min-h-[340vh]"
     >
       <motion.div
         style={{ opacity: outerOpacity, y: outerY }}
@@ -1096,6 +1180,8 @@ function DeepFeatureDetail({
             className="absolute -left-5 top-2 bottom-20 w-[2px] bg-[#a3e635] origin-top rounded-full"
           />
 
+          {/* Heading block (eyebrow + title) — stays visible while the image
+              grows so the viewer always has context for what they're looking at. */}
           <motion.p
             style={{ opacity: eyebrowOp, y: eyebrowY }}
             className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#7ba320] dark:text-[#a3e635] mb-3"
@@ -1108,54 +1194,453 @@ function DeepFeatureDetail({
           >
             {feature.title}
           </motion.h3>
-          <motion.p
-            style={{ opacity: descOp, y: descY }}
-            className="text-gray-500 dark:text-gray-400 leading-relaxed text-base md:text-lg max-w-xl mb-6"
-          >
-            {feature.desc}
-          </motion.p>
-          <ul className="space-y-2 mb-8 max-w-xl">
-            {feature.bullets.map((b, bi) => (
-              <motion.li
-                key={b}
-                style={{ opacity: bulletOps[bi], x: bulletXs[bi] }}
-                className="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-300"
-              >
-                <svg viewBox="0 0 16 16" className="w-4 h-4 mt-0.5 flex-none fill-[#a3e635]">
-                  <path d="M6.5 11.5 3 8l1.1-1.1 2.4 2.4L11.9 4 13 5.1z" />
-                </svg>
-                <span>{b}</span>
-              </motion.li>
-            ))}
-          </ul>
+
+          {/* Supporting copy (description + bullets) — this is what fades out
+              during the focus phase so the image can take centre stage. */}
+          <motion.div style={{ opacity: textBlockOp, y: textBlockY }}>
+            <motion.p
+              style={{ opacity: descOp, y: descY }}
+              className="text-gray-500 dark:text-gray-400 leading-relaxed text-base md:text-lg max-w-xl mb-6"
+            >
+              {feature.desc}
+            </motion.p>
+            <ul className="space-y-2 mb-8 max-w-xl">
+              {feature.bullets.map((b, bi) => (
+                <motion.li
+                  key={b}
+                  style={{ opacity: bulletOps[bi], x: bulletXs[bi] }}
+                  className="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-300"
+                >
+                  <svg viewBox="0 0 16 16" className="w-4 h-4 mt-0.5 flex-none fill-[#a3e635]">
+                    <path d="M6.5 11.5 3 8l1.1-1.1 2.4 2.4L11.9 4 13 5.1z" />
+                  </svg>
+                  <span>{b}</span>
+                </motion.li>
+              ))}
+            </ul>
+          </motion.div>
         </div>
 
-        {/* Visual slot — index 0 (Zero Config) shows nothing, index 1
-            (No-Code Pipelines) embeds the real pipeline editor running a
-            passive loop, and the rest show the generic placeholder. */}
-        {index === 0 ? null : index === 1 ? (
+        {/* Visual slot — index 0 (Zero Config) shows a "Start now" card that
+            links to the docs, index 1 (No-Code Pipelines) embeds the
+            showcase video running a passive loop, and the rest show custom
+            mockups. */}
+        {index === 0 ? (
+          <motion.div
+            style={{ opacity: imgOp, y: imgY, scale: imgScale, clipPath: imgClip, width: imgWidth }}
+          >
+            <ZeroConfigStartCard />
+          </motion.div>
+        ) : index === 1 ? (
           // No-Code — video capped in width so the sticky content never
           // outgrows the viewport and bleeds into the next section.
           <motion.video
-            style={{ opacity: imgOp, y: imgY, scale: imgScale, clipPath: imgClip }}
+            style={{ opacity: imgOp, y: imgY, scale: imgScale, clipPath: imgClip, width: imgWidth }}
             src="/showcase.webm"
             autoPlay
             loop
             muted
             playsInline
-            className="block w-full max-w-[520px] h-auto rounded-2xl
+            className="block h-auto rounded-2xl
                        border border-gray-200/80 dark:border-white/[0.07]"
           />
-        ) : (
-          // Self-Hosted (2) and Integrations (3) use custom mockups.
+        ) : index === 2 ? (
+          // Self-Hosted — custom mockup inside its own card frame.
           <motion.div
-            style={{ opacity: imgOp, y: imgY, scale: imgScale, clipPath: imgClip }}
-            className="relative aspect-[16/10] w-full max-w-[520px]"
+            style={{ opacity: imgOp, y: imgY, scale: imgScale, clipPath: imgClip, width: imgWidth }}
+            className="relative aspect-[16/10]"
           >
-            {index === 2 ? <ImageSearchMockup /> : <IntegrationsOrb />}
+            <ImageSearchMockup />
+          </motion.div>
+        ) : (
+          // Integrations — 3D orb, rendered without any card frame and without
+          // the grow/freeze/center choreography. Wide/short aspect so the
+          // ellipsoid reads as a horizontal band of platform logos, centred
+          // in the column.
+          <motion.div
+            style={{ opacity: imgOp }}
+            className="relative mx-auto aspect-[16/6] w-full"
+          >
+            <IntegrationsOrb />
           </motion.div>
         )}
       </motion.div>
+    </div>
+  )
+}
+
+// ─── Mobile section heading ──────────────────────────────────────────────────
+// Shown inside the mobile sticky pill wrapper. Fades and collapses its own
+// height as the morph progresses so once the pill is formed, the heading
+// stops taking space in the sticky row — the pill sits alone at top-32 for
+// the rest of the Deep Dive section.
+function MobileSectionHeading({ morphProgress }: { morphProgress: MotionValue<number> }) {
+  // Match the MobileTimeline's PRE/RETRACT/SHAPE beats so the heading fades
+  // alongside the list retract and finishes collapsing as the pill takes shape.
+  const opacity = useTransform(morphProgress, [0.10, 0.45], [1, 0])
+  const rows    = useTransform(morphProgress, [0.45, 0.90], ["1fr", "0fr"])
+  return (
+    <motion.div style={{ gridTemplateRows: rows }} className="grid">
+      <motion.div style={{ opacity }} className="overflow-hidden min-h-0">
+        <div className="max-w-2xl mb-12">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#7ba320] dark:text-[#a3e635] mb-3">
+            Deep Dive
+          </p>
+          <h2 className="text-3xl font-bold tracking-tight">
+            How Bobby works{" "}
+            <span className="text-gray-400 dark:text-gray-500">end to end.</span>
+          </h2>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ─── Mobile timeline (floating right-edge pill) ──────────────────────────────
+// Shown only on small screens. Sits sticky near the top of the Deep Dive
+// section, aligned to the right edge. Collapsed state shows the currently
+// active step as a compact pill; tapping expands the full list so the user
+// can jump between steps without scrolling back up.
+function MobileTimeline({
+  features,
+  active,
+  morphProgress,
+  onJump,
+}: {
+  features: typeof DEEP_FEATURES
+  active: number
+  /** 0 → 1 as the user scrolls through the dedicated mobile morph buffer.
+   *  Drives the inline-list → pill transition over real scroll distance. */
+  morphProgress: MotionValue<number>
+  onJump: (i: number) => void
+}) {
+  // ── Morph choreography ────────────────────────────────────────────────
+  // One continuous in-place transformation — no flying element, no handoff
+  // to a separate pill. The whole container collapses like a sidebar nav:
+  //
+  //   PRE → RETRACT:  inactive rows fade + collapse their row height, so
+  //                   the list visually retracts around the active row.
+  //   RETRACT → SHAPE: the surviving container shrinks horizontally
+  //                   (right-aligned) and its surface morphs into a pill
+  //                   (rounded, solid bg, border, shadow, tighter padding).
+  //
+  // After SHAPE the container IS the pill — same DOM node, same active row
+  // content — just wrapped in pill-shaped chrome. Tapping it expands the
+  // height back out to reveal all rows as a dropdown.
+  const PRE     = 0.10
+  const RETRACT = 0.45
+  const SHAPE   = 0.90
+
+  // Inactive rows collapse + fade first.
+  const inactiveOpacity = useTransform(morphProgress, [PRE, RETRACT], [1, 0])
+  const inactiveRows    = useTransform(morphProgress, [PRE, RETRACT], ["1fr", "0fr"])
+  const railOpacity     = inactiveOpacity
+
+  // Container shrink: parent is `flex justify-end`, so as we lower maxWidth
+  // the container pulls in from the LEFT while its right edge stays pinned —
+  // which is exactly the "collapse toward a right-side pill" feel.
+  //
+  // We measure the parent width so we can tween between real pixel values
+  // (string-unit tweens like "100%" → "240px" don't interpolate smoothly in
+  // framer-motion). The maxWidth transform below reads parentW reactively.
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const parentWRef = useRef(0)
+  const [, forceRerender] = useState(0)
+  useLayoutEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const update = () => {
+      const w = el.offsetWidth
+      if (w && w !== parentWRef.current) {
+        parentWRef.current = w
+        forceRerender((n) => n + 1)
+      }
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const PILL_W = 210 // px — final pill width
+  const maxWidth = useTransform(morphProgress, (v) => {
+    const t = Math.max(0, Math.min(1, (v - RETRACT) / (SHAPE - RETRACT)))
+    const start = parentWRef.current || PILL_W
+    return start * (1 - t) + PILL_W * t
+  })
+
+  // Surface morph: flat timeline → pill chrome. Using a modest 22px target
+  // radius (rather than the full 9999 stadium) means the collapsed pill is
+  // still fully-round at its compact ~36px height (22 > 18 = half-height),
+  // while the taller expanded state reads naturally as a rounded rectangle
+  // — no radius animation needed on expand/collapse.
+  const radius       = useTransform(morphProgress, [RETRACT, SHAPE], [0, 22])
+  const padX         = useTransform(morphProgress, [RETRACT, SHAPE], [0, 12])
+  const padY         = useTransform(morphProgress, [RETRACT, SHAPE], [0, 6])
+  const bgOpacity    = useTransform(morphProgress, [RETRACT, SHAPE], [0, 1])
+  const shadowOp     = useTransform(morphProgress, [RETRACT, SHAPE], [0, 0.18])
+  const boxShadow    = useMotionTemplate`0 8px 24px -8px rgba(0,0,0,${shadowOp})`
+  // Chevron only appears once the pill is formed enough to read as a tap
+  // target; before that it's just distracting.
+  const chevOpacity  = useTransform(morphProgress, [RETRACT, SHAPE], [0, 1])
+
+  // ── Row-level compaction ──────────────────────────────────────────────
+  // The full timeline keeps the larger dot / text / spacing of the desktop
+  // style. Once the container starts shaping into the pill, each row tightens
+  // its own dimensions so the final pill is a single compact line — without
+  // changing how the full list looks before the morph.
+  const rowPadY        = useTransform(morphProgress, [RETRACT, SHAPE], [8, 4])   // py-2 → py-1
+  const dotSize        = useTransform(morphProgress, [RETRACT, SHAPE], [18, 14])
+  const dotCheckSize   = useTransform(morphProgress, [RETRACT, SHAPE], [10, 8])
+  const haloPx         = useTransform(morphProgress, [RETRACT, SHAPE], [6, 4])
+  const eyebrowFont    = useTransform(morphProgress, [RETRACT, SHAPE], [10, 9])
+  const eyebrowMB      = useTransform(morphProgress, [RETRACT, SHAPE], [4, 0])   // mb-1 → 0
+  const titleFont      = useTransform(morphProgress, [RETRACT, SHAPE], [16, 14]) // base → sm
+  // Halo shadow for the active dot — amplitude shrinks with haloPx so it
+  // matches the smaller compact dot.
+  const activeHalo     = useMotionTemplate`0 0 0 ${haloPx}px rgba(163,230,53,0.18)`
+  // Rail tracks the dot's horizontal center: padX (pill inner-left) plus half
+  // the dot width, which itself shrinks with the compaction above.
+  const railLeft       = useTransform(() => padX.get() + dotSize.get() / 2)
+
+  // Expand state (user taps the pill to see all rows as a dropdown).
+  const [expanded, setExpanded] = useState(false)
+  const [pillReady, setPillReady] = useState(false)
+  useMotionValueEvent(morphProgress, "change", (v) => {
+    setPillReady(v >= SHAPE - 0.05)
+  })
+  // Auto-collapse if we scroll back out of the pill state, so the dropdown
+  // doesn't reappear half-open next time.
+  useEffect(() => {
+    if (!pillReady) setExpanded(false)
+  }, [pillReady])
+
+
+  return (
+    // Outer row: right-aligns the morphing container so its right edge is
+    // pinned while the left edge pulls in as the container shrinks.
+    <div
+      ref={wrapperRef}
+      className="md:hidden flex justify-end"
+    >
+      <motion.div
+        style={{
+          maxWidth,
+          borderRadius: radius,
+          paddingLeft: padX,
+          paddingRight: padX,
+          paddingTop: padY,
+          paddingBottom: padY,
+          boxShadow,
+        }}
+        className="w-full relative"
+      >
+        {/* Pill surface layer — bg + border fade in during the SHAPE window.
+            Kept as its own layer so we can fade opacity cleanly without
+            fighting the padding/radius of the outer motion wrapper. */}
+        <motion.div
+          aria-hidden
+          style={{ opacity: bgOpacity, borderRadius: radius }}
+          className="pointer-events-none absolute inset-0
+                     border border-gray-200 bg-white
+                     dark:border-white/[0.12] dark:bg-[#141414]"
+        />
+
+        {/* Vertical rail — tracks the dot column; fades with inactive rows. */}
+        <motion.div
+          style={{ opacity: railOpacity, left: railLeft }}
+          className="absolute top-2 bottom-2 w-px bg-gray-200 dark:bg-white/10 pointer-events-none"
+        />
+
+        <ul className="relative flex flex-col">
+          {features.map((f, i) => {
+            const isActive = active === i
+            const isDone = active > i
+            // Row layout: inline flex so the dot lives inside the container
+            // and moves with it as the pill shrinks. (The old absolute
+            // `-left-8` placement would have leaked out of the pill.)
+            const row = (
+              // Button uses motion for paddingY so the row breathes more in
+              // full-timeline mode and tightens as the pill forms. Alignment
+              // is items-center so the dot sits on the row's vertical
+              // midline regardless of current text size.
+              <motion.button
+                onClick={() => onJump(i)}
+                style={{ paddingTop: rowPadY, paddingBottom: rowPadY }}
+                className="flex w-full items-center gap-3 text-left"
+                aria-label={`Jump to ${f.title}`}
+              >
+                <motion.span
+                  className="flex-none rounded-full flex items-center justify-center"
+                  style={{
+                    width: dotSize,
+                    height: dotSize,
+                    background: isActive || isDone ? "#a3e635" : "transparent",
+                    borderWidth: 2,
+                    borderStyle: "solid",
+                    borderColor: isActive || isDone ? "#a3e635" : "rgb(229 231 235)",
+                    boxShadow: isActive ? activeHalo : "none",
+                  }}
+                >
+                  {isDone && (
+                    <motion.svg
+                      viewBox="0 0 12 12"
+                      style={{ width: dotCheckSize, height: dotCheckSize }}
+                      className="fill-gray-900"
+                    >
+                      <path d="M4.5 8.5 2 6l.9-.9 1.6 1.6L9.1 2 10 2.9z" />
+                    </motion.svg>
+                  )}
+                </motion.span>
+                <span className="min-w-0 flex-1">
+                  <motion.span
+                    style={{ fontSize: eyebrowFont, marginBottom: eyebrowMB }}
+                    className={
+                      "block font-bold uppercase tracking-[0.18em] leading-none " +
+                      (isActive
+                        ? "text-[#7ba320] dark:text-[#a3e635]"
+                        : "text-gray-400 dark:text-gray-600")
+                    }
+                  >
+                    {f.eyebrow}
+                  </motion.span>
+                  <motion.span
+                    style={{ fontSize: titleFont }}
+                    className={
+                      "block font-bold tracking-tight truncate leading-tight " +
+                      (isActive
+                        ? "text-gray-900 dark:text-white"
+                        : "text-gray-500 dark:text-gray-400")
+                    }
+                  >
+                    {f.title}
+                  </motion.span>
+                </span>
+              </motion.button>
+            )
+
+            // Non-active rows: two driving modes sharing the same DOM node.
+            //
+            //  • Before the pill is formed, the row's height + opacity are
+            //    scroll-driven via `morphProgress` so the list smoothly
+            //    retracts as the user scrolls through the morph buffer.
+            //
+            //  • Once `pillReady` flips, we hand off to an `animate`-prop
+            //    driven state tied to the user's expand toggle, so tapping
+            //    the chevron eases the rows open/closed. At the hand-off
+            //    the motion value's current state (0, "0fr") matches the
+            //    collapsed animate target, so the switch is invisible.
+            if (!isActive) {
+              if (pillReady) {
+                return (
+                  <motion.li
+                    key={i}
+                    initial={false}
+                    animate={{
+                      gridTemplateRows: expanded ? "1fr" : "0fr",
+                      opacity: expanded ? 1 : 0,
+                    }}
+                    transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                    className="grid"
+                  >
+                    <div className="overflow-hidden min-h-0">{row}</div>
+                  </motion.li>
+                )
+              }
+              return (
+                <motion.li
+                  key={i}
+                  style={{ opacity: inactiveOpacity, gridTemplateRows: inactiveRows }}
+                  className="grid"
+                >
+                  <div className="overflow-hidden min-h-0">{row}</div>
+                </motion.li>
+              )
+            }
+
+            // Active row: sits in place, always visible. In pill mode the
+            // chevron on the right becomes the tap target for expand/
+            // collapse — same row, just gains an affordance.
+            return (
+              <li key={i} className="relative">
+                {row}
+                <motion.button
+                  type="button"
+                  style={{ opacity: chevOpacity }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setExpanded((v) => !v)
+                  }}
+                  disabled={!pillReady}
+                  aria-label={expanded ? "Collapse section navigation" : "Expand section navigation"}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  <svg
+                    viewBox="0 0 12 12"
+                    className={"h-3 w-3 fill-current transition-transform " + (expanded ? "rotate-180" : "")}
+                  >
+                    <path d="M6 8.5 1.5 4l1.1-1.1L6 6.3l3.4-3.4L10.5 4z" />
+                  </svg>
+                </motion.button>
+              </li>
+            )
+          })}
+        </ul>
+      </motion.div>
+    </div>
+  )
+}
+
+// ─── Zero Config — "Start now" card ──────────────────────────────────────────
+// Sits in the Step 01 visual slot. A compact, high-contrast card whose only
+// job is to get the reader onto the install-and-go page of the docs.
+function ZeroConfigStartCard() {
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl border
+                 border-gray-200 bg-white p-5 md:p-6
+                 dark:border-white/[0.08] dark:bg-[#0c0c0c]"
+    >
+      {/* Ambient lime glow — matches the accent used elsewhere on the page */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-20 -right-20 h-48 w-48 rounded-full blur-3xl opacity-40"
+        style={{ background: "radial-gradient(closest-side, rgba(163,230,53,0.35), transparent 70%)" }}
+      />
+
+      <div className="relative flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <RocketLaunchIcon className="h-4 w-4 text-[#7ba320] dark:text-[#a3e635]" />
+          <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#7ba320] dark:text-[#a3e635]">
+            Get running in 60 seconds
+          </span>
+        </div>
+
+        <h4 className="text-xl md:text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+          One command. No YAML.
+        </h4>
+
+        {/* Faux terminal snippet — reinforces the "one binary" pitch */}
+        <div
+          className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-sm
+                     text-gray-800 dark:border-white/[0.08] dark:bg-[#141414] dark:text-gray-200"
+        >
+          <span className="text-gray-400 dark:text-gray-500 select-none">$ </span>
+          curl -fsSL bobby.dev/install | sh
+        </div>
+
+        <a
+          href="/docs"
+          className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#a3e635] px-4 py-2
+                     text-sm font-semibold text-[#0c0c0c] shadow-sm
+                     transition-colors hover:bg-[#b4f04a]"
+        >
+          Start now
+          <svg viewBox="0 0 20 20" className="h-4 w-4 fill-current">
+            <path d="M10.293 3.293a1 1 0 0 1 1.414 0l5 5a1 1 0 0 1 0 1.414l-5 5a1 1 0 0 1-1.414-1.414L13.586 10H4a1 1 0 1 1 0-2h9.586l-3.293-3.293a1 1 0 0 1 0-1.414Z" />
+          </svg>
+        </a>
+      </div>
     </div>
   )
 }
