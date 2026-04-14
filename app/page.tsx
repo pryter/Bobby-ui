@@ -1263,41 +1263,48 @@ function DeepFeatureDetail({
   // page section).
   const local = useTransform(sectionProgress, [start - slice * 0.07, end + slice * 0.07], [0, 1])
 
-  // Outer block fade + lift-off — lift-off pushed all the way to local 0.93
+  // Outer block fade + lift-off — lift-off pushed all the way to local 0.95
   // so the freeze window owns the bulk of the middle/late slice.
-  const outerOpacity = useTransform(local, [0, 0.15, 0.93, 1],    [0, 1, 1, 0])
-  const outerY       = useTransform(local, [0, 0.15, 0.93, 1],    [40, 0, 0, -90])
+  const outerOpacity = useTransform(local, [0, 0.10, 0.95, 1],    [0, 1, 1, 0])
+  const outerY       = useTransform(local, [0, 0.10, 0.95, 1],    [40, 0, 0, -90])
 
   // Per-element staggered reveals, keyed off localProgress.
-  // Each element enters over its own window, stays, then fades with the block.
-  const eyebrowOp   = useTransform(local, [0.08, 0.18],      [0, 1])
-  const eyebrowY    = useTransform(local, [0.08, 0.18],      [20, 0])
+  // Reveal cascade is compressed into the first ~30% of the slice so the text
+  // lands quickly and the reader can move on to the visual — previously this
+  // ran all the way to 0.48, which left the first half of the slice feeling
+  // sluggish on slow scrolls. Image enters right after, and the rest of the
+  // slice (~0.50 → 0.95) is dedicated to the image's showcase/freeze.
+  const eyebrowOp   = useTransform(local, [0.04, 0.10],      [0, 1])
+  const eyebrowY    = useTransform(local, [0.04, 0.10],      [20, 0])
 
-  const titleOp     = useTransform(local, [0.12, 0.24],      [0, 1])
-  const titleY      = useTransform(local, [0.12, 0.24],      [45, 0])
+  const titleOp     = useTransform(local, [0.06, 0.14],      [0, 1])
+  const titleY      = useTransform(local, [0.06, 0.14],      [45, 0])
 
-  const descOp      = useTransform(local, [0.20, 0.34],      [0, 1])
-  const descY       = useTransform(local, [0.20, 0.34],      [35, 0])
+  const descOp      = useTransform(local, [0.10, 0.20],      [0, 1])
+  const descY       = useTransform(local, [0.10, 0.20],      [35, 0])
 
-  const bullet0Op   = useTransform(local, [0.32, 0.40],      [0, 1])
-  const bullet0X    = useTransform(local, [0.32, 0.40],      [-24, 0])
-  const bullet1Op   = useTransform(local, [0.36, 0.44],      [0, 1])
-  const bullet1X    = useTransform(local, [0.36, 0.44],      [-24, 0])
-  const bullet2Op   = useTransform(local, [0.40, 0.48],      [0, 1])
-  const bullet2X    = useTransform(local, [0.40, 0.48],      [-24, 0])
+  const bullet0Op   = useTransform(local, [0.18, 0.24],      [0, 1])
+  const bullet0X    = useTransform(local, [0.18, 0.24],      [-24, 0])
+  const bullet1Op   = useTransform(local, [0.21, 0.27],      [0, 1])
+  const bullet1X    = useTransform(local, [0.21, 0.27],      [-24, 0])
+  const bullet2Op   = useTransform(local, [0.24, 0.30],      [0, 1])
+  const bullet2X    = useTransform(local, [0.24, 0.30],      [-24, 0])
 
-  const imgOp       = useTransform(local, [0.25, 0.45],      [0, 1])
-  // Image y choreography:
-  //   [0.22 → 0.48]  entry rise  80 → 0 (at "normal" compact width)
-  //   [0.48 → 0.62]  ░░ PAUSE ░░ — text is fully loaded and image sits at its
+  const imgOp       = useTransform(local, [0.15, 0.30],      [0, 1])
+  // Image y choreography (shifted earlier + stretched showcase):
+  //   [0.15 → 0.30]  entry rise  80 → 0 (at "normal" compact width)
+  //   [0.30 → 0.38]  ░░ PAUSE ░░ — text is fully loaded and image sits at its
   //                               normal compact size so the eye can land
-  //   [0.62 → 0.74]  focus lift  0 → -296 (glides up to viewport centre as
+  //   [0.38 → 0.48]  focus lift  0 → -296 (glides up to viewport centre as
   //                               it simultaneously expands to full width)
-  //   [0.74 → 0.93]  ████ FREEZE ████ — locked at -296, full width, centred
-  //   [0.93 → 1.00]  outerY lift-off carries the whole block out
+  //   [0.48 → 0.95]  ████ FREEZE ████ — locked at -296, full width, centred.
+  //                               Much longer window (was 0.74→0.93) so the
+  //                               visual actually gets showcased instead of
+  //                               flashing past.
+  //   [0.95 → 1.00]  outerY lift-off carries the whole block out
   const imgY        = useTransform(
     local,
-    [0.22, 0.48, 0.62, 0.74, 0.93],
+    [0.15, 0.30, 0.38, 0.48, 0.95],
     [80,    0,    0,   -296, -296],
   )
   // Image width grows from a compact ~60% of the column to full width — the
@@ -1316,13 +1323,13 @@ function DeepFeatureDetail({
   }, [])
   const imgWidth    = useTransform(
     local,
-    [0.22, 0.48, 0.62, 0.74, 0.93],
+    [0.15, 0.30, 0.38, 0.48, 0.95],
     isMobile
       ? ["100%", "100%", "100%", "100%", "100%"]
       : ["62%",  "62%",  "62%",  "100%", "100%"],
   )
-  // Scale settles at 1 by 0.48 and stays there through the pause + freeze.
-  const imgScale    = useTransform(local, [0.22, 0.48, 0.93], [0.88, 1, 1])
+  // Scale settles at 1 by 0.30 and stays there through the pause + freeze.
+  const imgScale    = useTransform(local, [0.15, 0.30, 0.95], [0.88, 1, 1])
   // Prior left-to-right clip-path reveal removed — the opacity+y+scale
   // entry already does enough work on its own, and stacking the wipe on top
   // made the visual entry feel overwhelming. Now it's a plain in/out fade
@@ -1330,7 +1337,7 @@ function DeepFeatureDetail({
 
   // Focus phase — only for sections that actually have a visual. The text
   // block fades and drifts upward just as the image begins its focus lift,
-  // giving a brief pause at 0.48–0.62 where text + normal-size image both sit
+  // giving a brief pause at 0.30–0.38 where text + normal-size image both sit
   // fully loaded before anything moves.
   // Only steps 1 (No-Code video) and 2 (Self-Hosted video) run the freeze/
   // center focus choreography. Step 0 (Zero Config card) and step 3
@@ -1339,17 +1346,19 @@ function DeepFeatureDetail({
   const hasVisual = index === 1 || index === 2
   const textBlockOp = useTransform(
     local,
-    hasVisual ? [0.62, 0.72] : [0, 0.01],
+    hasVisual ? [0.38, 0.46] : [0, 0.01],
     hasVisual ? [1,    0]    : [1, 1],
   )
   const textBlockY = useTransform(
     local,
-    hasVisual ? [0.62, 0.72] : [0, 0.01],
+    hasVisual ? [0.38, 0.46] : [0, 0.01],
     hasVisual ? [0,   -40]   : [0, 0],
   )
 
   // Accent rail on the left of the text block — grows as you scroll through.
-  const railScaleY  = useTransform(local, [0.10, 0.55],      [0, 1])
+  // Pulled earlier (was [0.10, 0.55]) so it completes alongside the sped-up
+  // text cascade instead of lingering long after the copy is done.
+  const railScaleY  = useTransform(local, [0.05, 0.32],      [0, 1])
 
   const bulletOps = [bullet0Op, bullet1Op, bullet2Op]
   const bulletXs  = [bullet0X,  bullet1X,  bullet2X]
@@ -1463,16 +1472,22 @@ function DeepFeatureDetail({
         ) : (
           // Integrations — 3D orb, rendered without any card frame and without
           // the grow/freeze/center choreography. Wide/short aspect so the
-          // ellipsoid reads as a horizontal band of platform logos, centred
-          // in the column. `overflow-hidden` contains the orb's 640px-wide
-          // orbit rings + tile bleed (rx=260 + tile halfwidth means tiles
-          // can extend ~290px from centre, wider than a mobile viewport) so
-          // the orb doesn't push horizontal scroll on small screens.
+          // ellipsoid reads as a horizontal band of platform logos.
+          //
+          // The orb's tiles use fixed pixel coordinates (rx=260, ry=110) plus
+          // 64px tiles, so its natural extent is ~584×284. That fits a desktop
+          // column fine but blows past a ~335px mobile column on both axes.
+          // Rather than crop (which cuts the top/bottom rows of tiles), we
+          // scale the whole orb down on mobile via a CSS transform so it
+          // fits the column at its full visible extent. Wrapper height is
+          // sized to match the scaled orb height so nothing is cropped.
           <motion.div
             style={{ opacity: imgOp }}
-            className="relative mx-auto aspect-[16/6] w-full overflow-hidden"
+            className="relative mx-auto w-full h-[170px] md:h-auto md:aspect-[16/6] overflow-hidden"
           >
-            <IntegrationsOrb />
+            <div className="absolute inset-0 origin-center scale-[0.55] md:scale-100">
+              <IntegrationsOrb />
+            </div>
           </motion.div>
         )}
       </motion.div>
