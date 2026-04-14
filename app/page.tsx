@@ -7,6 +7,7 @@ import {
   useScroll,
   useSpring,
   useTransform,
+  useMotionValueEvent,
   MotionValue,
 } from "framer-motion"
 import { useRouter } from "next/navigation"
@@ -16,13 +17,21 @@ import {
   RocketLaunchIcon,
   BoltIcon,
   ShieldCheckIcon,
-  AdjustmentsHorizontalIcon,
-  CommandLineIcon,
-  SignalIcon,
-  LinkIcon,
 } from "@heroicons/react/24/solid"
 import Image from "next/image";
+import dynamic from "next/dynamic"
 import { useTheme } from "@/lib/useTheme"
+
+// Mockups used inside DeepDive sections — lazy loaded so their deps don't
+// bloat the initial landing bundle.
+const ImageSearchMockup = dynamic(
+  () => import("@/components/landing/ImageSearchMockup"),
+  { ssr: false },
+)
+const IntegrationsOrb = dynamic(
+  () => import("@/components/landing/IntegrationsOrb"),
+  { ssr: false },
+)
 
 // ─── Tile config ──────────────────────────────────────────────────────────────
 
@@ -441,36 +450,713 @@ function HeroScrollRing({ progress, dark }: { progress: MotionValue<number>; dar
 
 // ─── Features ─────────────────────────────────────────────────────────────────
 
-type FeatureIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>
+type ShowcaseVisual = React.ComponentType
 
-const FEATURES: { icon: FeatureIcon; title: string; desc: string }[] = [
-  { icon: AdjustmentsHorizontalIcon, title: "Zero Config",       desc: "Bobby reads your codebase and sets up the entire pipeline. Not a single YAML file." },
-  { icon: CommandLineIcon,           title: "Zero Code",         desc: "No Dockerfiles. No CI scripts. Push to git and your app ships itself." },
-  { icon: RocketLaunchIcon,          title: "Instant Deploy",    desc: "From commit to live in seconds. Built for speed at every step." },
-  { icon: ShieldCheckIcon,           title: "Secure by Default", desc: "Isolated build envs, encrypted secrets, signed artifacts — always on." },
-  { icon: SignalIcon,                title: "Live Streaming",    desc: "Watch every build happen in real time. No polling, no mystery." },
-  { icon: LinkIcon,                  title: "Git Native",        desc: "Connect any GitHub, GitLab, or Bitbucket repo in one click." },
+const SHOWCASE: { title: string; highlight?: string; desc: string; Visual: ShowcaseVisual }[] = [
+  {
+    title: "Zero Config",
+    highlight: "Setup",
+    desc: "Bobby reads your codebase and wires the pipeline. Not a single YAML file.",
+    Visual: StackGridVisual,
+  },
+  {
+    title: "No-Code",
+    highlight: "Pipelines",
+    desc: "Compose build, test and deploy stages visually. No Dockerfiles, no CI scripts.",
+    Visual: PipelineVisual,
+  },
+  {
+    title: "Self-Hosted",
+    highlight: "Infra",
+    desc: "Enterprise-grade infrastructure that runs on your own machine. Your data never leaves.",
+    Visual: ServerVisual,
+  },
+  {
+    title: "Rich",
+    highlight: "Integrations",
+    desc: "GitHub, GitLab, Bitbucket, registries and more — connect everything in one click.",
+    Visual: OrbitVisual,
+  },
 ]
 
-function FeatureCard({ icon: Icon, title, desc, index, scrollProgress }: { icon: FeatureIcon; title: string; desc: string; index: number; scrollProgress: MotionValue<number> }) {
-  const start   = 0.12 + index * 0.05
-  const end     = start + 0.15
+function ShowcaseCard({
+  title, highlight, desc, Visual, index, scrollProgress, featured,
+}: {
+  title: string
+  highlight?: string
+  desc: string
+  Visual: ShowcaseVisual
+  index: number
+  scrollProgress: MotionValue<number>
+  featured?: boolean
+}) {
+  const start   = 0.12 + index * 0.07
+  const end     = start + 0.18
   const opacity = useTransform(scrollProgress, [start, end], [0, 1])
-  const y       = useTransform(scrollProgress, [start, end], [100, 0])
+  const y       = useTransform(scrollProgress, [start, end], [80, 0])
 
   return (
-    <motion.div
-      style={{ opacity, y }}
-      className="rounded-2xl p-6 border border-gray-200/80 dark:border-white/[0.07]
-                 bg-white/60 dark:bg-white/[0.02]
-                 hover:border-indigo-200 dark:hover:border-indigo-500/25
-                 hover:bg-indigo-50/30 dark:hover:bg-indigo-500/[0.04]
-                 transition-all duration-300"
-    >
-      <Icon className="w-6 h-6 mb-3 text-indigo-500 dark:text-indigo-400" />
-      <h3 className="font-semibold text-gray-900 dark:text-white mb-1.5 text-sm">{title}</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{desc}</p>
+    <motion.div style={{ opacity, y }} className="relative h-full">
+      {/* Moving flares + bright border cores — travel along the card edge, 180° apart */}
+      {featured && (
+        <>
+          <div className="absolute inset-0 pointer-events-none">
+            {/* Start at top-center (12.5%) and bottom-center (62.5%) so they
+                phase-align with the conic bright arcs at angles 0° and 180°. */}
+            {[
+              { from: "12.5%", to: "112.5%" },
+              { from: "62.5%", to: "162.5%" },
+            ].map((phase, i) => (
+              <motion.div
+                key={i}
+                aria-hidden
+                animate={{ offsetDistance: [phase.from, phase.to] }}
+                transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+                className="absolute w-40 h-40 rounded-full"
+                style={{
+                  top: 0,
+                  left: 0,
+                  background:
+                    "radial-gradient(circle, rgba(163,230,53,0.25) 0%, rgba(163,230,53,0.11) 25%, rgba(163,230,53,0.04) 50%, rgba(163,230,53,0) 70%)",
+                  filter: "blur(20px)",
+                  offsetPath: "rect(0 100% 100% 0 round 1.5rem)",
+                  offsetAnchor: "center",
+                  offsetRotate: "0deg",
+                } as React.CSSProperties}
+              />
+            ))}
+          </div>
+          {/* Rotating gradient masked to the border ring — bright arcs chase around */}
+          <motion.div
+            aria-hidden
+            animate={{ "--angle": ["0deg", "360deg"] } as { [key: string]: string[] }}
+            transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+            className="absolute inset-0 rounded-3xl pointer-events-none z-10"
+            style={{
+              padding: "1.5px",
+              background:
+                "conic-gradient(from var(--angle) at 50% 50%, transparent 0deg, transparent 150deg, rgba(163,230,53,0.95) 175deg, rgba(163,230,53,1) 180deg, rgba(163,230,53,0.95) 185deg, transparent 210deg, transparent 330deg, rgba(163,230,53,0.95) 355deg, rgba(163,230,53,1) 360deg, rgba(163,230,53,0.95) 5deg, transparent 30deg)",
+              WebkitMask:
+                "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+              WebkitMaskComposite: "xor",
+              maskComposite: "exclude",
+              "--angle": "0deg",
+            } as React.CSSProperties}
+          />
+        </>
+      )}
+      <div
+        className={
+          "relative group rounded-3xl overflow-hidden h-full transition-colors duration-300 " +
+          (featured
+            ? "border border-[#a3e635]/40 dark:border-[#a3e635]/30 " +
+              "bg-white dark:bg-[#080808] " +
+              "shadow-[0_0_18px_-6px_rgba(163,230,53,0.22),0_0_40px_-12px_rgba(163,230,53,0.12)] " +
+              "hover:border-[#a3e635]/60 dark:hover:border-[#a3e635]/50"
+            : "border border-gray-200/80 dark:border-white/[0.07] " +
+              "bg-white/70 dark:bg-white/[0.02] " +
+              "hover:border-[#a3e635]/40 dark:hover:border-[#a3e635]/25")
+        }
+      >
+        <div className="px-7 pt-7 pb-3">
+          <h3 className="text-xl md:text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+            {title}{" "}
+            {highlight && (
+              <span className={featured ? "text-[#7ba320] dark:text-[#a3e635]/80" : "text-gray-400 dark:text-gray-500"}>
+                {highlight}
+              </span>
+            )}
+          </h3>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 leading-relaxed max-w-sm">
+            {desc}
+          </p>
+        </div>
+        <div className="relative h-48 md:h-56 overflow-hidden">
+          <Visual />
+        </div>
+      </div>
     </motion.div>
+  )
+}
+
+// ── Visuals ───────────────────────────────────────────────────────────────────
+
+function StackGridVisual() {
+  // 5×3 grid. Three center cells show simple, reliable brand glyphs.
+  const HIGHLIGHT_CELLS = [6, 7, 8] as const
+  const LOGOS: { bg: string; node: React.ReactNode }[] = [
+    {
+      // Node.js — hexagon with JS letters
+      bg: "bg-[#539E43]",
+      node: (
+        <div className="relative w-6 h-6 flex items-center justify-center">
+          <svg viewBox="0 0 24 24" className="absolute inset-0 w-full h-full" fill="rgba(255,255,255,0.22)">
+            <path d="M12 2 L21 7 L21 17 L12 22 L3 17 L3 7 Z" />
+          </svg>
+          <span className="relative text-white font-black text-[9px] tracking-tight leading-none">JS</span>
+        </div>
+      ),
+    },
+    {
+      // Docker — container blocks + hull
+      bg: "bg-[#2396ED]",
+      node: (
+        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="white">
+          <rect x="4"  y="11" width="3" height="3" rx="0.3" />
+          <rect x="7.5" y="11" width="3" height="3" rx="0.3" />
+          <rect x="11" y="11" width="3" height="3" rx="0.3" />
+          <rect x="14.5" y="11" width="3" height="3" rx="0.3" />
+          <rect x="7.5" y="7.5" width="3" height="3" rx="0.3" />
+          <rect x="11" y="7.5" width="3" height="3" rx="0.3" />
+          <rect x="11" y="4" width="3" height="3" rx="0.3" />
+          <path d="M2 15 Q12 19 22 15 Q21 18.5 17 19.5 Q11 20.8 6 19 Q3 18 2 15 Z" />
+        </svg>
+      ),
+    },
+    {
+      // Python — two offset rounded rects
+      bg: "bg-[#3776AB]",
+      node: (
+        <svg viewBox="0 0 24 24" className="w-6 h-6">
+          <rect x="5"  y="3"  width="11" height="10" rx="2.5" fill="white" />
+          <rect x="8"  y="11" width="11" height="10" rx="2.5" fill="#FFD43B" />
+          <circle cx="7.8"  cy="6"  r="0.9" fill="#3776AB" />
+          <circle cx="16.2" cy="18" r="0.9" fill="#3776AB" />
+        </svg>
+      ),
+    },
+  ]
+
+  return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      <div className="relative grid grid-cols-5 gap-2.5 p-2">
+        {Array.from({ length: 15 }).map((_, i) => {
+          const idx = HIGHLIGHT_CELLS.indexOf(i as typeof HIGHLIGHT_CELLS[number])
+          if (idx === -1) {
+            return (
+              <div
+                key={i}
+                className="w-10 h-10 rounded-lg border border-gray-200/70 dark:border-white/[0.06] bg-gray-50/60 dark:bg-white/[0.015]"
+              />
+            )
+          }
+          const logo = LOGOS[idx]
+          return (
+            <div
+              key={i}
+              className={`w-10 h-10 rounded-lg ${logo.bg} flex items-center justify-center shadow-lg shadow-black/10`}
+            >
+              {logo.node}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function OrbitVisual() {
+  // Center Bobby hub with platform chips orbiting
+  return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      <div className="absolute inset-0"
+           style={{ background: "radial-gradient(ellipse at 50% 55%, rgba(163,230,53,0.10) 0%, transparent 65%)" }} />
+      {/* faint connection lines */}
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 220" preserveAspectRatio="none">
+        <line x1="80"  y1="80"  x2="200" y2="110" stroke="currentColor" className="text-gray-300 dark:text-white/10" strokeWidth="1" strokeDasharray="3 4" />
+        <line x1="320" y1="80"  x2="200" y2="110" stroke="currentColor" className="text-gray-300 dark:text-white/10" strokeWidth="1" strokeDasharray="3 4" />
+        <line x1="100" y1="170" x2="200" y2="110" stroke="currentColor" className="text-gray-300 dark:text-white/10" strokeWidth="1" strokeDasharray="3 4" />
+        <line x1="300" y1="170" x2="200" y2="110" stroke="currentColor" className="text-gray-300 dark:text-white/10" strokeWidth="1" strokeDasharray="3 4" />
+      </svg>
+      {/* center hub — lime glow pulse */}
+      <motion.div
+        aria-hidden
+        animate={{ opacity: [0.4, 0.9, 0.4], scale: [1, 1.25, 1] }}
+        transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute w-20 h-20 rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(163,230,53,0.55) 0%, transparent 70%)", filter: "blur(8px)" }}
+      />
+      <div className="relative z-10 w-14 h-14 rounded-full bg-gradient-to-br from-[#a3e635] to-[#7ba320] shadow-xl shadow-[#a3e635]/40 flex items-center justify-center ring-4 ring-[#a3e635]/20">
+        <BobbyIcon className=" size-8 text-gray-900" />
+      </div>
+      {/* orbit chips */}
+      <div className="absolute top-6 left-10 w-11 h-11 rounded-xl bg-gray-900 dark:bg-white/[0.06] border border-black/5 dark:border-white/10 flex items-center justify-center shadow-lg shadow-black/10">
+        <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="currentColor"><path d="M12 .5A11.5 11.5 0 0 0 .5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.27-5.23-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.18 1.17a11 11 0 0 1 5.79 0c2.21-1.48 3.18-1.17 3.18-1.17.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.37-5.25 5.66.41.35.78 1.04.78 2.1v3.12c0 .31.21.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z"/></svg>
+      </div>
+      <div className="absolute top-6 right-10 w-11 h-11 rounded-xl bg-[#fc6d26] flex items-center justify-center shadow-lg shadow-black/10">
+        <span className="text-white text-base font-bold">GL</span>
+      </div>
+      <div className="absolute bottom-6 left-14 w-11 h-11 rounded-xl bg-[#2684ff] flex items-center justify-center shadow-lg shadow-black/10">
+        <span className="text-white text-base font-bold">BB</span>
+      </div>
+      <div className="absolute bottom-6 right-14 w-11 h-11 rounded-xl bg-gray-100 dark:bg-white/[0.06] border border-gray-200/80 dark:border-white/10 flex items-center justify-center shadow-lg shadow-black/10">
+        <RocketLaunchIcon className="w-5 h-5 text-[#7ba320] dark:text-[#a3e635]" />
+      </div>
+    </div>
+  )
+}
+
+function PipelineVisual() {
+  // Horizontal no-code pipeline: Source → Build → Test → Deploy
+  const stages = [
+    { label: "Source", color: "bg-gray-900 dark:bg-white/[0.08]", dot: "bg-gray-400",  text: "text-white" },
+    { label: "Build",  color: "bg-[#2563eb]",                     dot: "bg-blue-200",  text: "text-white" },
+    { label: "Test",   color: "bg-[#f5a623]",                     dot: "bg-yellow-100",text: "text-white" },
+    { label: "Deploy", color: "bg-[#a3e635]",                     dot: "bg-lime-900/40",text: "text-gray-900" },
+  ]
+  return (
+    <div className="absolute inset-0 flex items-center justify-center px-6">
+      <div className="absolute inset-0"
+           style={{ background: "radial-gradient(ellipse at 50% 55%, rgba(99,102,241,0.10) 0%, transparent 65%)" }} />
+      <div className="relative z-10 flex items-center gap-0 w-full max-w-sm">
+        {stages.map((s, i) => (
+          <div key={s.label} className="flex items-center flex-1 last:flex-none">
+            <motion.div
+              animate={s.label === "Deploy"
+                ? { boxShadow: ["0 8px 18px -4px rgba(163,230,53,0.45)", "0 8px 30px -2px rgba(163,230,53,0.85)", "0 8px 18px -4px rgba(163,230,53,0.45)"] }
+                : {}}
+              transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+              className={`${s.color} ${s.text} relative rounded-xl px-3 py-2.5 min-w-[74px] shadow-lg shadow-black/10`}
+            >
+              <div className="flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                <span className="text-[11px] font-semibold tracking-wide">{s.label}</span>
+              </div>
+              <div className="mt-1.5 h-1 rounded-full bg-black/15 overflow-hidden">
+                <motion.div
+                  className="h-full bg-current rounded-full opacity-80"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${30 + i * 22}%` }}
+                  transition={{ duration: 1.2, delay: i * 0.2, ease: "easeOut" }}
+                />
+              </div>
+            </motion.div>
+            {i < stages.length - 1 && (
+              <svg className="flex-1 h-px mx-1 text-gray-300 dark:text-white/15" viewBox="0 0 40 2" preserveAspectRatio="none">
+                <line x1="0" y1="1" x2="40" y2="1" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 3" />
+              </svg>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ServerVisual() {
+  // Self-hosted: a server rack sitting on "your machine" with a lock badge
+  return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      <div className="absolute inset-0"
+           style={{ background: "radial-gradient(ellipse at 50% 55%, rgba(163,230,53,0.10) 0%, transparent 65%)" }} />
+      <div className="relative">
+        {/* Server rack */}
+        <div className="relative w-44 rounded-2xl bg-gradient-to-b from-white to-gray-50 dark:from-white/[0.06] dark:to-white/[0.02]
+                        border border-gray-200/80 dark:border-white/10 shadow-xl shadow-black/10 p-3 space-y-1.5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex items-center gap-2 rounded-md bg-gray-100/80 dark:bg-white/[0.04] border border-gray-200/70 dark:border-white/[0.05] px-2 py-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${i === 0 ? "bg-[#a3e635]" : i === 1 ? "bg-indigo-400" : "bg-[#f5a623]"} animate-pulse`} />
+              <div className="h-1.5 rounded-full bg-gray-300/70 dark:bg-white/10 flex-1" />
+              <div className="flex gap-0.5">
+                <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-white/20" />
+                <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-white/20" />
+                <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-white/20" />
+              </div>
+            </div>
+          ))}
+          {/* Lock badge — top right */}
+          <motion.div
+            animate={{ boxShadow: ["0 0 0 0 rgba(163,230,53,0.55)", "0 0 0 10px rgba(163,230,53,0)", "0 0 0 0 rgba(163,230,53,0)"] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+            className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-[#a3e635] flex items-center justify-center ring-4 ring-white dark:ring-[#080808]"
+          >
+            <ShieldCheckIcon className="w-4 h-4 text-gray-900" />
+          </motion.div>
+        </div>
+        {/* "Your machine" base */}
+        <div className="mx-auto mt-2 w-52 h-1.5 rounded-full bg-gray-200/80 dark:bg-white/[0.06]" />
+        <div className="mx-auto mt-1.5 text-[10px] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500 text-center">
+          your machine
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Deep-dive timeline ──────────────────────────────────────────────────────
+
+const DEEP_FEATURES: {
+  eyebrow: string
+  title: string
+  desc: string
+  bullets: string[]
+}[] = [
+  {
+    eyebrow: "Step 01",
+    title: "Zero Config Setup",
+    desc:
+      "Install the Bobby binary and you're done. It auto-detects your codebase, provisions secure build environments, and starts running pipelines directly on your machine. No YAML, no dashboards to wire up, no secrets to sync — Bobby manages the state, runtime, and orchestration so you only ever have to push code.",
+    bullets: [
+      "Single-binary install, no daemon zoo",
+      "Auto-detects language, framework, and entrypoint",
+      "Encrypted local state — nothing leaves your box",
+    ],
+  },
+  {
+    eyebrow: "Step 02",
+    title: "No-Code Pipelines",
+    desc:
+      "Compose build, test, and deploy stages in a drag-and-drop canvas. If you've used n8n or Zapier, you already know how — snap nodes together, wire inputs to outputs, and your pipeline is live. Swap steps, branch on conditions, fan out in parallel. No Dockerfiles, no CI scripts, no brittle shell glue.",
+    bullets: [
+      "Drag-and-drop n8n-style canvas",
+      "Reusable nodes: build, test, scan, deploy",
+      "Branching, parallelism, and retries out of the box",
+    ],
+  },
+  {
+    eyebrow: "Step 03",
+    title: "Self-Hosted Infra",
+    desc:
+      "Enterprise-grade infrastructure that runs where your code lives. A built-in registry proxy caches OCI images close to the build, fully isolated micro-VMs run every step in a clean room, and every artifact is versioned and signed right on your machine. You get the guarantees of a managed platform with none of the data egress.",
+    bullets: [
+      "Registry proxy with transparent layer caching",
+      "Fully isolated micro-VMs per pipeline run",
+      "Content-addressed image versioning and signing",
+    ],
+  },
+  {
+    eyebrow: "Step 04",
+    title: "Rich Integrations",
+    desc:
+      "Connect Bobby to everything your workflow already touches. Git webhooks trigger pipelines on push, PR, or tag. Container registries, secret stores, chat, and ticketing systems are one click away. Everything that isn't first-party is one tiny plugin shim — and plugins are just binaries, so you can ship your own in an afternoon.",
+    bullets: [
+      "Git webhooks for GitHub, GitLab, Bitbucket",
+      "First-party registry, secret, and chat integrations",
+      "Plugin SDK — ship your own in minutes",
+    ],
+  },
+]
+
+function DeepDiveSection() {
+  const sectionRef = useRef<HTMLDivElement>(null)
+  const detailRefs = useRef<(HTMLDivElement | null)[]>([])
+  const [active, setActive] = useState(0)
+
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end end"],
+  })
+  const progress = useSpring(scrollYProgress, { stiffness: 80, damping: 22, restDelta: 0.001 })
+
+  // Track which detail section is currently on stage. Each slice visually
+  // hands off to the next at the lift-off point (local ≈ 0.72 → 1.0), which
+  // sits around slice-fraction 0.9. Advancing active at v*total + 0.1 keeps
+  // the highlighted step in sync with the content actually showing.
+  useMotionValueEvent(progress, "change", (v) => {
+    const total = DEEP_FEATURES.length
+    const raw = v * total
+    const i = Math.max(0, Math.min(total - 1, Math.floor(raw)))
+    setActive(i)
+  })
+
+  const scrollTo = (i: number) => {
+    const section = sectionRef.current
+    if (!section) return
+    // Land the user at the "fully unfolded" moment of this step — after the
+    // entry cascade has completed but before the lift-off/exit kicks in.
+    // Local progress ≈ 0.60 sits cleanly in that plateau.
+    const slice = 1 / DEEP_FEATURES.length
+    const targetLocal = 0.60
+    // local maps [start - 0.07*slice, end + 0.07*slice] → [0,1], so invert:
+    const targetSectionProgress = (i - 0.07) * slice + targetLocal * 1.14 * slice
+    const sectionTop = section.getBoundingClientRect().top + window.scrollY
+    const scrollRange = section.offsetHeight - window.innerHeight
+    const targetY = sectionTop + targetSectionProgress * scrollRange
+    window.scrollTo({ top: targetY, behavior: "smooth" })
+  }
+
+  return (
+    <section ref={sectionRef} className="relative px-5 md:px-12 pt-20 pb-48">
+      <div className="max-w-6xl mx-auto">
+        {/* Section heading — staggered entry when it scrolls into view */}
+        <motion.div
+          className="max-w-2xl mb-20"
+          initial="hidden"
+          whileInView="shown"
+          viewport={{ once: true, margin: "-15% 0px -15% 0px" }}
+          transition={{ staggerChildren: 0.12, delayChildren: 0.05 }}
+        >
+          <motion.p
+            variants={{
+              hidden: { opacity: 0, y: 18 },
+              shown: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
+            }}
+            className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#7ba320] dark:text-[#a3e635] mb-3"
+          >
+            Deep Dive
+          </motion.p>
+          <motion.h2
+            variants={{
+              hidden: { opacity: 0, y: 32 },
+              shown: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
+            }}
+            className="text-3xl md:text-5xl font-bold tracking-tight"
+          >
+            How Bobby works{" "}
+            <span className="text-gray-400 dark:text-gray-500">end to end.</span>
+          </motion.h2>
+        </motion.div>
+
+        <div className="grid md:grid-cols-12 gap-x-12 gap-y-16">
+          {/* ── Left: sticky interactive timeline ─────────────────────────── */}
+          <div className="md:col-span-4">
+            <div className="md:sticky md:top-28">
+              <div className="relative pl-8">
+                {/* Vertical rail */}
+                <div className="absolute left-[9px] top-2 bottom-2 w-px bg-gray-200 dark:bg-white/10" />
+                {/* Lime progress fill — height animates with scroll */}
+                <motion.div
+                  className="absolute left-[9px] top-2 w-px bg-[#a3e635] origin-top"
+                  style={{
+                    height: useTransform(progress, [0, 1], ["0%", "100%"]),
+                    boxShadow: "0 0 8px rgba(163,230,53,0.55)",
+                  }}
+                />
+                <motion.ul
+                  className="space-y-7"
+                  initial="hidden"
+                  whileInView="shown"
+                  viewport={{ once: true, margin: "-15% 0px -15% 0px" }}
+                  transition={{ staggerChildren: 0.11, delayChildren: 0.1 }}
+                >
+                  {DEEP_FEATURES.map((f, i) => {
+                    const isActive = active === i
+                    const isDone = active > i
+                    return (
+                      <motion.li
+                        key={i}
+                        className="relative"
+                        variants={{
+                          hidden: { opacity: 0, x: -18 },
+                          shown: {
+                            opacity: 1,
+                            x: 0,
+                            transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
+                          },
+                        }}
+                      >
+                        {/* Dot */}
+                        <button
+                          onClick={() => scrollTo(i)}
+                          className="absolute -left-8 top-1 w-[18px] h-[18px] rounded-full flex items-center justify-center transition-colors duration-300"
+                          style={{
+                            background: isActive || isDone ? "#a3e635" : "transparent",
+                            borderWidth: 2,
+                            borderColor: isActive || isDone ? "#a3e635" : "rgb(229 231 235)",
+                            boxShadow: isActive ? "0 0 0 6px rgba(163,230,53,0.18)" : "none",
+                          }}
+                          aria-label={`Jump to ${f.title}`}
+                        >
+                          {isDone && (
+                            <svg viewBox="0 0 12 12" className="w-2.5 h-2.5 fill-gray-900">
+                              <path d="M4.5 8.5 2 6l.9-.9 1.6 1.6L9.1 2 10 2.9z" />
+                            </svg>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => scrollTo(i)}
+                          className="text-left w-full group"
+                        >
+                          <p className={
+                            "text-[10px] font-bold uppercase tracking-[0.18em] mb-1 transition-colors duration-300 " +
+                            (isActive
+                              ? "text-[#7ba320] dark:text-[#a3e635]"
+                              : "text-gray-400 dark:text-gray-600")
+                          }>
+                            {f.eyebrow}
+                          </p>
+                          <h3 className={
+                            "text-lg font-bold tracking-tight transition-colors duration-300 " +
+                            (isActive
+                              ? "text-gray-900 dark:text-white"
+                              : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300")
+                          }>
+                            {f.title}
+                          </h3>
+                        </button>
+                      </motion.li>
+                    )
+                  })}
+                </motion.ul>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Right: scrolling feature details ──────────────────────────── */}
+          <div className="md:col-span-8">
+            {DEEP_FEATURES.map((f, i) => (
+              <DeepFeatureDetail
+                key={i}
+                feature={f}
+                index={i}
+                total={DEEP_FEATURES.length}
+                sectionProgress={progress}
+                registerRef={(el) => { detailRefs.current[i] = el }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function DeepFeatureDetail({
+  feature, index, total, sectionProgress, registerRef,
+}: {
+  feature: typeof DEEP_FEATURES[number]
+  index: number
+  total: number
+  sectionProgress: MotionValue<number>
+  registerRef: (el: HTMLDivElement | null) => void
+}) {
+  // Each detail owns a slice of the section's scroll range (e.g. 25% for 4 items).
+  // We convert sectionProgress → localProgress in [0,1] scoped to this slice,
+  // then drive a staggered cascade of element reveals within the slice.
+  const slice = 1 / total
+  const start = index * slice
+  const end   = start + slice
+
+  // Local progress: 0 just before the slice, 1 just after.
+  // Extended by a small ±7% so enter/exit start slightly before/after the
+  // exact slice — enough for a smooth handoff without bleeding far into
+  // neighbouring slices (previously ±20% caused the last slice's exit to
+  // complete well past the section's bottom, visually overlapping the next
+  // page section).
+  const local = useTransform(sectionProgress, [start - slice * 0.07, end + slice * 0.07], [0, 1])
+
+  // Outer block fade + lift-off — once the entry animation completes the
+  // block starts drifting up and fading out so the next section can take over
+  // without a dead pause between them.
+  const outerOpacity = useTransform(local, [0, 0.15, 0.85, 1],    [0, 1, 1, 0])
+  const outerY       = useTransform(local, [0, 0.15, 0.85, 1],    [40, 0, 0, -90])
+
+  // Per-element staggered reveals, keyed off localProgress.
+  // Each element enters over its own window, stays, then fades with the block.
+  const eyebrowOp   = useTransform(local, [0.08, 0.18],      [0, 1])
+  const eyebrowY    = useTransform(local, [0.08, 0.18],      [20, 0])
+
+  const titleOp     = useTransform(local, [0.12, 0.24],      [0, 1])
+  const titleY      = useTransform(local, [0.12, 0.24],      [45, 0])
+
+  const descOp      = useTransform(local, [0.20, 0.34],      [0, 1])
+  const descY       = useTransform(local, [0.20, 0.34],      [35, 0])
+
+  const bullet0Op   = useTransform(local, [0.32, 0.40],      [0, 1])
+  const bullet0X    = useTransform(local, [0.32, 0.40],      [-24, 0])
+  const bullet1Op   = useTransform(local, [0.36, 0.44],      [0, 1])
+  const bullet1X    = useTransform(local, [0.36, 0.44],      [-24, 0])
+  const bullet2Op   = useTransform(local, [0.40, 0.48],      [0, 1])
+  const bullet2X    = useTransform(local, [0.40, 0.48],      [-24, 0])
+
+  const imgOp       = useTransform(local, [0.28, 0.50],      [0, 1])
+  const imgY        = useTransform(local, [0.28, 0.55],      [80, 0])
+  const imgScale    = useTransform(local, [0.28, 0.70, 1],   [0.88, 1, 1.04])
+  // Reveal mask — wipes from left to right as you scroll through the slice.
+  const imgClip     = useTransform(local, [0.30, 0.60],      ["inset(0 100% 0 0)", "inset(0 0% 0 0)"])
+
+  // Accent rail on the left of the text block — grows as you scroll through.
+  const railScaleY  = useTransform(local, [0.10, 0.55],      [0, 1])
+
+  const bulletOps = [bullet0Op, bullet1Op, bullet2Op]
+  const bulletXs  = [bullet0X,  bullet1X,  bullet2X]
+
+  return (
+    // Outer scroll spacer — gives the slice enough scroll distance for the
+    // entry animation to fully unfold. The actual content inside is pinned to
+    // the viewport via `sticky`, so the user stays on the content while the
+    // animation plays rather than scrolling past it.
+    <div
+      ref={registerRef}
+      className="relative min-h-[220vh]"
+    >
+      <motion.div
+        style={{ opacity: outerOpacity, y: outerY }}
+        // `top-28` matches the left timeline column so STEP 0x and the
+        // detail's own eyebrow sit on the same Y line. `justify-start` keeps
+        // the content anchored to the top of the viewport instead of
+        // centering it (which previously pushed the first detail down).
+        className="sticky top-28 h-[calc(100vh-7rem)] flex flex-col justify-start gap-8 pb-12"
+      >
+        <div className="relative">
+          {/* Lime accent rail — scales in vertically as the section reveals */}
+          <motion.div
+            aria-hidden
+            style={{ scaleY: railScaleY }}
+            className="absolute -left-5 top-2 bottom-20 w-[2px] bg-[#a3e635] origin-top rounded-full"
+          />
+
+          <motion.p
+            style={{ opacity: eyebrowOp, y: eyebrowY }}
+            className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#7ba320] dark:text-[#a3e635] mb-3"
+          >
+            {feature.eyebrow}
+          </motion.p>
+          <motion.h3
+            style={{ opacity: titleOp, y: titleY }}
+            className="text-3xl md:text-4xl font-bold tracking-tight mb-4"
+          >
+            {feature.title}
+          </motion.h3>
+          <motion.p
+            style={{ opacity: descOp, y: descY }}
+            className="text-gray-500 dark:text-gray-400 leading-relaxed text-base md:text-lg max-w-xl mb-6"
+          >
+            {feature.desc}
+          </motion.p>
+          <ul className="space-y-2 mb-8 max-w-xl">
+            {feature.bullets.map((b, bi) => (
+              <motion.li
+                key={b}
+                style={{ opacity: bulletOps[bi], x: bulletXs[bi] }}
+                className="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-300"
+              >
+                <svg viewBox="0 0 16 16" className="w-4 h-4 mt-0.5 flex-none fill-[#a3e635]">
+                  <path d="M6.5 11.5 3 8l1.1-1.1 2.4 2.4L11.9 4 13 5.1z" />
+                </svg>
+                <span>{b}</span>
+              </motion.li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Visual slot — index 0 (Zero Config) shows nothing, index 1
+            (No-Code Pipelines) embeds the real pipeline editor running a
+            passive loop, and the rest show the generic placeholder. */}
+        {index === 0 ? null : index === 1 ? (
+          // No-Code — video capped in width so the sticky content never
+          // outgrows the viewport and bleeds into the next section.
+          <motion.video
+            style={{ opacity: imgOp, y: imgY, scale: imgScale, clipPath: imgClip }}
+            src="/showcase.webm"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="block w-full max-w-[520px] h-auto rounded-2xl
+                       border border-gray-200/80 dark:border-white/[0.07]"
+          />
+        ) : (
+          // Self-Hosted (2) and Integrations (3) use custom mockups.
+          <motion.div
+            style={{ opacity: imgOp, y: imgY, scale: imgScale, clipPath: imgClip }}
+            className="relative aspect-[16/10] w-full max-w-[520px]"
+          >
+            {index === 2 ? <ImageSearchMockup /> : <IntegrationsOrb />}
+          </motion.div>
+        )}
+      </motion.div>
+    </div>
   )
 }
 
@@ -649,7 +1335,7 @@ export default function LandingPage() {
           style={{ opacity: featuresHeadingOpacity, y: featuresHeadingY }}
           className="text-center mb-14"
         >
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-indigo-500 dark:text-indigo-400 mb-3">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#7ba320] dark:text-[#a3e635] mb-3">
             Why Bobby
           </p>
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
@@ -657,10 +1343,22 @@ export default function LandingPage() {
             <span className="text-gray-400 dark:text-gray-500">Nothing needed.</span>
           </h2>
         </motion.div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
-          {FEATURES.map((f, i) => <FeatureCard key={f.title} {...f} index={i} scrollProgress={featuresProgress} />)}
+        {/* Bento layout: wide-narrow / narrow-wide to mirror the reference */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-5 max-w-5xl mx-auto">
+          {SHOWCASE.map((f, i) => {
+            // rows: [wide, narrow, narrow, wide] → spans 3,2,2,3 across 5 cols
+            const span = i === 0 || i === 3 ? "md:col-span-3" : "md:col-span-2"
+            return (
+              <div key={f.title} className={span}>
+                <ShowcaseCard {...f} index={i} scrollProgress={featuresProgress} featured={i === 0} />
+              </div>
+            )
+          })}
         </div>
       </section>
+
+      {/* ── Deep-dive timeline ────────────────────────────────────────────── */}
+      <DeepDiveSection />
 
       {/* ── Bottom CTA ──────────────────────────────────────────────────────── */}
       <section ref={ctaRef} className="px-5 pb-32">

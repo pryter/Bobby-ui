@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Registered custom property so browsers can interpolate the conic-gradient angle
+   used in the Zero Config card's rotating border glow. */
+@property --angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
 .curtain {
   @apply fixed inset-0 z-50 bg-white bg-opacity-80;
 }
