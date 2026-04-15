@@ -1,9 +1,9 @@
 import DocsSidebar from "@/components/docs/DocsSidebar"
 import DocsNavbar from "./DocsNavbar"
-import { getAllDocs } from "@/lib/docs"
+import { getDocTree } from "@/lib/docs"
 
 export default function DocsLayout({ children }: { children: React.ReactNode }) {
-  const docs = getAllDocs()
+  const tree = getDocTree()
 
   return (
     <div className="relative min-h-screen bg-white dark:bg-bobby-bg text-black dark:text-white">
@@ -23,7 +23,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
 
       <div className="relative max-w-7xl mx-auto px-4 lg:px-8 pt-28">
         <div className="flex gap-10">
-          <DocsSidebar docs={docs} />
+          <DocsSidebar tree={tree} />
           <main className="flex-1 min-w-0 pb-32">{children}</main>
         </div>
       </div>

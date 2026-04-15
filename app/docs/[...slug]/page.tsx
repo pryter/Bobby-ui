@@ -3,12 +3,12 @@ import { notFound } from "next/navigation"
 import { getAllDocs, getDoc } from "@/lib/docs"
 
 export function generateStaticParams() {
-  return getAllDocs().map((d) => ({ slug: d.slug }))
+  return getAllDocs().map((d) => ({ slug: d.slug.split("/") }))
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string[] }> }) {
   const { slug } = await params
-  const doc = getDoc(slug)
+  const doc = getDoc(slug.join("/"))
   if (!doc) return { title: "Bobby — Docs" }
   return {
     title: `Bobby — ${doc.title}`,
@@ -16,13 +16,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-export default async function DocPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function DocPage({ params }: { params: Promise<{ slug: string[] }> }) {
   const { slug } = await params
-  const doc = getDoc(slug)
+  const joined = slug.join("/")
+  const doc = getDoc(joined)
   if (!doc) notFound()
 
   const docs = getAllDocs()
-  const idx = docs.findIndex((d) => d.slug === slug)
+  const idx = docs.findIndex((d) => d.slug === joined)
   const prev = idx > 0 ? docs[idx - 1] : null
   const next = idx >= 0 && idx < docs.length - 1 ? docs[idx + 1] : null
 
