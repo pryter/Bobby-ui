@@ -243,7 +243,7 @@ const SHOWCASE: { title: string; highlight?: string; desc: string; Visual: Showc
   {
     title: "Zero Config",
     highlight: "Setup",
-    desc: "Bobby reads your codebase and wires the pipeline. Not a single YAML file.",
+    desc: "Single install command and Bobby is live. No network config, no port forwarding, no firewall holes, no reverse proxies.",
     Visual: StackGridVisual,
   },
   {
@@ -255,7 +255,7 @@ const SHOWCASE: { title: string; highlight?: string; desc: string; Visual: Showc
   {
     title: "Self-Hosted",
     highlight: "Infra",
-    desc: "Enterprise-grade infrastructure that runs on your own machine. Your data never leaves.",
+    desc: "Enterprise-grade infrastructure that runs on your own machine.",
     Visual: ServerVisual,
   },
   {

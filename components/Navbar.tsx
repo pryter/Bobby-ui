@@ -9,7 +9,7 @@ import { RocketLaunchIcon } from "@heroicons/react/24/solid"
 export const NAV_LINKS: { label: string; href: string }[] = [
   { label: "Features", href: "/#features" },
   { label: "Docs", href: "/docs" },
-  { label: "Pricing", href: "/#pricing" },
+  { label: "Pricing", href: "/pricing" },
   { label: "FAQ", href: "/docs/faq" },
 ]
 
