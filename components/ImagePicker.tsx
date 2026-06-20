@@ -578,7 +578,7 @@ export default function ImagePicker({ value, onChange, placeholder, className }:
 
   // ── Styles (match ProjectConfiguration conventions) ──────────────────────
   const inputBase = "rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 border-gray-200 bg-white text-gray-900 focus:ring-primary dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-primary/60"
-  const panel = "rounded-lg border border-gray-200 bg-white shadow-lg dark:border-white/[0.10] dark:bg-[#1a1a1a]"
+  const panel = "rounded-lg border border-gray-200 bg-white shadow-lg dark:border-white/[0.10] dark:bg-[#1f1f23]"
 
   return (
     <div ref={containerRef} className={`relative ${className ?? ""}`}>
@@ -699,7 +699,7 @@ export default function ImagePicker({ value, onChange, placeholder, className }:
                       className={`absolute z-30 mt-1 max-h-64 w-full overflow-y-auto ${panel}`}
                     >
                       {/* Filter input for power users */}
-                      <div className="sticky top-0 border-b border-gray-100 bg-white p-1.5 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+                      <div className="sticky top-0 border-b border-gray-100 bg-white p-1.5 dark:border-white/[0.08] dark:bg-[#1f1f23]">
                         <input
                           type="text"
                           autoFocus
@@ -768,7 +768,7 @@ export default function ImagePicker({ value, onChange, placeholder, className }:
                       ref={variantPanelRef}
                       className={`absolute z-30 mt-1 max-h-64 w-full overflow-y-auto ${panel}`}
                     >
-                      <div className="sticky top-0 border-b border-gray-100 bg-white p-1.5 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+                      <div className="sticky top-0 border-b border-gray-100 bg-white p-1.5 dark:border-white/[0.08] dark:bg-[#1f1f23]">
                         <input
                           type="text"
                           autoFocus

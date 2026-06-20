@@ -61,8 +61,8 @@ All hex values come from [tailwind.config.js](../tailwind.config.js) and compone
 | Token | Hex | Role |
 |---|---|---|
 | `brand/yellow` | `#facc15` | **Primary CTA** — "Get started", key actions, focus accents |
-| `brand/bg` | `#080808` | Page background (dark mode default) |
-| `brand/surface` | `#111111` | Elevated surfaces — nav pill, sidebar, cards |
+| `brand/bg` | `#0d0d0f` | Page background (dark mode default) |
+| `brand/surface` | `#17171a` | Elevated surfaces — nav pill, sidebar, cards |
 
 ### 3.2 Tile palette (feature iconography)
 Used on the landing hero and feature tiles. Each hue maps to a product capability.
@@ -95,8 +95,8 @@ Used on the landing hero and feature tiles. Each hue maps to a product capabilit
 | `neutral/500` | `#6b7280` | Tertiary text |
 | `neutral/600` | `#4b5563` | Disabled |
 | `neutral/800` | `#1f2937` | Light-mode body text |
-| `neutral/900` | `#111111` | Dark surface |
-| `neutral/950` | `#080808` | Dark page |
+| `neutral/900` | `#17171a` | Dark surface |
+| `neutral/950` | `#0d0d0f` | Dark page |
 
 ### 3.5 Semantic roles
 | Role | Light | Dark |
@@ -211,7 +211,7 @@ Interaction: `hover:scale-[1.02]`, `active:scale-[0.98]`, `transition-all` — ~
 - Radius: 8 – 12 px.
 
 ### 6.4 Navigation pill (desktop)
-- Background: `rgba(17,17,17,0.90)` + `backdrop-blur(24px)`
+- Background: `rgba(23,23,26,0.90)` + `backdrop-blur(24px)`
 - Border: `rgba(255,255,255,0.08)`
 - Shadow: `shadow/nav`
 - Radius: `radius/full`

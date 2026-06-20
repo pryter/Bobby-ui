@@ -264,7 +264,7 @@ export default function DocsSidebar({ tree }: { tree: DocNode[] }) {
           bottom: spring,
         }}
         className="fixed z-[60] lg:hidden overflow-hidden
-                   bg-[#111]/95 backdrop-blur-xl
+                   bg-[#17171a]/95 backdrop-blur-xl
                    border border-white/[0.08] shadow-xl shadow-black/40"
       >
         <motion.button

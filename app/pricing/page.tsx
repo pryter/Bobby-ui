@@ -66,7 +66,7 @@ export default function PricingPage() {
   const card2Y         = useTransform(progress, [0.2, 0.6], [50, 0])
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#080808] text-gray-900 dark:text-white transition-colors">
+    <div className="min-h-screen bg-white dark:bg-[#0d0d0f] text-gray-900 dark:text-white transition-colors">
       <Navbar dark={dark} onToggle={toggle} />
 
       {/* Hero */}

@@ -77,7 +77,7 @@ export default function Navbar({ dark, onToggle }: { dark: boolean; onToggle: ()
         className="fixed top-5 inset-x-0 z-[60] hidden sm:flex sm:justify-center px-4"
       >
         <div className="flex items-center gap-1 px-2 py-1.5 rounded-full
-                        bg-[#111]/90 backdrop-blur-xl
+                        bg-[#17171a]/90 backdrop-blur-xl
                         border border-white/[0.08] shadow-xl shadow-black/30">
           <Link href="/" className="flex items-center gap-0.5 px-2 mr-1">
             <div className="w-6 h-6 flex items-center justify-center -mt-0.5">
@@ -133,7 +133,7 @@ export default function Navbar({ dark, onToggle }: { dark: boolean; onToggle: ()
           top: spring,
         }}
         className="fixed left-4 z-[60] sm:hidden overflow-hidden
-                   bg-[#111]/90 backdrop-blur-xl
+                   bg-[#17171a]/90 backdrop-blur-xl
                    border border-white/[0.08] shadow-xl shadow-black/40"
       >
         {/* Pill content layer */}

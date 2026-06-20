@@ -165,7 +165,7 @@ export default function ImageSearchMockup() {
                 transition={{ duration: 0.18 }}
                 className="absolute left-0 right-0 top-full mt-1.5 z-10
                            rounded-lg border border-gray-200 bg-white shadow-lg
-                           dark:border-white/[0.10] dark:bg-[#1a1a1a] overflow-hidden"
+                           dark:border-white/[0.10] dark:bg-[#1f1f23] overflow-hidden"
               >
                 {REPOS.map((r, i) => {
                   const hovered = phase.kind === "results" && phase.hovered === i
@@ -245,7 +245,7 @@ export default function ImageSearchMockup() {
                     exit={{ opacity: 0, y: -4 }}
                     transition={{ duration: 0.15 }}
                     className="-mt-1 rounded-lg border border-gray-200 bg-white shadow-lg
-                               dark:border-white/[0.10] dark:bg-[#1a1a1a] overflow-hidden
+                               dark:border-white/[0.10] dark:bg-[#1f1f23] overflow-hidden
                                mr-auto w-1/2 pr-1.5"
                   >
                     {VERSIONS.map((v, i) => {
@@ -277,7 +277,7 @@ export default function ImageSearchMockup() {
                     exit={{ opacity: 0, y: -4 }}
                     transition={{ duration: 0.15 }}
                     className="-mt-1 rounded-lg border border-gray-200 bg-white shadow-lg
-                               dark:border-white/[0.10] dark:bg-[#1a1a1a] overflow-hidden
+                               dark:border-white/[0.10] dark:bg-[#1f1f23] overflow-hidden
                                ml-auto w-1/2 pl-1.5"
                   >
                     {VARIANTS.map((v, i) => {
