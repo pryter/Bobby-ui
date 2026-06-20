@@ -31,7 +31,7 @@ export default function PairPage({ params }: { params: Promise<{ code: string }>
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-white dark:bg-[#080808] text-gray-900 dark:text-white px-5 transition-colors">
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-white dark:bg-[#0d0d0f] text-gray-900 dark:text-white px-5 transition-colors">
       {/* Ambient glow */}
       <div
         className="pointer-events-none fixed inset-0 opacity-0 dark:opacity-100"

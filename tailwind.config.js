@@ -34,8 +34,8 @@ module.exports = {
           red:    "#f04e30", // bolt tile
           purple: "#7c3aed", // shield tile
           // Brand accent (`primary`, top-level) now lives in the CSS-var ramp.
-          bg:      "#080808", // page background (dark)
-          surface: "#111111", // nav pill / elevated surfaces
+          bg:      "#0d0d0f", // page background (dark)
+          surface: "#17171a", // nav pill / elevated surfaces
         },
       },
       keyframes: {

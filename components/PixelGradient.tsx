@@ -30,6 +30,13 @@ function smoothstep(e0: number, e1: number, x: number) {
   return t * t * (3 - 2 * t)
 }
 
+// Stable per-tile pseudo-random in [0,1) — drives the optional noise/dither so
+// the same tile always gets the same jitter across redraws.
+function hash(x: number, y: number) {
+  const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453
+  return s - Math.floor(s)
+}
+
 function sampleStops(stops: Stop[], t: number): RGB {
   if (t <= stops[0].pos) return stops[0].c
   const last = stops[stops.length - 1]
@@ -63,7 +70,7 @@ const FALLBACK_STOPS: Stop[] = [
   { pos: 0.0, c: [254, 240, 160] },
   { pos: 0.34, c: [250, 204, 21] },
   { pos: 0.72, c: [133, 77, 14] },
-  { pos: 1.0, c: [8, 8, 8] },
+  { pos: 1.0, c: [13, 13, 15] },
 ]
 
 // Build a themeable ramp from the app's `--primary-*` CSS vars plus the page
@@ -79,7 +86,7 @@ function readPrimaryStops(): Stop[] {
   const p600 = v("--primary-600", [202, 138, 4])
   const p800 = v("--primary-800", [133, 77, 14])
   const p900 = v("--primary-900", [113, 63, 18])
-  const bg = parseColor(cs.backgroundColor) ?? [8, 8, 8]
+  const bg = parseColor(cs.backgroundColor) ?? [13, 13, 15]
   // Luminous-but-still-on-hue core: lift the lightest shade toward white.
   const core: RGB = [lerp(p300[0], 255, 0.42), lerp(p300[1], 255, 0.42), lerp(p300[2], 255, 0.2)]
   return [
@@ -106,6 +113,7 @@ export default function PixelGradient({
   levels = 0,            // 0 = smooth ramp; N>1 posterises into N hard steps (chunkier)
   wipeProgress,          // MotionValue 0→1: dissolves the bloom outer→inner into the page bg
   wipeSteps = 0,         // 0 = smooth wipe; N>1 advances the front in N hard rings (step-by-step)
+  noise = 0,             // per-tile brightness jitter (0–255) → dithered, obviously-pixelated texture
   className = "",
 }: {
   stops?: Stop[]
@@ -120,6 +128,7 @@ export default function PixelGradient({
   levels?: number
   wipeProgress?: MotionValue<number>
   wipeSteps?: number
+  noise?: number
   className?: string
 }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -181,6 +190,10 @@ export default function PixelGradient({
           if (levels > 1) t = Math.round(t * (levels - 1)) / (levels - 1) // posterise → harder steps
           const c = sampleStops(activeStops, t)
           let cr = c[0], cg = c[1], cbl = c[2]
+          if (noise > 0) {
+            const n = (hash(x, y) - 0.5) * noise // ImageData is clamped, so over/underflow is fine
+            cr += n; cg += n; cbl += n
+          }
           if (p > 0) {
             const wf = smoothstep(front, front + wipeEdge, r) // 0 = keep tile, 1 = page bg
             if (wf > 0) { cr = lerp(cr, bg[0], wf); cg = lerp(cg, bg[1], wf); cbl = lerp(cbl, bg[2], wf) }
@@ -204,7 +217,7 @@ export default function PixelGradient({
     // Redraw imperatively as the wipe progress changes (no React re-render).
     const unsubWipe = wipeProgress?.on("change", draw)
     return () => { ro.disconnect(); mo?.disconnect(); unsubWipe?.() }
-  }, [stops, tiltDeg, tilePx, tileAspect, anchorX, anchorY, metric, bloomStart, bloomEnd, levels, wipeProgress, wipeSteps])
+  }, [stops, tiltDeg, tilePx, tileAspect, anchorX, anchorY, metric, bloomStart, bloomEnd, levels, wipeProgress, wipeSteps, noise])
 
   return (
     <canvas

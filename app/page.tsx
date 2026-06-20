@@ -18,6 +18,11 @@ import {
   RocketLaunchIcon,
   BoltIcon,
   ShieldCheckIcon,
+  CheckIcon,
+  CheckCircleIcon,
+  CubeIcon,
+  PlusIcon,
+  CursorArrowRaysIcon,
 } from "@heroicons/react/24/solid"
 import Image from "next/image";
 import dynamic from "next/dynamic"
@@ -44,7 +49,7 @@ const HERO_FLARE_DARK: Stop[] = [
   { pos: 0.54, c: [140, 92, 22] },
   { pos: 0.74, c: [60, 40, 14] },
   { pos: 0.9,  c: [20, 16, 10] },
-  { pos: 1.0,  c: [8, 8, 8] },        // dark page bg
+  { pos: 1.0,  c: [13, 13, 15] },        // dark page bg
 ]
 
 // Mockups used inside DeepDive sections — lazy loaded so their deps don't
@@ -259,334 +264,144 @@ function HeroScrollRing({ progress, dark }: { progress: MotionValue<number>; dar
 
 // ─── Features ─────────────────────────────────────────────────────────────────
 
-type ShowcaseVisual = React.ComponentType
+type ShowcaseFeature = {
+  title: string
+  desc: string
+  Art: React.ComponentType
+}
 
-const SHOWCASE: { title: string; highlight?: string; desc: string; Visual: ShowcaseVisual }[] = [
-  {
-    title: "Zero Config",
-    highlight: "Setup",
-    desc: "Single install command and Bobby is live. No network config, no port forwarding, no firewall holes, no reverse proxies.",
-    Visual: StackGridVisual,
-  },
-  {
-    title: "No-Code",
-    highlight: "Pipelines",
-    desc: "Compose build, test and deploy stages visually. No Dockerfiles, no CI scripts.",
-    Visual: PipelineVisual,
-  },
-  {
-    title: "Self-Hosted",
-    highlight: "Infra",
-    desc: "Enterprise-grade infrastructure that runs on your own machine.",
-    Visual: ServerVisual,
-  },
-  {
-    title: "Rich",
-    highlight: "Integrations",
-    desc: "GitHub, GitLab, Bitbucket, registries and more — connect everything in one click.",
-    Visual: OrbitVisual,
-  },
+const SHOWCASE: ShowcaseFeature[] = [
+  { title: "Zero Config",       desc: "One command and you're live — no ports, no proxies.", Art: ZeroConfigArt },
+  { title: "No-Code Pipelines", desc: "Snap stages together on a visual canvas.",            Art: PipelineArt },
+  { title: "Self-Hosted Infra", desc: "Isolated & signed, on your own machine.",             Art: InfraArt },
+  { title: "Rich Integrations", desc: "Connect GitHub, GitLab & more in a click.",            Art: IntegrationsArt },
 ]
 
 function ShowcaseCard({
-  title, highlight, desc, Visual, index, scrollProgress, featured,
-}: {
-  title: string
-  highlight?: string
-  desc: string
-  Visual: ShowcaseVisual
+  title, desc, Art, index, scrollProgress,
+}: ShowcaseFeature & {
   index: number
   scrollProgress: MotionValue<number>
-  featured?: boolean
 }) {
-  const start   = 0.12 + index * 0.07
-  const end     = start + 0.18
+  const start   = 0.10 + index * 0.05
+  const end     = start + 0.20
   const opacity = useTransform(scrollProgress, [start, end], [0, 1])
-  const y       = useTransform(scrollProgress, [start, end], [80, 0])
+  const y       = useTransform(scrollProgress, [start, end], [50, 0])
 
   return (
-    <motion.div style={{ opacity, y }} className="relative h-full">
-      {/* Moving flares + bright border cores — travel along the card edge, 180° apart */}
-      {featured && (
-        <>
-          <div className="absolute inset-0 pointer-events-none">
-            {/* Start at top-center (12.5%) and bottom-center (62.5%) so they
-                phase-align with the conic bright arcs at angles 0° and 180°. */}
-            {[
-              { from: "12.5%", to: "112.5%" },
-              { from: "62.5%", to: "162.5%" },
-            ].map((phase, i) => (
-              <motion.div
-                key={i}
-                aria-hidden
-                animate={{ offsetDistance: [phase.from, phase.to] }}
-                transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-                className="absolute w-40 h-40 rounded-full"
-                style={{
-                  top: 0,
-                  left: 0,
-                  background:
-                    "radial-gradient(circle, rgb(var(--primary-400) / 0.25) 0%, rgb(var(--primary-400) / 0.11) 25%, rgb(var(--primary-400) / 0.04) 50%, rgb(var(--primary-400) / 0) 70%)",
-                  filter: "blur(20px)",
-                  offsetPath: "rect(0 100% 100% 0 round 1.5rem)",
-                  offsetAnchor: "center",
-                  offsetRotate: "0deg",
-                } as React.CSSProperties}
-              />
-            ))}
-          </div>
-          {/* Rotating gradient masked to the border ring — bright arcs chase around */}
-          <motion.div
-            aria-hidden
-            animate={{ "--angle": ["0deg", "360deg"] } as { [key: string]: string[] }}
-            transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-            className="absolute inset-0 rounded-3xl pointer-events-none z-10"
-            style={{
-              padding: "1.5px",
-              background:
-                "conic-gradient(from var(--angle) at 50% 50%, transparent 0deg, transparent 150deg, rgb(var(--primary-400) / 0.95) 175deg, rgb(var(--primary-400) / 1) 180deg, rgb(var(--primary-400) / 0.95) 185deg, transparent 210deg, transparent 330deg, rgb(var(--primary-400) / 0.95) 355deg, rgb(var(--primary-400) / 1) 360deg, rgb(var(--primary-400) / 0.95) 5deg, transparent 30deg)",
-              WebkitMask:
-                "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
-              WebkitMaskComposite: "xor",
-              maskComposite: "exclude",
-              "--angle": "0deg",
-            } as React.CSSProperties}
-          />
-        </>
-      )}
-      <div
-        className={
-          "relative group rounded-3xl overflow-hidden h-full transition-colors duration-300 " +
-          (featured
-            ? "border border-primary/40 dark:border-primary/30 " +
-              "bg-white dark:bg-[#080808] " +
-              "shadow-[0_0_18px_-6px_rgb(var(--primary-400)_/_0.22),0_0_40px_-12px_rgb(var(--primary-400)_/_0.12)] " +
-              "hover:border-primary/60 dark:hover:border-primary/50"
-            : "border border-gray-200/80 dark:border-white/[0.07] " +
-              "bg-white/70 dark:bg-white/[0.02] " +
-              "hover:border-primary/40 dark:hover:border-primary/25")
-        }
-      >
-        <div className="px-7 pt-7 pb-3">
-          <h3 className="text-xl md:text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-            {title}{" "}
-            {highlight && (
-              <span className={featured ? "text-primary-600 dark:text-primary/80" : "text-gray-400 dark:text-gray-500"}>
-                {highlight}
-              </span>
-            )}
-          </h3>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 leading-relaxed max-w-sm">
-            {desc}
-          </p>
+    <motion.div style={{ opacity, y }} className="h-full w-[290px] shrink-0 lg:w-auto">
+      <div className="group flex h-full min-h-[440px] flex-col rounded-3xl border border-gray-200/80 bg-white px-6 pb-9 pt-9 text-left
+                      shadow-[0_1px_2px_rgba(16,24,40,0.04),0_16px_34px_-18px_rgba(16,24,40,0.18)] transition-colors duration-300
+                      hover:border-gray-300/80 dark:border-white/[0.07] dark:bg-white/[0.02] dark:shadow-none dark:hover:border-white/[0.12]">
+        <h3 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">{title}</h3>
+        <div className="flex w-full flex-1 items-center justify-center py-8">
+          <div style={{ zoom: 1.5 }}><Art /></div>
         </div>
-        <div className="relative h-48 md:h-56 overflow-hidden">
-          <Visual />
-        </div>
+        <p className="text-[15px] leading-relaxed text-gray-500 dark:text-gray-400">{desc}</p>
       </div>
     </motion.div>
   )
 }
 
-// ── Visuals ───────────────────────────────────────────────────────────────────
+// ── Feature card graphics ───────────────────────────────────────────────────
+// Light "UI screenshot" scenes with fixed colours, so they read on white and
+// dark cards alike. Each feature gets its own accent (green / blue / violet /
+// orange) — independent of the brand yellow.
 
-function StackGridVisual() {
-  // 5×3 grid. Three center cells show simple, reliable brand glyphs.
-  const HIGHLIGHT_CELLS = [6, 7, 8] as const
-  const LOGOS: { bg: string; node: React.ReactNode }[] = [
-    {
-      // Node.js — hexagon with JS letters
-      bg: "bg-[#539E43]",
-      node: (
-        <div className="relative w-6 h-6 flex items-center justify-center">
-          <svg viewBox="0 0 24 24" className="absolute inset-0 w-full h-full" fill="rgba(255,255,255,0.22)">
-            <path d="M12 2 L21 7 L21 17 L12 22 L3 17 L3 7 Z" />
-          </svg>
-          <span className="relative text-white font-black text-[9px] tracking-tight leading-none">JS</span>
-        </div>
-      ),
-    },
-    {
-      // Docker — container blocks + hull
-      bg: "bg-[#2396ED]",
-      node: (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="white">
-          <rect x="4"  y="11" width="3" height="3" rx="0.3" />
-          <rect x="7.5" y="11" width="3" height="3" rx="0.3" />
-          <rect x="11" y="11" width="3" height="3" rx="0.3" />
-          <rect x="14.5" y="11" width="3" height="3" rx="0.3" />
-          <rect x="7.5" y="7.5" width="3" height="3" rx="0.3" />
-          <rect x="11" y="7.5" width="3" height="3" rx="0.3" />
-          <rect x="11" y="4" width="3" height="3" rx="0.3" />
-          <path d="M2 15 Q12 19 22 15 Q21 18.5 17 19.5 Q11 20.8 6 19 Q3 18 2 15 Z" />
-        </svg>
-      ),
-    },
-    {
-      // Python — two offset rounded rects
-      bg: "bg-[#3776AB]",
-      node: (
-        <svg viewBox="0 0 24 24" className="w-6 h-6">
-          <rect x="5"  y="3"  width="11" height="10" rx="2.5" fill="white" />
-          <rect x="8"  y="11" width="11" height="10" rx="2.5" fill="#FFD43B" />
-          <circle cx="7.8"  cy="6"  r="0.9" fill="#3776AB" />
-          <circle cx="16.2" cy="18" r="0.9" fill="#3776AB" />
-        </svg>
-      ),
-    },
-  ]
-
+function ZeroConfigArt() {
   return (
-    <div className="absolute inset-0 flex items-center justify-center">
-      <div className="relative grid grid-cols-5 gap-2.5 p-2">
-        {Array.from({ length: 15 }).map((_, i) => {
-          const idx = HIGHLIGHT_CELLS.indexOf(i as typeof HIGHLIGHT_CELLS[number])
-          if (idx === -1) {
-            return (
-              <div
-                key={i}
-                className="w-10 h-10 rounded-lg border border-gray-200/70 dark:border-white/[0.06] bg-gray-50/60 dark:bg-white/[0.015]"
-              />
-            )
-          }
-          const logo = LOGOS[idx]
-          return (
-            <div
-              key={i}
-              className={`w-10 h-10 rounded-lg ${logo.bg} flex items-center justify-center shadow-lg shadow-black/10`}
-            >
-              {logo.node}
-            </div>
-          )
-        })}
+    <div className="w-[155px] rounded-xl border border-gray-200 bg-white p-3 text-left shadow-[0_12px_26px_-16px_rgba(16,24,40,0.3)]">
+      <div className="mb-2.5 flex gap-1.5">
+        <span className="h-1.5 w-1.5 rounded-full bg-gray-200" />
+        <span className="h-1.5 w-1.5 rounded-full bg-gray-200" />
+        <span className="h-1.5 w-1.5 rounded-full bg-gray-200" />
+      </div>
+      <div className="font-mono text-xs text-gray-700"><span className="text-green-600">$</span> bobby&nbsp;up</div>
+      <div className="my-2.5 h-px bg-gray-100" />
+      <div className="flex items-center gap-1.5">
+        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-green-600 text-white shadow-[0_0_0_4px_rgba(22,163,74,0.14)]">
+          <CheckIcon className="h-2.5 w-2.5" />
+        </span>
+        <span className="text-[11px] font-semibold text-green-600">Live</span>
+        <span className="ml-auto font-mono text-[10px] text-gray-400">2.0s</span>
       </div>
     </div>
   )
 }
 
-function OrbitVisual() {
-  // Center Bobby hub with platform chips orbiting
+function PipelineArt() {
   return (
-    <div className="absolute inset-0 flex items-center justify-center">
-      <div className="absolute inset-0"
-           style={{ background: "radial-gradient(ellipse at 50% 55%, rgb(var(--primary-400) / 0.10) 0%, transparent 65%)" }} />
-      {/* faint connection lines */}
-      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 220" preserveAspectRatio="none">
-        <line x1="80"  y1="80"  x2="200" y2="110" stroke="currentColor" className="text-gray-300 dark:text-white/10" strokeWidth="1" strokeDasharray="3 4" />
-        <line x1="320" y1="80"  x2="200" y2="110" stroke="currentColor" className="text-gray-300 dark:text-white/10" strokeWidth="1" strokeDasharray="3 4" />
-        <line x1="100" y1="170" x2="200" y2="110" stroke="currentColor" className="text-gray-300 dark:text-white/10" strokeWidth="1" strokeDasharray="3 4" />
-        <line x1="300" y1="170" x2="200" y2="110" stroke="currentColor" className="text-gray-300 dark:text-white/10" strokeWidth="1" strokeDasharray="3 4" />
+    <div className="relative h-28 w-[150px]">
+      <svg viewBox="0 0 150 112" className="absolute inset-0 h-full w-full overflow-visible" aria-hidden>
+        <path d="M44 26 C 80 26, 70 56, 106 56" fill="none" stroke="#3b82f6" strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M106 56 C 70 56, 80 88, 44 88" fill="none" stroke="#cbd5e1" strokeWidth="1.6" strokeLinecap="round" strokeDasharray="2 4" />
+        <circle cx="44" cy="26" r="2.4" fill="#3b82f6" />
+        <circle cx="106" cy="56" r="2.4" fill="#3b82f6" />
+        <circle cx="44" cy="88" r="2.4" fill="#94a3b8" />
       </svg>
-      {/* center hub — yellow glow pulse */}
-      <motion.div
-        aria-hidden
-        animate={{ opacity: [0.4, 0.9, 0.4], scale: [1, 1.25, 1] }}
-        transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute w-20 h-20 rounded-full"
-        style={{ background: "radial-gradient(circle, rgb(var(--primary-400) / 0.55) 0%, transparent 70%)", filter: "blur(8px)" }}
-      />
-      <div className="relative z-10 w-14 h-14 p-2 rounded-full bg-gradient-to-br from-primary to-primary-600 shadow-xl shadow-primary/40 flex items-center justify-center ring-4 ring-primary/20">
-        <BobbyIcon className="text-gray-900" />
+      <div className="absolute left-0 top-3 flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-[11px] font-medium text-gray-600 shadow-[0_4px_10px_-6px_rgba(16,24,40,0.25)]">
+        <CubeIcon className="h-3.5 w-3.5 text-blue-500" /> Build
       </div>
-      {/* orbit chips */}
-      <div className="absolute top-6 left-10 w-11 h-11 rounded-xl bg-gray-900 dark:bg-white/[0.06] border border-black/5 dark:border-white/10 flex items-center justify-center shadow-lg shadow-black/10">
-        <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="currentColor"><path d="M12 .5A11.5 11.5 0 0 0 .5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.27-5.23-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.18 1.17a11 11 0 0 1 5.79 0c2.21-1.48 3.18-1.17 3.18-1.17.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.37-5.25 5.66.41.35.78 1.04.78 2.1v3.12c0 .31.21.67.8.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z"/></svg>
+      <div className="absolute right-0 top-11 flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-[11px] font-medium text-gray-600 shadow-[0_4px_10px_-6px_rgba(16,24,40,0.25)]">
+        <CheckCircleIcon className="h-3.5 w-3.5 text-blue-500" /> Test
       </div>
-      <div className="absolute top-6 right-10 w-11 h-11 rounded-xl bg-[#fc6d26] flex items-center justify-center shadow-lg shadow-black/10">
-        <span className="text-white text-base font-bold">GL</span>
+      <div className="absolute left-0 top-[74px] flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-2 py-1.5 text-[11px] font-medium text-gray-400">
+        <PlusIcon className="h-3.5 w-3.5" /> Deploy
       </div>
-      <div className="absolute bottom-6 left-14 w-11 h-11 rounded-xl bg-[#2684ff] flex items-center justify-center shadow-lg shadow-black/10">
-        <span className="text-white text-base font-bold">BB</span>
-      </div>
-      <div className="absolute bottom-6 right-14 w-11 h-11 rounded-xl bg-gray-100 dark:bg-white/[0.06] border border-gray-200/80 dark:border-white/10 flex items-center justify-center shadow-lg shadow-black/10">
-        <RocketLaunchIcon className="w-5 h-5 text-primary-600 dark:text-primary" />
-      </div>
+      <CursorArrowRaysIcon className="absolute left-[68px] top-[84px] h-4 w-4 text-gray-900" />
     </div>
   )
 }
 
-function PipelineVisual() {
-  // Horizontal no-code pipeline: Source → Build → Test → Deploy
-  const stages = [
-    { label: "Source", color: "bg-gray-900 dark:bg-white/[0.08]", dot: "bg-gray-400",  text: "text-white" },
-    { label: "Build",  color: "bg-[#2563eb]",                     dot: "bg-blue-200",  text: "text-white" },
-    { label: "Test",   color: "bg-[#f5a623]",                     dot: "bg-yellow-100",text: "text-white" },
-    { label: "Deploy", color: "bg-primary",                     dot: "bg-primary-900/40",text: "text-gray-900" },
-  ]
+function InfraArt() {
   return (
-    <div className="absolute inset-0 flex items-center justify-center px-6">
-      <div className="absolute inset-0"
-           style={{ background: "radial-gradient(ellipse at 50% 55%, rgba(99,102,241,0.10) 0%, transparent 65%)" }} />
-      <div className="relative z-10 flex items-center gap-0 w-full max-w-sm">
-        {stages.map((s, i) => (
-          <div key={s.label} className="flex items-center flex-1 last:flex-none">
-            <motion.div
-              animate={s.label === "Deploy"
-                ? { boxShadow: ["0 8px 18px -4px rgb(var(--primary-400) / 0.45)", "0 8px 30px -2px rgb(var(--primary-400) / 0.85)", "0 8px 18px -4px rgb(var(--primary-400) / 0.45)"] }
-                : {}}
-              transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-              className={`${s.color} ${s.text} relative rounded-xl px-3 py-2.5 min-w-[74px] shadow-lg shadow-black/10`}
-            >
-              <div className="flex items-center gap-1.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                <span className="text-[11px] font-semibold tracking-wide">{s.label}</span>
-              </div>
-              <div className="mt-1.5 h-1 rounded-full bg-black/15 overflow-hidden">
-                <motion.div
-                  className="h-full bg-current rounded-full opacity-80"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${30 + i * 22}%` }}
-                  transition={{ duration: 1.2, delay: i * 0.2, ease: "easeOut" }}
-                />
-              </div>
-            </motion.div>
-            {i < stages.length - 1 && (
-              <svg className="flex-1 h-px mx-1 text-gray-300 dark:text-white/15" viewBox="0 0 40 2" preserveAspectRatio="none">
-                <line x1="0" y1="1" x2="40" y2="1" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 3" />
-              </svg>
-            )}
-          </div>
-        ))}
+    <div className="relative w-[122px]">
+      <div className="flex h-[72px] items-center justify-center rounded-xl rounded-b-[4px] border border-gray-200 bg-gray-50">
+        <div className="flex flex-col items-center gap-1 rounded-[10px] border border-dashed border-violet-300 bg-violet-500/[0.05] px-3 py-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-900">
+            <BobbyIcon className=" h-full w-full text-white" />
+          </span>
+          <span className="flex items-center gap-1 text-[8px] font-semibold text-violet-600">
+            <span className="h-1 w-1 rounded-full bg-green-500" /> running locally
+          </span>
+        </div>
       </div>
+      <div className="-mx-2.5 h-2 rounded-b-[4px] bg-gray-200" />
+      <div className="mx-auto mt-0.5 h-[3px] w-[34%] rounded-full bg-gray-300" />
+      <span className="absolute -right-2 -top-2.5 flex h-[26px] w-[26px] items-center justify-center rounded-full border-[3px] border-white bg-violet-600 text-white shadow-[0_4px_10px_-4px_rgba(124,58,237,0.5)]">
+        <ShieldCheckIcon className="h-3.5 w-3.5" />
+      </span>
     </div>
   )
 }
 
-function ServerVisual() {
-  // Self-hosted: a server rack sitting on "your machine" with a lock badge
+function IntegrationLogo({ slug, color }: { slug: string; color: string }) {
   return (
-    <div className="absolute inset-0 flex items-center justify-center">
-      <div className="absolute inset-0"
-           style={{ background: "radial-gradient(ellipse at 50% 55%, rgb(var(--primary-400) / 0.10) 0%, transparent 65%)" }} />
-      <div className="relative">
-        {/* Server rack */}
-        <div className="relative w-44 rounded-2xl bg-gradient-to-b from-white to-gray-50 dark:from-white/[0.06] dark:to-white/[0.02]
-                        border border-gray-200/80 dark:border-white/10 shadow-xl shadow-black/10 p-3 space-y-1.5">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="flex items-center gap-2 rounded-md bg-gray-100/80 dark:bg-white/[0.04] border border-gray-200/70 dark:border-white/[0.05] px-2 py-1.5">
-              <span className={`w-1.5 h-1.5 rounded-full ${i === 0 ? "bg-primary" : i === 1 ? "bg-indigo-400" : "bg-[#f5a623]"} animate-pulse`} />
-              <div className="h-1.5 rounded-full bg-gray-300/70 dark:bg-white/10 flex-1" />
-              <div className="flex gap-0.5">
-                <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-white/20" />
-                <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-white/20" />
-                <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-white/20" />
-              </div>
-            </div>
-          ))}
-          {/* Lock badge — top right */}
-          <motion.div
-            animate={{ boxShadow: ["0 0 0 0 rgb(var(--primary-400) / 0.55)", "0 0 0 10px rgb(var(--primary-400) / 0)", "0 0 0 0 rgb(var(--primary-400) / 0)"] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-            className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-primary flex items-center justify-center ring-4 ring-white dark:ring-[#080808]"
-          >
-            <ShieldCheckIcon className="w-4 h-4 text-gray-900" />
-          </motion.div>
-        </div>
-        {/* "Your machine" base */}
-        <div className="mx-auto mt-2 w-52 h-1.5 rounded-full bg-gray-200/80 dark:bg-white/[0.06]" />
-        <div className="mx-auto mt-1.5 text-[10px] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500 text-center">
-          your machine
-        </div>
+    <span className="flex h-[19px] w-[19px] flex-none items-center justify-center rounded-md border border-gray-200/70 bg-gray-50">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={`https://cdn.simpleicons.org/${slug}/${color}`} alt={slug} width={11} height={11} loading="lazy" />
+    </span>
+  )
+}
+
+function IntegrationsArt() {
+  return (
+    <div className="w-[150px] rounded-xl border border-gray-200 bg-white p-2 shadow-[0_12px_26px_-16px_rgba(16,24,40,0.3)]">
+      <div className="flex items-center gap-2 px-1 py-1.5">
+        <IntegrationLogo slug="github" color="181717" />
+        <span className="text-[11px] font-medium text-gray-700">GitHub</span>
+        <CheckCircleIcon className="ml-auto h-4 w-4 text-green-600" />
+      </div>
+      <div className="relative flex items-center gap-2 px-1 py-1.5">
+        <IntegrationLogo slug="gitlab" color="fc6d26" />
+        <span className="text-[11px] font-medium text-gray-700">GitLab</span>
+        <span className="ml-auto rounded-md bg-orange-500 px-2 py-1 text-[10px] font-semibold leading-none text-white">Connect</span>
+        <CursorArrowRaysIcon className="absolute -bottom-2 right-1 h-3.5 w-3.5 text-gray-900" />
+      </div>
+      <div className="flex items-center gap-2 px-1 py-1.5 opacity-50">
+        <IntegrationLogo slug="docker" color="2496ed" />
+        <span className="text-[11px] font-medium text-gray-700">Docker</span>
+        <PlusIcon className="ml-auto h-3.5 w-3.5 text-gray-300" />
       </div>
     </div>
   )
@@ -1845,7 +1660,7 @@ export default function LandingPage() {
   // ── Background parallax ────────────────────────────────────────────────────
   return (
     <DeepDiveNavContext.Provider value={{ compact: deepDiveCompact, setCompact: setDeepDiveCompact }}>
-    <div className="bg-white dark:bg-[#080808] text-gray-900 dark:text-white transition-colors">
+    <div className="bg-white dark:bg-[#0d0d0f] text-gray-900 dark:text-white transition-colors">
       <Navbar dark={dark} onToggle={toggleTheme} />
       <HeroScrollRing progress={smoothProgress} dark={dark} />
 
@@ -1948,17 +1763,12 @@ export default function LandingPage() {
             <span className="text-gray-400 dark:text-gray-500">Nothing needed.</span>
           </h2>
         </motion.div>
-        {/* Bento layout: wide-narrow / narrow-wide to mirror the reference */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-5 max-w-5xl mx-auto">
-          {SHOWCASE.map((f, i) => {
-            // rows: [wide, narrow, narrow, wide] → spans 3,2,2,3 across 5 cols
-            const span = i === 0 || i === 3 ? "md:col-span-3" : "md:col-span-2"
-            return (
-              <div key={f.title} className={span}>
-                <ShowcaseCard {...f} index={i} scrollProgress={featuresProgress} featured={i === 0} />
-              </div>
-            )
-          })}
+        {/* One row; overflows into a horizontal scroll below lg, grid-fills at lg+ */}
+        <div className="mx-auto flex max-w-7xl gap-6 overflow-x-auto px-5 pb-3
+                        lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-5 lg:pb-0">
+          {SHOWCASE.map((f, i) => (
+            <ShowcaseCard key={f.title} {...f} index={i} scrollProgress={featuresProgress} />
+          ))}
         </div>
       </section>
 
