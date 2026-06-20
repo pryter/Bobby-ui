@@ -1,0 +1,1253 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Bobby · Component reference</title>
+    <link rel="icon" href="assets/favicon-source.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+    /* ─── tokens (light mode only — see ci/tokens.json) ────────────────── */
+    :root {
+        --c-page:        #fafafa;
+        --c-surface:     #ffffff;
+        --c-surface-2:   #f9f9f9;
+        --c-border:      #e5e7eb;
+        --c-border-strong:#d1d5db;
+        --c-text:        #1f2937;
+        --c-text-muted:  #6b7280;
+        --c-text-dim:    #9ca3af;
+        --c-overlay:     rgba(0,0,0,0.04);
+
+        --c-trigger-bg:    #fef3c7;
+        --c-trigger-fg:    #92400e;
+        --c-action-bg:     #dbeafe;
+        --c-action-fg:     #1e40af;
+        --c-output-bg:     #d1fae5;
+        --c-output-fg:     #065f46;
+        --c-info-bg:       #ede9fe;
+        --c-info-fg:       #5b21b6;
+
+        --c-success:       #16a34a;
+        --c-success-bg:    #f0fdf4;
+        --c-warn:          #b45309;
+        --c-warn-bg:       #fffbeb;
+        --c-error:         #b91c1c;
+        --c-error-bg:      #fef2f2;
+
+        --r-sm:  8px;
+        --r-md:  12px;
+        --r-lg:  16px;
+        --r-xl:  20px;
+        --r-2xl: 28px;
+
+        --shadow-card: 0 1px 2px rgba(15,23,42,0.04), 0 4px 14px -4px rgba(15,23,42,0.06);
+        --shadow-pop:  0 12px 32px -8px rgba(15,23,42,0.18), 0 2px 6px rgba(15,23,42,0.06);
+
+        --t-fast: 140ms cubic-bezier(0.22, 1, 0.36, 1);
+        --t-mid:  220ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+        font-family: "Nunito", system-ui, -apple-system, sans-serif;
+        font-feature-settings: "ss01", "cv11";
+        color: var(--c-text);
+        background: var(--c-page);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        line-height: 1.45;
+        background-image:
+            radial-gradient(circle at 1px 1px, rgba(15,23,42,0.045) 1px, transparent 0);
+        background-size: 18px 18px;
+    }
+
+    a { color: inherit; }
+    button {
+        font: inherit;
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        color: inherit;
+    }
+
+    /* ─── layout ───────────────────────────────────────────────────────── */
+    .page {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 56px 32px 96px;
+    }
+    .header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 24px;
+        flex-wrap: wrap;
+        padding-bottom: 32px;
+        border-bottom: 1px solid var(--c-border);
+        margin-bottom: 56px;
+    }
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+    .brand-mark {
+        width: 36px; height: 36px;
+        border-radius: var(--r-md);
+        background: #111;
+        display: grid; place-items: center;
+        color: #facc15;
+    }
+    .brand-mark svg { width: 22px; height: 22px; }
+    .brand-text {
+        display: flex; flex-direction: column;
+    }
+    .brand-text .label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: var(--c-text-muted);
+    }
+    .brand-text .title {
+        font-weight: 700;
+        font-size: 17px;
+        letter-spacing: -0.01em;
+    }
+    .header-meta {
+        font-size: 13px;
+        color: var(--c-text-muted);
+    }
+    .header-meta code {
+        background: var(--c-overlay);
+        padding: 2px 6px;
+        border-radius: var(--r-sm);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 12px;
+    }
+
+    h2 {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.012em;
+        margin: 0 0 6px;
+    }
+    h3 {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--c-text-muted);
+        margin: 32px 0 16px;
+    }
+    .section {
+        margin-bottom: 72px;
+    }
+    .section-lead {
+        color: var(--c-text-muted);
+        max-width: 64ch;
+        font-size: 14.5px;
+        margin: 0 0 32px;
+    }
+    .grid {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+    .grid-2 {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    }
+
+    /* ─── workflow card ────────────────────────────────────────────────── */
+    .card {
+        background: var(--c-surface);
+        border: 1px solid var(--c-border);
+        border-radius: var(--r-lg);
+        padding: 14px 14px 12px;
+        box-shadow: var(--shadow-card);
+        transition: transform var(--t-mid), box-shadow var(--t-mid), border-color var(--t-mid);
+        position: relative;
+    }
+    .card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 12px 28px -10px rgba(15,23,42,0.10);
+        border-color: var(--c-border-strong);
+    }
+    .card.is-warning {
+        border-color: rgba(180, 83, 9, 0.25);
+    }
+    .card-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px 3px 7px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        margin-bottom: 10px;
+    }
+    .card-tag svg { width: 11px; height: 11px; }
+    .card-tag.trigger { background: var(--c-trigger-bg); color: var(--c-trigger-fg); }
+    .card-tag.action  { background: var(--c-action-bg);  color: var(--c-action-fg); }
+    .card-tag.output  { background: var(--c-output-bg);  color: var(--c-output-fg); }
+    .card-tag.info    { background: var(--c-info-bg);    color: var(--c-info-fg); }
+
+    .card-title {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-weight: 700;
+        font-size: 14px;
+        letter-spacing: -0.005em;
+    }
+    .card-title-icon {
+        width: 18px; height: 18px;
+        flex-shrink: 0;
+        color: var(--c-text);
+    }
+    .card-menu {
+        margin-left: auto;
+        width: 26px; height: 26px;
+        border-radius: var(--r-sm);
+        display: grid; place-items: center;
+        color: var(--c-text-dim);
+        transition: background var(--t-fast), color var(--t-fast);
+    }
+    .card-menu:hover { background: var(--c-overlay); color: var(--c-text); }
+
+    .card-body {
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .card-input {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 12px;
+        background: var(--c-surface-2);
+        border: 1px solid var(--c-border);
+        border-radius: var(--r-md);
+        font-size: 12.5px;
+        color: var(--c-text-muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+    .card-input svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .card-input strong {
+        color: var(--c-text);
+        font-weight: 600;
+    }
+
+    .card-footer {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px dashed var(--c-border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 11.5px;
+        color: var(--c-text-dim);
+        font-feature-settings: "tnum" 1;
+    }
+    .card-footer .meta-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .card-footer svg { width: 11px; height: 11px; }
+    .card-footer .alert {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--c-error);
+        font-weight: 600;
+    }
+    .card-prompt {
+        background: var(--c-surface-2);
+        border: 1px solid var(--c-border);
+        border-radius: var(--r-md);
+        padding: 10px 12px;
+        font-size: 12.5px;
+        color: var(--c-text);
+        line-height: 1.55;
+    }
+    .card-prompt .var {
+        background: rgba(99,102,241,0.10);
+        color: #4338ca;
+        border-radius: 4px;
+        padding: 0 4px;
+        font-weight: 600;
+        font-size: 11.5px;
+    }
+    .card-pill-row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 9px;
+        border-radius: 999px;
+        font-size: 11.5px;
+        font-weight: 600;
+        background: var(--c-surface-2);
+        border: 1px solid var(--c-border);
+        color: var(--c-text);
+    }
+    .pill svg { width: 12px; height: 12px; }
+    .pill.success { background: var(--c-success-bg); border-color: rgba(22,163,74,0.20); color: var(--c-success); }
+    .pill.warn    { background: var(--c-warn-bg);    border-color: rgba(180,83,9,0.20);  color: var(--c-warn); }
+    .pill.error   { background: var(--c-error-bg);   border-color: rgba(185,28,28,0.18); color: var(--c-error); }
+
+    /* ─── custom dropdown ──────────────────────────────────────────────── */
+    .dd {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+    }
+    .dd-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 9px 12px;
+        background: var(--c-surface);
+        border: 1px solid var(--c-border);
+        border-radius: var(--r-md);
+        font-size: 13px;
+        color: var(--c-text);
+        font-weight: 500;
+        text-align: left;
+        transition: border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+    }
+    .dd-trigger:hover {
+        border-color: var(--c-border-strong);
+    }
+    .dd-trigger:focus-visible {
+        outline: none;
+        border-color: #111;
+        box-shadow: 0 0 0 3px rgba(17,17,17,0.08);
+    }
+    .dd[data-open="true"] > .dd-trigger {
+        border-color: #111;
+        box-shadow: 0 0 0 3px rgba(17,17,17,0.08);
+    }
+    .dd-trigger .dd-icon { width: 16px; height: 16px; color: var(--c-text-muted); }
+    .dd-trigger .dd-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dd-trigger .dd-chevron { width: 14px; height: 14px; color: var(--c-text-dim); transition: transform var(--t-fast); }
+    .dd[data-open="true"] .dd-chevron { transform: rotate(180deg); }
+    .dd-trigger .dd-tag {
+        font-size: 10.5px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: var(--c-overlay);
+        color: var(--c-text-muted);
+        font-weight: 600;
+    }
+
+    .dd-menu {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        background: var(--c-surface);
+        border: 1px solid var(--c-border);
+        border-radius: var(--r-md);
+        box-shadow: var(--shadow-pop);
+        padding: 6px;
+        z-index: 30;
+        opacity: 0;
+        transform: translateY(-4px) scale(0.98);
+        pointer-events: none;
+        transition: opacity var(--t-fast), transform var(--t-fast);
+        max-height: 320px;
+        overflow: hidden auto;
+    }
+    .dd[data-open="true"] .dd-menu {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+    }
+
+    .dd-search {
+        display: flex; align-items: center; gap: 8px;
+        padding: 8px 10px 6px;
+        border-bottom: 1px solid var(--c-border);
+        margin: -6px -6px 4px;
+    }
+    .dd-search svg { width: 14px; height: 14px; color: var(--c-text-dim); }
+    .dd-search input {
+        flex: 1;
+        border: none;
+        outline: none;
+        font: inherit;
+        font-size: 13px;
+        background: transparent;
+        color: var(--c-text);
+    }
+    .dd-search input::placeholder { color: var(--c-text-dim); }
+
+    .dd-group-label {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--c-text-dim);
+        padding: 8px 10px 4px;
+    }
+    .dd-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: var(--r-sm);
+        font-size: 13px;
+        color: var(--c-text);
+        text-align: left;
+        cursor: pointer;
+        transition: background var(--t-fast);
+    }
+    .dd-option:hover, .dd-option[data-active="true"] {
+        background: var(--c-overlay);
+    }
+    .dd-option[data-selected="true"] {
+        background: rgba(99,102,241,0.07);
+    }
+    .dd-option .opt-icon {
+        width: 18px; height: 18px;
+        flex-shrink: 0;
+        display: grid; place-items: center;
+        border-radius: 5px;
+        color: var(--c-text-muted);
+    }
+    .dd-option .opt-icon svg { width: 14px; height: 14px; }
+    .dd-option .opt-body {
+        flex: 1; min-width: 0;
+        display: flex; flex-direction: column;
+        gap: 2px;
+    }
+    .dd-option .opt-title {
+        font-weight: 600;
+        font-size: 13px;
+        line-height: 1.2;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .dd-option .opt-desc {
+        font-size: 11.5px;
+        color: var(--c-text-muted);
+        line-height: 1.3;
+    }
+    .dd-option .opt-check {
+        width: 14px; height: 14px;
+        color: #4f46e5;
+        opacity: 0;
+        transition: opacity var(--t-fast);
+    }
+    .dd-option[data-selected="true"] .opt-check { opacity: 1; }
+    .dd-option .opt-shortcut {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 10.5px;
+        color: var(--c-text-dim);
+        background: var(--c-surface-2);
+        padding: 2px 6px;
+        border-radius: 4px;
+        border: 1px solid var(--c-border);
+    }
+    .dd-empty {
+        padding: 24px 12px;
+        text-align: center;
+        font-size: 12.5px;
+        color: var(--c-text-dim);
+    }
+
+    /* ─── small bits ───────────────────────────────────────────────────── */
+    .row { display: flex; gap: 18px; flex-wrap: wrap; align-items: stretch; }
+    .col { display: flex; flex-direction: column; gap: 12px; max-width: 320px; }
+    .col-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-weight: 700;
+        color: var(--c-text-muted);
+    }
+    .arrow {
+        color: var(--c-border-strong);
+        align-self: center;
+        font-size: 18px;
+    }
+    .composed {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-width: 360px;
+    }
+    .connector {
+        width: 1px;
+        height: 18px;
+        background: var(--c-border);
+        margin-left: 22px;
+    }
+
+    code.kbd {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 11px;
+        background: var(--c-surface-2);
+        border: 1px solid var(--c-border);
+        border-bottom-width: 2px;
+        padding: 2px 6px;
+        border-radius: 5px;
+    }
+
+    .footnote {
+        font-size: 12.5px;
+        color: var(--c-text-muted);
+        margin-top: 56px;
+        padding-top: 24px;
+        border-top: 1px solid var(--c-border);
+    }
+    .footnote a {
+        color: #4f46e5;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(79,70,229,0.25);
+    }
+
+    /* skeleton (in cards) */
+    .skel {
+        position: relative;
+        overflow: hidden;
+        background: var(--c-surface-2);
+        border-radius: 4px;
+    }
+    .skel::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, transparent 0, rgba(255,255,255,0.7) 50%, transparent 100%);
+        transform: translateX(-100%);
+        animation: shimmer 1.4s ease-in-out infinite;
+    }
+    @keyframes shimmer { to { transform: translateX(100%); } }
+    @media (prefers-reduced-motion: reduce) {
+        * { animation: none !important; transition: none !important; }
+    }
+    </style>
+</head>
+<body>
+
+<main class="page">
+
+    <!-- ─── header ──────────────────────────────────────────────────────── -->
+    <header class="header">
+        <div class="brand">
+            <div class="brand-mark" aria-hidden>
+                <svg viewBox="0 0 106 102" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 22 C14 12 22 4 32 4 H74 C84 4 92 12 92 22 V70 C92 86 80 98 64 98 H42 C26 98 14 86 14 70 Z" fill="currentColor"/>
+                    <circle cx="40" cy="46" r="9" fill="#080808"/>
+                    <circle cx="68" cy="46" r="9" fill="#080808"/>
+                </svg>
+            </div>
+            <div class="brand-text">
+                <span class="label">Bobby · Component reference</span>
+                <span class="title">Workflow cards & dropdowns</span>
+            </div>
+        </div>
+        <div class="header-meta">
+            Light theme · See <code>ci/design-system.md</code> for tokens.
+        </div>
+    </header>
+
+    <!-- ─── workflow cards ─────────────────────────────────────────────── -->
+    <section class="section">
+        <h2>Workflow cards</h2>
+        <p class="section-lead">
+            One card per pipeline step. Tag colour signals the role (trigger / action / output).
+            Cards are dense by default — content rows expose the configured value, the footer carries
+            timing + state. Failure and "needs setup" states surface inline rather than in a modal.
+        </p>
+
+        <h3>Triggers</h3>
+        <div class="grid">
+            <article class="card">
+                <span class="card-tag trigger">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+                    Trigger
+                </span>
+                <div class="card-title">
+                    <svg class="card-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/>
+                    </svg>
+                    <span>Incoming Webhook</span>
+                    <button class="card-menu" aria-label="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></button>
+                </div>
+                <div class="card-body">
+                    <div class="card-input">
+                        <strong>POST</strong>
+                        <span style="overflow:hidden;text-overflow:ellipsis;">https://api.bobby.io/hooks/7f8a9c…</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>0.0 sec</span>
+                    <span class="pill success">Live</span>
+                </div>
+            </article>
+
+            <article class="card">
+                <span class="card-tag trigger">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+                    Trigger
+                </span>
+                <div class="card-title">
+                    <svg class="card-title-icon" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="5" width="20" height="14" rx="3"/><polygon points="10,9 15,12 10,15" fill="#dc2626" stroke="none"/>
+                    </svg>
+                    <span>Input URL</span>
+                    <button class="card-menu" aria-label="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></button>
+                </div>
+                <div class="card-body">
+                    <div class="card-input">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 14a4 4 0 005.66 0l3-3a4 4 0 00-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 00-5.66 0l-3 3a4 4 0 005.66 5.66l1-1"/></svg>
+                        <span style="overflow:hidden;text-overflow:ellipsis;">https://www.youtube.com/watch?v=…</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>0.0 sec</span>
+                </div>
+            </article>
+        </div>
+
+        <h3>Actions</h3>
+        <div class="grid">
+            <article class="card is-warning">
+                <span class="card-tag action">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>
+                    Action
+                </span>
+                <div class="card-title">
+                    <svg class="card-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 7h10v3H7zM7 14h10v3H7z"/>
+                    </svg>
+                    <span>Write to Notion</span>
+                    <button class="card-menu" aria-label="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></button>
+                </div>
+                <div class="card-body">
+                    <button class="dd-trigger" style="cursor: pointer;">
+                        <svg class="dd-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>
+                        <span class="dd-label" style="color: var(--c-text-muted);">Connect Notion Account</span>
+                        <svg class="dd-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                </div>
+                <div class="card-footer">
+                    <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>0.0 sec</span>
+                    <span class="alert">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h0"/></svg>
+                        Account not connected
+                    </span>
+                </div>
+            </article>
+
+            <article class="card">
+                <span class="card-tag action">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>
+                    Action
+                </span>
+                <div class="card-title">
+                    <svg class="card-title-icon" viewBox="0 0 24 24" fill="none" stroke="#635bff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 7c0-1-1-2-3-2-3 0-4 1-4 3 0 4 8 2 8 7 0 2-2 3-4 3-3 0-4-2-4-3"/>
+                    </svg>
+                    <span>Create Customer</span>
+                    <button class="card-menu" aria-label="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></button>
+                </div>
+                <div class="card-body">
+                    <!-- live custom dropdown -->
+                    <div class="dd" data-dropdown>
+                        <button class="dd-trigger" type="button">
+                            <svg class="dd-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>
+                            <span class="dd-label">Stripe (Production)</span>
+                            <span class="dd-tag">live</span>
+                            <svg class="dd-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <div class="dd-menu" role="listbox">
+                            <div class="dd-group-label">Connected accounts</div>
+                            <button class="dd-option" data-selected="true" role="option">
+                                <span class="opt-icon" style="background:#635bff;color:white;">S</span>
+                                <span class="opt-body">
+                                    <span class="opt-title">Stripe (Production)</span>
+                                    <span class="opt-desc">acct_1Q8fC7… · admin@bobby.io</span>
+                                </span>
+                                <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                            </button>
+                            <button class="dd-option" role="option">
+                                <span class="opt-icon" style="background:#fef3c7;color:#92400e;">S</span>
+                                <span class="opt-body">
+                                    <span class="opt-title">Stripe (Test mode)</span>
+                                    <span class="opt-desc">acct_1Q8gK2…</span>
+                                </span>
+                                <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                            </button>
+                            <div class="dd-group-label">Add</div>
+                            <button class="dd-option" role="option">
+                                <span class="opt-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>
+                                <span class="opt-body"><span class="opt-title">Connect another account…</span></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>0.4 sec</span>
+                    <span class="pill">$0.00</span>
+                </div>
+            </article>
+        </div>
+
+        <h3>Outputs</h3>
+        <div class="grid">
+            <article class="card">
+                <span class="card-tag output">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>
+                    Output
+                </span>
+                <div class="card-title">
+                    <svg class="card-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 12h3l3-7 4 14 3-7h5"/>
+                    </svg>
+                    <span>Audio Output</span>
+                    <button class="card-menu" aria-label="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></button>
+                </div>
+                <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div class="dd" data-dropdown>
+                        <button class="dd-trigger" type="button">
+                            <svg class="dd-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9h6l5-5v16l-5-5H5z"/></svg>
+                            <span class="dd-label">Eleven v3 (alpha)</span>
+                            <svg class="dd-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <div class="dd-menu" role="listbox">
+                            <button class="dd-option" data-selected="true" role="option">
+                                <span class="opt-body"><span class="opt-title">Eleven v3 (alpha)</span><span class="opt-desc">Highest quality, low latency</span></span>
+                                <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                            </button>
+                            <button class="dd-option" role="option">
+                                <span class="opt-body"><span class="opt-title">Eleven Multilingual v2</span><span class="opt-desc">29 languages, stable</span></span>
+                                <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                            </button>
+                            <button class="dd-option" role="option">
+                                <span class="opt-body"><span class="opt-title">Eleven Turbo v2.5</span><span class="opt-desc">Fastest, ~75ms</span></span>
+                                <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dd" data-dropdown>
+                        <button class="dd-trigger" type="button">
+                            <span class="dd-icon" style="background:#fde68a;color:#92400e;border-radius:50%;display:inline-grid;place-items:center;width:18px;height:18px;font-size:10px;font-weight:700;">S</span>
+                            <span class="dd-label">Sarah</span>
+                            <svg class="dd-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <div class="dd-menu" role="listbox">
+                            <div class="dd-search">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+                                <input data-dd-search placeholder="Search voices…" />
+                            </div>
+                            <button class="dd-option" data-selected="true" role="option">
+                                <span class="opt-icon" style="background:#fde68a;color:#92400e;">S</span>
+                                <span class="opt-body"><span class="opt-title">Sarah</span><span class="opt-desc">Soft · narration · en-US</span></span>
+                                <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                            </button>
+                            <button class="dd-option" role="option">
+                                <span class="opt-icon" style="background:#bfdbfe;color:#1e40af;">A</span>
+                                <span class="opt-body"><span class="opt-title">Adam</span><span class="opt-desc">Neutral · documentary · en-US</span></span>
+                                <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                            </button>
+                            <button class="dd-option" role="option">
+                                <span class="opt-icon" style="background:#fecaca;color:#991b1b;">R</span>
+                                <span class="opt-body"><span class="opt-title">Rachel</span><span class="opt-desc">Warm · audiobook · en-US</span></span>
+                                <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                            </button>
+                            <button class="dd-option" role="option">
+                                <span class="opt-icon" style="background:#c7d2fe;color:#3730a3;">B</span>
+                                <span class="opt-body"><span class="opt-title">Bella</span><span class="opt-desc">Bright · ads · en-GB</span></span>
+                                <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>0.0 sec</span>
+                    <span class="meta-item">382 tokens</span>
+                </div>
+            </article>
+
+            <article class="card">
+                <span class="card-tag output">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>
+                    Output
+                </span>
+                <div class="card-title">
+                    <svg class="card-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                        <path d="M21 15l-5-5L5 21"/>
+                    </svg>
+                    <span>Image Output</span>
+                    <button class="card-menu" aria-label="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></button>
+                </div>
+                <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div class="dd" data-dropdown>
+                        <button class="dd-trigger" type="button">
+                            <svg class="dd-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/><circle cx="12" cy="12" r="4"/></svg>
+                            <span class="dd-label">4o Image Generation</span>
+                            <svg class="dd-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <div class="dd-menu" role="listbox">
+                            <button class="dd-option" data-selected="true" role="option">
+                                <span class="opt-body"><span class="opt-title">4o Image Generation</span><span class="opt-desc">OpenAI · gpt-image-1</span></span>
+                                <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                            </button>
+                            <button class="dd-option" role="option">
+                                <span class="opt-body"><span class="opt-title">DALL·E 3</span><span class="opt-desc">OpenAI · 1024 / 1792</span></span>
+                                <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                            </button>
+                            <button class="dd-option" role="option">
+                                <span class="opt-body"><span class="opt-title">Stable Diffusion 3.5</span><span class="opt-desc">Stability · large-turbo</span></span>
+                                <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dd" data-dropdown>
+                        <button class="dd-trigger" type="button">
+                            <svg class="dd-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8l4-4 4 4M16 16l4 4-4 4M4 12h16"/></svg>
+                            <span class="dd-label">1024 × 1024</span>
+                            <svg class="dd-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <div class="dd-menu" role="listbox">
+                            <button class="dd-option" data-selected="true" role="option">
+                                <span class="opt-body"><span class="opt-title">1024 × 1024</span><span class="opt-desc">Square · 1:1</span></span>
+                                <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                            </button>
+                            <button class="dd-option" role="option">
+                                <span class="opt-body"><span class="opt-title">1024 × 1792</span><span class="opt-desc">Portrait · 9:16</span></span>
+                                <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                            </button>
+                            <button class="dd-option" role="option">
+                                <span class="opt-body"><span class="opt-title">1792 × 1024</span><span class="opt-desc">Landscape · 16:9</span></span>
+                                <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>0.0 sec</span>
+                    <span class="meta-item">382 tokens</span>
+                </div>
+            </article>
+        </div>
+
+        <h3>Composed (with summary + email)</h3>
+        <div class="grid grid-2">
+            <article class="card">
+                <span class="card-tag action">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>
+                    Action
+                </span>
+                <div class="card-title">
+                    <svg class="card-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18l-2 13a2 2 0 01-2 2H7a2 2 0 01-2-2L3 6z"/>
+                        <path d="M9 6V4a3 3 0 016 0v2"/>
+                    </svg>
+                    <span>Send Email</span>
+                    <button class="card-menu" aria-label="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></button>
+                </div>
+                <p style="margin:8px 0 10px;font-size:12.5px;color:var(--c-text-muted);line-height:1.45;">
+                    Uses Postmark to send a quick, personalised follow-up email.
+                </p>
+                <div class="card-prompt">
+                    Hello <span class="var">{first_name}</span>, I just wanted to follow up on our recent conversation and send you a quick reminder. If you have a…
+                </div>
+                <div class="card-pill-row" style="margin-top:10px;">
+                    <span class="pill"><span style="width:8px;height:8px;background:#ffc145;border-radius:2px;display:inline-block;"></span> Postmark</span>
+                </div>
+                <div class="card-footer">
+                    <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>0.0 sec</span>
+                </div>
+            </article>
+
+            <article class="card">
+                <span class="card-tag action">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>
+                    Action
+                </span>
+                <div class="card-title">
+                    <svg class="card-title-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 22h20L12 2zm0 4l8 14H4l8-14z"/></svg>
+                    <span>Anthropic</span>
+                    <button class="card-menu" aria-label="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></button>
+                </div>
+                <p style="margin:8px 0 10px;font-size:12.5px;color:var(--c-text-muted);line-height:1.45;">
+                    Summarises the conversation text received from the incoming webhook.
+                </p>
+                <div class="card-prompt">
+                    Summarise this conversation from the webhook: <span class="var">{Incoming Webhook}</span>. Output 3–5 bullet points with main topic…
+                </div>
+                <div class="card-pill-row" style="margin-top:10px;">
+                    <span class="pill"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 22h20L12 2z"/></svg> Claude-Opus-4</span>
+                </div>
+                <div class="card-footer">
+                    <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>0.0 sec</span>
+                    <span class="meta-item">1,382 tokens</span>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <!-- ─── custom dropdown ────────────────────────────────────────────── -->
+    <section class="section">
+        <h2>Custom dropdown</h2>
+        <p class="section-lead">
+            Replaces native <code class="kbd">&lt;select&gt;</code> with a typed combobox: rich options
+            (icon + title + meta), grouping, optional search, keyboard navigation
+            (<code class="kbd">↑</code> <code class="kbd">↓</code> <code class="kbd">Enter</code> <code class="kbd">Esc</code>),
+            and click-outside-to-close. Anchors to the trigger; flips above when out of viewport.
+        </p>
+
+        <div class="row">
+            <div class="col">
+                <span class="col-label">Default — single select</span>
+                <div class="dd" data-dropdown>
+                    <button class="dd-trigger" type="button">
+                        <svg class="dd-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 7l10 6 10-6"/><rect x="2" y="5" width="20" height="14" rx="2"/></svg>
+                        <span class="dd-label">Resend</span>
+                        <svg class="dd-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="dd-menu" role="listbox">
+                        <button class="dd-option" data-selected="true" role="option">
+                            <span class="opt-icon" style="background:#000;color:white;">R</span>
+                            <span class="opt-body"><span class="opt-title">Resend</span></span>
+                            <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                        </button>
+                        <button class="dd-option" role="option">
+                            <span class="opt-icon" style="background:#ffc145;color:#1f2937;">P</span>
+                            <span class="opt-body"><span class="opt-title">Postmark</span></span>
+                            <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                        </button>
+                        <button class="dd-option" role="option">
+                            <span class="opt-icon" style="background:#3b82f6;color:white;">M</span>
+                            <span class="opt-body"><span class="opt-title">Mailgun</span></span>
+                            <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col">
+                <span class="col-label">With search & descriptions</span>
+                <div class="dd" data-dropdown>
+                    <button class="dd-trigger" type="button">
+                        <svg class="dd-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h18M3 12h18M3 20h18"/></svg>
+                        <span class="dd-label">claude-opus-4-7</span>
+                        <span class="dd-tag">latest</span>
+                        <svg class="dd-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="dd-menu" role="listbox">
+                        <div class="dd-search">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+                            <input data-dd-search placeholder="Search models…" />
+                        </div>
+                        <div class="dd-group-label">Anthropic</div>
+                        <button class="dd-option" data-selected="true" role="option">
+                            <span class="opt-icon" style="background:#fbbf24;"></span>
+                            <span class="opt-body"><span class="opt-title">claude-opus-4-7</span><span class="opt-desc">Best reasoning · 200k ctx · $15/$75 per M</span></span>
+                            <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                        </button>
+                        <button class="dd-option" role="option">
+                            <span class="opt-icon" style="background:#fbbf24;"></span>
+                            <span class="opt-body"><span class="opt-title">claude-sonnet-4-6</span><span class="opt-desc">Balanced · 200k ctx · $3/$15 per M</span></span>
+                            <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                        </button>
+                        <button class="dd-option" role="option">
+                            <span class="opt-icon" style="background:#fbbf24;"></span>
+                            <span class="opt-body"><span class="opt-title">claude-haiku-4-5</span><span class="opt-desc">Fast · 200k ctx · $0.80/$4 per M</span></span>
+                            <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                        </button>
+                        <div class="dd-group-label">OpenAI</div>
+                        <button class="dd-option" role="option">
+                            <span class="opt-icon" style="background:#10a37f;"></span>
+                            <span class="opt-body"><span class="opt-title">gpt-4.1</span><span class="opt-desc">Reasoning · 1M ctx · $2/$8 per M</span></span>
+                            <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                        </button>
+                        <button class="dd-option" role="option">
+                            <span class="opt-icon" style="background:#10a37f;"></span>
+                            <span class="opt-body"><span class="opt-title">gpt-4.1-mini</span><span class="opt-desc">Cheap & fast · $0.40/$1.60 per M</span></span>
+                            <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col">
+                <span class="col-label">Compact (inline form)</span>
+                <div class="dd" data-dropdown>
+                    <button class="dd-trigger" type="button">
+                        <svg class="dd-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg>
+                        <span class="dd-label">Open</span>
+                        <svg class="dd-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="dd-menu" role="listbox">
+                        <button class="dd-option" data-selected="true" role="option">
+                            <span class="opt-icon" style="background:#dbeafe;color:#1e40af;">●</span>
+                            <span class="opt-body"><span class="opt-title">Open</span></span>
+                            <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                        </button>
+                        <button class="dd-option" role="option">
+                            <span class="opt-icon" style="background:#fef3c7;color:#92400e;">●</span>
+                            <span class="opt-body"><span class="opt-title">In progress</span></span>
+                            <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                        </button>
+                        <button class="dd-option" role="option">
+                            <span class="opt-icon" style="background:#fee2e2;color:#991b1b;">●</span>
+                            <span class="opt-body"><span class="opt-title">Blocked</span></span>
+                            <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                        </button>
+                        <button class="dd-option" role="option">
+                            <span class="opt-icon" style="background:#d1fae5;color:#065f46;">●</span>
+                            <span class="opt-body"><span class="opt-title">Done</span></span>
+                            <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── states ─────────────────────────────────────────────────────── -->
+    <section class="section">
+        <h2>Loading & empty states</h2>
+        <p class="section-lead">
+            Cards stay the same shape during fetch — content swaps for shimmering skeletons. Empty
+            states use a single soft prompt instead of an illustration; cheaper to maintain and
+            doesn't punch the user with whitespace.
+        </p>
+        <div class="grid">
+            <article class="card">
+                <span class="card-tag info">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>
+                    Loading
+                </span>
+                <div class="card-title">
+                    <svg class="card-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+                    <span>Indexing repo…</span>
+                    <span style="margin-left:auto;" class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="" style="animation:spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-6.2-8.55"/></svg> 0:42</span>
+                </div>
+                <div class="card-body">
+                    <div class="skel" style="height:10px;width:80%;"></div>
+                    <div class="skel" style="height:10px;width:60%;"></div>
+                    <div class="skel" style="height:10px;width:72%;"></div>
+                </div>
+                <div class="card-footer">
+                    <div style="height:4px;background:var(--c-border);border-radius:999px;width:100%;overflow:hidden;">
+                        <div style="height:100%;width:42%;background:var(--c-text);border-radius:999px;transition:width .5s ease-out;"></div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="card">
+                <span class="card-tag" style="background:var(--c-error-bg);color:var(--c-error);">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>
+                    Failed
+                </span>
+                <div class="card-title">
+                    <svg class="card-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+                    <span>Clone failed</span>
+                    <button class="card-menu" aria-label="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></button>
+                </div>
+                <p style="margin:8px 0 0;font-size:12.5px;color:var(--c-text-muted);line-height:1.5;">
+                    fatal: Authentication failed for <code class="kbd">github.com/acme/private</code>. Add a temporary token under <strong>Integrations → Bobby-analyser</strong> and retry.
+                </p>
+                <div class="card-footer">
+                    <button class="pill" style="cursor:pointer;">Retry</button>
+                    <button class="pill" style="cursor:pointer;">Open settings</button>
+                </div>
+            </article>
+
+            <article class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:160px;background:var(--c-surface-2);border-style:dashed;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="color:var(--c-text-dim);"><path d="M12 5v14M5 12h14"/></svg>
+                <div style="font-size:13px;font-weight:600;margin-top:8px;">Add a step</div>
+                <div style="font-size:12px;color:var(--c-text-muted);margin-top:2px;">Trigger, action, or output</div>
+            </article>
+        </div>
+    </section>
+
+    <!-- ─── tokens used ────────────────────────────────────────────────── -->
+    <section class="section">
+        <h2>Tokens used here</h2>
+        <p class="section-lead">
+            Every colour, radius, and shadow in this page comes from
+            <code class="kbd">ci/tokens.json</code> or its semantic mapping.
+            Want to fork the look? Override the variables at the top of the
+            <code class="kbd">&lt;style&gt;</code> block.
+        </p>
+        <div class="grid">
+            <div class="card" style="padding:16px;">
+                <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--c-text-muted);font-weight:700;">Surface</div>
+                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                    <span style="width:32px;height:32px;border-radius:8px;background:#ffffff;border:1px solid var(--c-border);" title="#ffffff"></span>
+                    <span style="width:32px;height:32px;border-radius:8px;background:#fcfcfc;border:1px solid var(--c-border);" title="#fcfcfc"></span>
+                    <span style="width:32px;height:32px;border-radius:8px;background:#f9f9f9;border:1px solid var(--c-border);" title="#f9f9f9"></span>
+                </div>
+            </div>
+            <div class="card" style="padding:16px;">
+                <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--c-text-muted);font-weight:700;">Tag</div>
+                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                    <span class="card-tag trigger" style="margin:0;">trigger</span>
+                    <span class="card-tag action" style="margin:0;">action</span>
+                    <span class="card-tag output" style="margin:0;">output</span>
+                    <span class="card-tag info" style="margin:0;">info</span>
+                </div>
+            </div>
+            <div class="card" style="padding:16px;">
+                <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--c-text-muted);font-weight:700;">Status pills</div>
+                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                    <span class="pill success">success</span>
+                    <span class="pill warn">warn</span>
+                    <span class="pill error">error</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <p class="footnote">
+        Bobby · Component reference · light mode. Source-of-truth tokens in
+        <a href="tokens.json">tokens.json</a>; written guidelines in
+        <a href="design-system.md">design-system.md</a>.
+        Drag any block to a layout to reuse — markup is intentionally free of frameworks.
+    </p>
+</main>
+
+<script>
+// ─── dropdown behaviour ─────────────────────────────────────────────────
+// Single instance per .dd. Click trigger to open; click outside / Esc to
+// close. Arrow keys navigate options. Enter / Space selects. Search input
+// (when present) live-filters.
+(() => {
+    const dropdowns = document.querySelectorAll("[data-dropdown]");
+    let openDropdown = null;
+
+    function close(dd) {
+        dd.dataset.open = "false";
+        if (openDropdown === dd) openDropdown = null;
+    }
+    function open(dd) {
+        if (openDropdown && openDropdown !== dd) close(openDropdown);
+        dd.dataset.open = "true";
+        openDropdown = dd;
+        const search = dd.querySelector("[data-dd-search]");
+        if (search) setTimeout(() => search.focus(), 0);
+    }
+
+    dropdowns.forEach((dd) => {
+        dd.dataset.open = "false";
+        const trigger = dd.querySelector(".dd-trigger");
+        const menu = dd.querySelector(".dd-menu");
+        const options = () => Array.from(dd.querySelectorAll(".dd-option"));
+        const search = dd.querySelector("[data-dd-search]");
+
+        trigger.addEventListener("click", (e) => {
+            e.stopPropagation();
+            dd.dataset.open === "true" ? close(dd) : open(dd);
+        });
+
+        options().forEach((opt) => {
+            opt.addEventListener("click", () => {
+                options().forEach((o) => (o.dataset.selected = "false"));
+                opt.dataset.selected = "true";
+                const title = opt.querySelector(".opt-title");
+                const label = trigger.querySelector(".dd-label");
+                if (title && label) label.textContent = title.textContent;
+                close(dd);
+            });
+            opt.addEventListener("mouseenter", () => {
+                options().forEach((o) => (o.dataset.active = "false"));
+                opt.dataset.active = "true";
+            });
+        });
+
+        // keyboard navigation
+        dd.addEventListener("keydown", (e) => {
+            if (dd.dataset.open !== "true") return;
+            const opts = options();
+            const active = opts.find((o) => o.dataset.active === "true");
+            const idx = active ? opts.indexOf(active) : -1;
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                const next = opts[(idx + 1) % opts.length];
+                opts.forEach((o) => (o.dataset.active = "false"));
+                next.dataset.active = "true";
+                next.scrollIntoView({ block: "nearest" });
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                const prev = opts[(idx - 1 + opts.length) % opts.length];
+                opts.forEach((o) => (o.dataset.active = "false"));
+                prev.dataset.active = "true";
+                prev.scrollIntoView({ block: "nearest" });
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                (active || opts[0])?.click();
+            } else if (e.key === "Escape") {
+                close(dd);
+                trigger.focus();
+            }
+        });
+
+        if (search) {
+            search.addEventListener("input", () => {
+                const q = search.value.trim().toLowerCase();
+                let any = false;
+                options().forEach((o) => {
+                    const text = o.textContent.toLowerCase();
+                    const hit = !q || text.includes(q);
+                    o.style.display = hit ? "" : "none";
+                    if (hit) any = true;
+                });
+                let empty = dd.querySelector(".dd-empty");
+                if (!any) {
+                    if (!empty) {
+                        empty = document.createElement("div");
+                        empty.className = "dd-empty";
+                        empty.textContent = "No matches.";
+                        dd.querySelector(".dd-menu").appendChild(empty);
+                    }
+                } else if (empty) {
+                    empty.remove();
+                }
+            });
+            search.addEventListener("click", (e) => e.stopPropagation());
+            search.addEventListener("keydown", (e) => {
+                if (e.key === "Escape") {
+                    close(dd);
+                    trigger.focus();
+                }
+            });
+        }
+    });
+
+    document.addEventListener("click", (e) => {
+        if (openDropdown && !openDropdown.contains(e.target)) close(openDropdown);
+    });
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && openDropdown) close(openDropdown);
+    });
+})();
+</script>
+
+</body>
+</html>

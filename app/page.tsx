@@ -23,6 +23,29 @@ import Image from "next/image";
 import dynamic from "next/dynamic"
 import { useTheme } from "@/lib/useTheme"
 import Navbar, { DeepDiveNavContext } from "@/components/Navbar"
+import PixelGradient, { type Stop } from "@/components/PixelGradient"
+
+// Hero background ramps for the pixelated primary flare (PixelGradient `stops`).
+// Low-contrast warm → page-bg so the tiles read as a subtle flare, not hard rings.
+// Strong, high-contrast warm → page-bg ramp: a deep gold core that decays
+// quickly to white, so the pixel tiles read as a defined gradient (each tile
+// clearly different from its neighbour) rather than a faint wash.
+const HERO_FLARE_LIGHT: Stop[] = [
+  { pos: 0.0,  c: [196, 128, 6] },    // deep gold core — darker start
+  { pos: 0.38, c: [228, 165, 22] },   // strong amber
+  { pos: 0.56, c: [247, 200, 78] },   // warm yellow
+  { pos: 0.74, c: [253, 230, 155] },  // soft
+  { pos: 0.88, c: [255, 247, 220] },  // pale
+  { pos: 1.0,  c: [255, 255, 255] },  // white page bg
+]
+const HERO_FLARE_DARK: Stop[] = [
+  { pos: 0.0,  c: [250, 210, 90] },   // bright warm core (glows on dark)
+  { pos: 0.34, c: [220, 158, 36] },
+  { pos: 0.54, c: [140, 92, 22] },
+  { pos: 0.74, c: [60, 40, 14] },
+  { pos: 0.9,  c: [20, 16, 10] },
+  { pos: 1.0,  c: [8, 8, 8] },        // dark page bg
+]
 
 // Mockups used inside DeepDive sections — lazy loaded so their deps don't
 // bloat the initial landing bundle.
@@ -224,11 +247,10 @@ function HeroScrollRing({ progress, dark }: { progress: MotionValue<number>; dar
         <motion.circle
           cx={size / 2} cy={size / 2} r={r}
           fill="none"
-          stroke="#a3e635"
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={circ}
-          style={{ strokeDashoffset: dashOffset }}
+          style={{ strokeDashoffset: dashOffset, stroke: "rgb(var(--primary-400))" }}
         />
       </svg>
     </motion.div>
@@ -243,7 +265,7 @@ const SHOWCASE: { title: string; highlight?: string; desc: string; Visual: Showc
   {
     title: "Zero Config",
     highlight: "Setup",
-    desc: "Bobby reads your codebase and wires the pipeline. Not a single YAML file.",
+    desc: "Single install command and Bobby is live. No network config, no port forwarding, no firewall holes, no reverse proxies.",
     Visual: StackGridVisual,
   },
   {
@@ -255,7 +277,7 @@ const SHOWCASE: { title: string; highlight?: string; desc: string; Visual: Showc
   {
     title: "Self-Hosted",
     highlight: "Infra",
-    desc: "Enterprise-grade infrastructure that runs on your own machine. Your data never leaves.",
+    desc: "Enterprise-grade infrastructure that runs on your own machine.",
     Visual: ServerVisual,
   },
   {
@@ -304,7 +326,7 @@ function ShowcaseCard({
                   top: 0,
                   left: 0,
                   background:
-                    "radial-gradient(circle, rgba(163,230,53,0.25) 0%, rgba(163,230,53,0.11) 25%, rgba(163,230,53,0.04) 50%, rgba(163,230,53,0) 70%)",
+                    "radial-gradient(circle, rgb(var(--primary-400) / 0.25) 0%, rgb(var(--primary-400) / 0.11) 25%, rgb(var(--primary-400) / 0.04) 50%, rgb(var(--primary-400) / 0) 70%)",
                   filter: "blur(20px)",
                   offsetPath: "rect(0 100% 100% 0 round 1.5rem)",
                   offsetAnchor: "center",
@@ -322,7 +344,7 @@ function ShowcaseCard({
             style={{
               padding: "1.5px",
               background:
-                "conic-gradient(from var(--angle) at 50% 50%, transparent 0deg, transparent 150deg, rgba(163,230,53,0.95) 175deg, rgba(163,230,53,1) 180deg, rgba(163,230,53,0.95) 185deg, transparent 210deg, transparent 330deg, rgba(163,230,53,0.95) 355deg, rgba(163,230,53,1) 360deg, rgba(163,230,53,0.95) 5deg, transparent 30deg)",
+                "conic-gradient(from var(--angle) at 50% 50%, transparent 0deg, transparent 150deg, rgb(var(--primary-400) / 0.95) 175deg, rgb(var(--primary-400) / 1) 180deg, rgb(var(--primary-400) / 0.95) 185deg, transparent 210deg, transparent 330deg, rgb(var(--primary-400) / 0.95) 355deg, rgb(var(--primary-400) / 1) 360deg, rgb(var(--primary-400) / 0.95) 5deg, transparent 30deg)",
               WebkitMask:
                 "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
               WebkitMaskComposite: "xor",
@@ -336,20 +358,20 @@ function ShowcaseCard({
         className={
           "relative group rounded-3xl overflow-hidden h-full transition-colors duration-300 " +
           (featured
-            ? "border border-[#a3e635]/40 dark:border-[#a3e635]/30 " +
+            ? "border border-primary/40 dark:border-primary/30 " +
               "bg-white dark:bg-[#080808] " +
-              "shadow-[0_0_18px_-6px_rgba(163,230,53,0.22),0_0_40px_-12px_rgba(163,230,53,0.12)] " +
-              "hover:border-[#a3e635]/60 dark:hover:border-[#a3e635]/50"
+              "shadow-[0_0_18px_-6px_rgb(var(--primary-400)_/_0.22),0_0_40px_-12px_rgb(var(--primary-400)_/_0.12)] " +
+              "hover:border-primary/60 dark:hover:border-primary/50"
             : "border border-gray-200/80 dark:border-white/[0.07] " +
               "bg-white/70 dark:bg-white/[0.02] " +
-              "hover:border-[#a3e635]/40 dark:hover:border-[#a3e635]/25")
+              "hover:border-primary/40 dark:hover:border-primary/25")
         }
       >
         <div className="px-7 pt-7 pb-3">
           <h3 className="text-xl md:text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
             {title}{" "}
             {highlight && (
-              <span className={featured ? "text-[#7ba320] dark:text-[#a3e635]/80" : "text-gray-400 dark:text-gray-500"}>
+              <span className={featured ? "text-primary-600 dark:text-primary/80" : "text-gray-400 dark:text-gray-500"}>
                 {highlight}
               </span>
             )}
@@ -447,7 +469,7 @@ function OrbitVisual() {
   return (
     <div className="absolute inset-0 flex items-center justify-center">
       <div className="absolute inset-0"
-           style={{ background: "radial-gradient(ellipse at 50% 55%, rgba(163,230,53,0.10) 0%, transparent 65%)" }} />
+           style={{ background: "radial-gradient(ellipse at 50% 55%, rgb(var(--primary-400) / 0.10) 0%, transparent 65%)" }} />
       {/* faint connection lines */}
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 220" preserveAspectRatio="none">
         <line x1="80"  y1="80"  x2="200" y2="110" stroke="currentColor" className="text-gray-300 dark:text-white/10" strokeWidth="1" strokeDasharray="3 4" />
@@ -455,15 +477,15 @@ function OrbitVisual() {
         <line x1="100" y1="170" x2="200" y2="110" stroke="currentColor" className="text-gray-300 dark:text-white/10" strokeWidth="1" strokeDasharray="3 4" />
         <line x1="300" y1="170" x2="200" y2="110" stroke="currentColor" className="text-gray-300 dark:text-white/10" strokeWidth="1" strokeDasharray="3 4" />
       </svg>
-      {/* center hub — lime glow pulse */}
+      {/* center hub — yellow glow pulse */}
       <motion.div
         aria-hidden
         animate={{ opacity: [0.4, 0.9, 0.4], scale: [1, 1.25, 1] }}
         transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
         className="absolute w-20 h-20 rounded-full"
-        style={{ background: "radial-gradient(circle, rgba(163,230,53,0.55) 0%, transparent 70%)", filter: "blur(8px)" }}
+        style={{ background: "radial-gradient(circle, rgb(var(--primary-400) / 0.55) 0%, transparent 70%)", filter: "blur(8px)" }}
       />
-      <div className="relative z-10 w-14 h-14 p-2 rounded-full bg-gradient-to-br from-[#a3e635] to-[#7ba320] shadow-xl shadow-[#a3e635]/40 flex items-center justify-center ring-4 ring-[#a3e635]/20">
+      <div className="relative z-10 w-14 h-14 p-2 rounded-full bg-gradient-to-br from-primary to-primary-600 shadow-xl shadow-primary/40 flex items-center justify-center ring-4 ring-primary/20">
         <BobbyIcon className="text-gray-900" />
       </div>
       {/* orbit chips */}
@@ -477,7 +499,7 @@ function OrbitVisual() {
         <span className="text-white text-base font-bold">BB</span>
       </div>
       <div className="absolute bottom-6 right-14 w-11 h-11 rounded-xl bg-gray-100 dark:bg-white/[0.06] border border-gray-200/80 dark:border-white/10 flex items-center justify-center shadow-lg shadow-black/10">
-        <RocketLaunchIcon className="w-5 h-5 text-[#7ba320] dark:text-[#a3e635]" />
+        <RocketLaunchIcon className="w-5 h-5 text-primary-600 dark:text-primary" />
       </div>
     </div>
   )
@@ -489,7 +511,7 @@ function PipelineVisual() {
     { label: "Source", color: "bg-gray-900 dark:bg-white/[0.08]", dot: "bg-gray-400",  text: "text-white" },
     { label: "Build",  color: "bg-[#2563eb]",                     dot: "bg-blue-200",  text: "text-white" },
     { label: "Test",   color: "bg-[#f5a623]",                     dot: "bg-yellow-100",text: "text-white" },
-    { label: "Deploy", color: "bg-[#a3e635]",                     dot: "bg-lime-900/40",text: "text-gray-900" },
+    { label: "Deploy", color: "bg-primary",                     dot: "bg-primary-900/40",text: "text-gray-900" },
   ]
   return (
     <div className="absolute inset-0 flex items-center justify-center px-6">
@@ -500,7 +522,7 @@ function PipelineVisual() {
           <div key={s.label} className="flex items-center flex-1 last:flex-none">
             <motion.div
               animate={s.label === "Deploy"
-                ? { boxShadow: ["0 8px 18px -4px rgba(163,230,53,0.45)", "0 8px 30px -2px rgba(163,230,53,0.85)", "0 8px 18px -4px rgba(163,230,53,0.45)"] }
+                ? { boxShadow: ["0 8px 18px -4px rgb(var(--primary-400) / 0.45)", "0 8px 30px -2px rgb(var(--primary-400) / 0.85)", "0 8px 18px -4px rgb(var(--primary-400) / 0.45)"] }
                 : {}}
               transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
               className={`${s.color} ${s.text} relative rounded-xl px-3 py-2.5 min-w-[74px] shadow-lg shadow-black/10`}
@@ -535,14 +557,14 @@ function ServerVisual() {
   return (
     <div className="absolute inset-0 flex items-center justify-center">
       <div className="absolute inset-0"
-           style={{ background: "radial-gradient(ellipse at 50% 55%, rgba(163,230,53,0.10) 0%, transparent 65%)" }} />
+           style={{ background: "radial-gradient(ellipse at 50% 55%, rgb(var(--primary-400) / 0.10) 0%, transparent 65%)" }} />
       <div className="relative">
         {/* Server rack */}
         <div className="relative w-44 rounded-2xl bg-gradient-to-b from-white to-gray-50 dark:from-white/[0.06] dark:to-white/[0.02]
                         border border-gray-200/80 dark:border-white/10 shadow-xl shadow-black/10 p-3 space-y-1.5">
           {[0, 1, 2].map((i) => (
             <div key={i} className="flex items-center gap-2 rounded-md bg-gray-100/80 dark:bg-white/[0.04] border border-gray-200/70 dark:border-white/[0.05] px-2 py-1.5">
-              <span className={`w-1.5 h-1.5 rounded-full ${i === 0 ? "bg-[#a3e635]" : i === 1 ? "bg-indigo-400" : "bg-[#f5a623]"} animate-pulse`} />
+              <span className={`w-1.5 h-1.5 rounded-full ${i === 0 ? "bg-primary" : i === 1 ? "bg-indigo-400" : "bg-[#f5a623]"} animate-pulse`} />
               <div className="h-1.5 rounded-full bg-gray-300/70 dark:bg-white/10 flex-1" />
               <div className="flex gap-0.5">
                 <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-white/20" />
@@ -553,9 +575,9 @@ function ServerVisual() {
           ))}
           {/* Lock badge — top right */}
           <motion.div
-            animate={{ boxShadow: ["0 0 0 0 rgba(163,230,53,0.55)", "0 0 0 10px rgba(163,230,53,0)", "0 0 0 0 rgba(163,230,53,0)"] }}
+            animate={{ boxShadow: ["0 0 0 0 rgb(var(--primary-400) / 0.55)", "0 0 0 10px rgb(var(--primary-400) / 0)", "0 0 0 0 rgb(var(--primary-400) / 0)"] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-            className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-[#a3e635] flex items-center justify-center ring-4 ring-white dark:ring-[#080808]"
+            className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-primary flex items-center justify-center ring-4 ring-white dark:ring-[#080808]"
           >
             <ShieldCheckIcon className="w-4 h-4 text-gray-900" />
           </motion.div>
@@ -764,7 +786,7 @@ function DeepDiveSection() {
               hidden: { opacity: 0, y: 18 },
               shown: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
             }}
-            className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#7ba320] dark:text-[#a3e635] mb-3"
+            className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary-600 dark:text-primary mb-3"
           >
             Deep Dive
           </motion.p>
@@ -820,12 +842,12 @@ function DeepDiveSection() {
               <div className="relative pl-8">
                 {/* Vertical rail */}
                 <div className="absolute left-[9px] top-2 bottom-2 w-px bg-gray-200 dark:bg-white/10" />
-                {/* Lime progress fill — height animates with scroll */}
+                {/* Yellow progress fill — height animates with scroll */}
                 <motion.div
-                  className="absolute left-[9px] top-2 w-px bg-[#a3e635] origin-top"
+                  className="absolute left-[9px] top-2 w-px bg-primary origin-top"
                   style={{
                     height: useTransform(progress, [0, 1], ["0%", "100%"]),
-                    boxShadow: "0 0 8px rgba(163,230,53,0.55)",
+                    boxShadow: "0 0 8px rgb(var(--primary-400) / 0.55)",
                   }}
                 />
                 <motion.ul
@@ -856,10 +878,10 @@ function DeepDiveSection() {
                           onClick={() => scrollTo(i)}
                           className="absolute -left-8 top-1 w-[18px] h-[18px] rounded-full flex items-center justify-center transition-colors duration-300"
                           style={{
-                            background: isActive || isDone ? "#a3e635" : "transparent",
+                            background: isActive || isDone ? "rgb(var(--primary-400))" : "transparent",
                             borderWidth: 2,
-                            borderColor: isActive || isDone ? "#a3e635" : "rgb(229 231 235)",
-                            boxShadow: isActive ? "0 0 0 6px rgba(163,230,53,0.18)" : "none",
+                            borderColor: isActive || isDone ? "rgb(var(--primary-400))" : "rgb(229 231 235)",
+                            boxShadow: isActive ? "0 0 0 6px rgb(var(--primary-400) / 0.18)" : "none",
                           }}
                           aria-label={`Jump to ${f.title}`}
                         >
@@ -876,7 +898,7 @@ function DeepDiveSection() {
                           <p className={
                             "text-[10px] font-bold uppercase tracking-[0.18em] mb-1 transition-colors duration-300 " +
                             (isActive
-                              ? "text-[#7ba320] dark:text-[#a3e635]"
+                              ? "text-primary-600 dark:text-primary"
                               : "text-gray-400 dark:text-gray-600")
                           }>
                             {f.eyebrow}
@@ -1064,18 +1086,18 @@ function DeepFeatureDetail({
         className="sticky top-28 h-[calc(100vh-7rem)] flex flex-col justify-start gap-8 pb-12"
       >
         <div className="relative">
-          {/* Lime accent rail — scales in vertically as the section reveals */}
+          {/* Yellow accent rail — scales in vertically as the section reveals */}
           <motion.div
             aria-hidden
             style={{ scaleY: railScaleY }}
-            className="absolute -left-5 top-2 bottom-20 w-[2px] bg-[#a3e635] origin-top rounded-full"
+            className="absolute -left-5 top-2 bottom-20 w-[2px] bg-primary origin-top rounded-full"
           />
 
           {/* Heading block (eyebrow + title) — stays visible while the image
               grows so the viewer always has context for what they're looking at. */}
           <motion.p
             style={{ opacity: eyebrowOp, y: eyebrowY }}
-            className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#7ba320] dark:text-[#a3e635] mb-3"
+            className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary-600 dark:text-primary mb-3"
           >
             {feature.eyebrow}
           </motion.p>
@@ -1102,7 +1124,7 @@ function DeepFeatureDetail({
                   style={{ opacity: bulletOps[bi], x: bulletXs[bi] }}
                   className="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-300"
                 >
-                  <svg viewBox="0 0 16 16" className="w-4 h-4 mt-0.5 flex-none fill-[#a3e635]">
+                  <svg viewBox="0 0 16 16" className="w-4 h-4 mt-0.5 flex-none fill-primary">
                     <path d="M6.5 11.5 3 8l1.1-1.1 2.4 2.4L11.9 4 13 5.1z" />
                   </svg>
                   <span>{b}</span>
@@ -1243,7 +1265,7 @@ function MobileSectionHeading({ morphProgress }: { morphProgress: MotionValue<nu
     <motion.div style={{ gridTemplateRows: rows }} className="grid">
       <motion.div style={{ opacity }} className="overflow-hidden min-h-0">
         <div className="max-w-2xl mb-12">
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#7ba320] dark:text-[#a3e635] mb-3">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary-600 dark:text-primary mb-3">
             Deep Dive
           </p>
           <h2 className="text-3xl font-bold tracking-tight">
@@ -1315,10 +1337,10 @@ function TimelineRow({
         style={{
           width: dotSize,
           height: dotSize,
-          background: isActive || isDone ? "#a3e635" : "transparent",
+          background: isActive || isDone ? "rgb(var(--primary-400))" : "transparent",
           borderWidth: 2,
           borderStyle: "solid",
-          borderColor: isActive || isDone ? "#a3e635" : "rgb(229 231 235)",
+          borderColor: isActive || isDone ? "rgb(var(--primary-400))" : "rgb(229 231 235)",
           boxShadow: isActive ? activeHalo : "none",
         }}
       >
@@ -1356,7 +1378,7 @@ function TimelineRow({
             className={
               "block font-bold uppercase tracking-[0.18em] leading-none overflow-hidden min-h-0 mb-1 " +
               (isActive
-                ? "text-[#7ba320] dark:text-[#a3e635]"
+                ? "text-primary-600 dark:text-primary"
                 : "text-gray-400 dark:text-gray-600")
             }
           >
@@ -1562,7 +1584,7 @@ function MobileTimeline({
   const haloPx  = useMotionValue(6)
   // Halo shadow for the active dot — amplitude shrinks with haloPx so it
   // matches the smaller compact dot.
-  const activeHalo     = useMotionTemplate`0 0 0 ${haloPx}px rgba(163,230,53,0.18)`
+  const activeHalo     = useMotionTemplate`0 0 0 ${haloPx}px rgb(var(--primary-400) / 0.18)`
   // Rail tracks the dot's horizontal center: padX (pill inner-left) plus half
   // the dot width, which itself shrinks with the compaction above.
   const railLeft       = useTransform(() => padX.get() + dotSize.get() / 2)
@@ -1689,17 +1711,17 @@ function ZeroConfigStartCard() {
                  border-gray-200 bg-white p-5 md:p-6
                  dark:border-white/[0.08] dark:bg-[#0c0c0c]"
     >
-      {/* Ambient lime glow — matches the accent used elsewhere on the page */}
+      {/* Ambient yellow glow — matches the accent used elsewhere on the page */}
       <div
         aria-hidden
         className="pointer-events-none absolute -top-20 -right-20 h-48 w-48 rounded-full blur-3xl opacity-40"
-        style={{ background: "radial-gradient(closest-side, rgba(163,230,53,0.35), transparent 70%)" }}
+        style={{ background: "radial-gradient(closest-side, rgb(var(--primary-400) / 0.35), transparent 70%)" }}
       />
 
       <div className="relative flex flex-col gap-3">
         <div className="flex items-center gap-2">
-          <RocketLaunchIcon className="h-4 w-4 text-[#7ba320] dark:text-[#a3e635]" />
-          <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#7ba320] dark:text-[#a3e635]">
+          <RocketLaunchIcon className="h-4 w-4 text-primary-600 dark:text-primary" />
+          <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary-600 dark:text-primary">
             Get running in 60 seconds
           </span>
         </div>
@@ -1719,7 +1741,7 @@ function ZeroConfigStartCard() {
 
         <a
           href="/docs"
-          className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#a3e635] px-4 py-2
+          className="inline-flex w-fit items-center gap-2 rounded-lg bg-primary px-4 py-2
                      text-sm font-semibold text-[#0c0c0c] shadow-sm
                      transition-colors hover:bg-[#b4f04a]"
         >
@@ -1783,6 +1805,11 @@ export default function LandingPage() {
   // Smooth spring follows scroll with inertia — lower stiffness = more lag
   const smoothProgress = useSpring(scrollYProgress, { stiffness: 60, damping: 24, restDelta: 0.001 })
 
+  // Hero flare starts dissolving once the tiles reach centre (tile rise finishes
+  // ~0.42–0.50), rippling away outer→inner ring-by-ring to the page background
+  // and completing just as the hero ends.
+  const heroFlareWipe = useTransform(smoothProgress, [0.42, 1.0], [0, 1])
+
   // ── Features section scroll timeline ──────────────────────────────────────
   const { scrollYProgress: featuresSYP } = useScroll({
     target: featuresRef,
@@ -1816,8 +1843,6 @@ export default function LandingPage() {
   const subtextScale   = useTransform(smoothProgress, [0.12, 0.21], [1, 0.92])
 
   // ── Background parallax ────────────────────────────────────────────────────
-  const bgScale = useTransform(smoothProgress, [0, 1], [1, 1.2])
-
   return (
     <DeepDiveNavContext.Provider value={{ compact: deepDiveCompact, setCompact: setDeepDiveCompact }}>
     <div className="bg-white dark:bg-[#080808] text-gray-900 dark:text-white transition-colors">
@@ -1837,19 +1862,22 @@ export default function LandingPage() {
       <div ref={heroRef} style={{ height: tileCount === 4 ? "calc(100vh + 2500px)" : "calc(100vh + 2500px)" }}>
         <div className="sticky top-0 h-screen overflow-hidden">
 
-          {/* Background */}
-          <motion.div style={{ scale: bgScale }} className="absolute inset-0 pointer-events-none">
-            <div className="dark:hidden absolute inset-0"
-                 style={{ backgroundImage: "radial-gradient(circle,rgba(0,0,0,0.055) 1px,transparent 1px)", backgroundSize: "28px 28px" }} />
-            <div className="hidden dark:block absolute inset-0"
-                 style={{ backgroundImage: "radial-gradient(circle,rgba(255,255,255,0.04) 1px,transparent 1px)", backgroundSize: "28px 28px" }} />
-            <div className="hidden dark:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px]"
-                 style={{ background: "radial-gradient(circle,rgba(99,102,241,0.14) 0%,rgba(124,77,255,0.05) 45%,transparent 70%)", filter: "blur(80px)" }} />
-            <div className="hidden dark:block absolute top-[16%] left-[16%] w-96 h-96 animate-orb-1 opacity-20"
-                 style={{ background: "radial-gradient(circle,rgba(59,106,237,0.7) 0%,transparent 70%)", filter: "blur(70px)" }} />
-            <div className="hidden dark:block absolute bottom-[12%] right-[12%] w-80 h-80 animate-orb-2 opacity-15"
-                 style={{ background: "radial-gradient(circle,rgba(240,90,42,0.6) 0%,transparent 70%)", filter: "blur(70px)" }} />
-          </motion.div>
+          {/* Background — pixelated primary flare from the top. As the hero
+              scrolls away the bloom dissolves outer→inner into the page bg (a
+              pixel ripple), driven by smoothProgress via wipeProgress. */}
+          <PixelGradient
+            stops={dark ? HERO_FLARE_DARK : HERO_FLARE_LIGHT}
+            metric="circle"
+            tiltDeg={0}
+            anchorX={0.5}
+            anchorY={-0.6}
+            tilePx={32}
+            tileAspect={1.2}
+            bloomStart={0}
+            bloomEnd={0.68}
+            wipeProgress={heroFlareWipe}
+            wipeSteps={24}
+          />
 
           {/* ── Hero content: text upper, tiles lower ─────────────────── */}
           <div className="relative h-full flex flex-col justify-center items-start sm:items-center px-5 md:px-12 pt-[72px] sm:pt-[128px]"
@@ -1912,7 +1940,7 @@ export default function LandingPage() {
           style={{ opacity: featuresHeadingOpacity, y: featuresHeadingY }}
           className="text-center mb-14"
         >
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#7ba320] dark:text-[#a3e635] mb-3">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary-600 dark:text-primary mb-3">
             Why Bobby
           </p>
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
@@ -1946,7 +1974,7 @@ export default function LandingPage() {
                      bg-gray-50/60 dark:bg-white/[0.02]"
         >
           <div className="absolute inset-0 pointer-events-none opacity-0 dark:opacity-100"
-               style={{ background: "radial-gradient(ellipse at 50% 0%,rgba(163,230,53,0.07) 0%,transparent 60%)" }} />
+               style={{ background: "radial-gradient(ellipse at 50% 0%,rgb(var(--primary-400) / 0.07) 0%,transparent 60%)" }} />
           <h2 className="relative text-3xl md:text-4xl font-bold tracking-tight mb-4">
             Ready to ship faster?
           </h2>
@@ -1957,7 +1985,7 @@ export default function LandingPage() {
             onClick={() => { window.location.href = "/account" }}
             className="relative px-8 py-3 rounded-full text-sm font-bold text-black
                        transition-all hover:scale-105 active:scale-95 shadow-lg"
-            style={{ background: "#a3e635" }}
+            style={{ background: "rgb(var(--primary-400))" }}
           >
             Get started for free
           </button>

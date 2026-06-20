@@ -154,14 +154,14 @@ export default function WorkerDetail({ id }: { id: string }) {
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && saveName()}
               className="rounded-lg border px-3 py-1 text-xl font-semibold outline-none transition-colors sm:text-2xl
-                         border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-bobby-lime
-                         dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-bobby-lime/60"
+                         border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary
+                         dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-primary/60"
             />
             <button
               disabled={savingName}
               onClick={saveName}
               className="rounded-full px-4 py-1.5 text-sm font-semibold transition-colors disabled:opacity-50
-                         bg-bobby-lime text-black hover:bg-bobby-lime/90"
+                         bg-primary text-black hover:bg-primary/90"
             >
               {savingName ? "Saving…" : "Save"}
             </button>
@@ -222,7 +222,7 @@ export default function WorkerDetail({ id }: { id: string }) {
                   <a
                     href={getArtifactDownloadURL(b.artifact_url)!}
                     className="rounded-full px-3 py-1 text-xs font-semibold transition-colors
-                               bg-bobby-lime text-black hover:bg-bobby-lime/90"
+                               bg-primary text-black hover:bg-primary/90"
                     download
                   >
                     Download

@@ -29,7 +29,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
 
   return (
     <div className="docs-content">
-      <div className="mb-2 text-xs uppercase tracking-wider font-semibold text-bobby-lime">
+      <div className="mb-2 text-xs uppercase tracking-wider font-semibold text-primary">
         Docs
       </div>
       <article
@@ -44,7 +44,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
             className="group flex-1 p-4 rounded-xl border border-black/[0.08] dark:border-white/[0.08] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors"
           >
             <div className="text-xs text-gray-500 mb-1">← Previous</div>
-            <div className="font-semibold text-black dark:text-white group-hover:text-bobby-lime transition-colors">
+            <div className="font-semibold text-black dark:text-white group-hover:text-primary transition-colors">
               {prev.title}
             </div>
           </Link>
@@ -55,7 +55,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
             className="group flex-1 p-4 rounded-xl border border-black/[0.08] dark:border-white/[0.08] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors text-right"
           >
             <div className="text-xs text-gray-500 mb-1">Next →</div>
-            <div className="font-semibold text-black dark:text-white group-hover:text-bobby-lime transition-colors">
+            <div className="font-semibold text-black dark:text-white group-hover:text-primary transition-colors">
               {next.title}
             </div>
           </Link>

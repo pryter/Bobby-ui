@@ -272,7 +272,7 @@ export default function DocsSidebar({ tree }: { tree: DocNode[] }) {
           animate={{ opacity: mobileOpen ? 0 : 1 }}
           transition={{ duration: mobileOpen ? 0.08 : 0.18, delay: mobileOpen ? 0 : 0.22 }}
           style={{ pointerEvents: mobileOpen ? "none" : "auto" }}
-          className="h-12 pl-5 pr-4 flex items-center gap-2 text-bobby-lime text-sm font-bold whitespace-nowrap"
+          className="h-12 pl-5 pr-4 flex items-center gap-2 text-primary text-sm font-bold whitespace-nowrap"
           aria-label="Open contents"
         >
           <span>Contents</span>

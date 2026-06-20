@@ -239,7 +239,7 @@ export default function AddProjectModal({
               <button
                 onClick={connectGitHub}
                 className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold transition-colors
-                           bg-bobby-lime text-black hover:bg-bobby-lime/90"
+                           bg-primary text-black hover:bg-primary/90"
               >
                 <ArrowTopRightOnSquareIcon className="h-4 w-4" />
                 Connect GitHub
@@ -292,8 +292,8 @@ export default function AddProjectModal({
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="w-full rounded-xl border py-2 pl-9 pr-3 text-sm shadow-sm outline-none transition-colors focus:border-transparent focus:ring-2
-                                   border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-bobby-lime
-                                   dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-bobby-lime/60"
+                                   border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-primary
+                                   dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-primary/60"
                       />
                     </div>
 
@@ -384,8 +384,8 @@ export default function AddProjectModal({
                     placeholder="Select a repository"
                     value={selectedRepo?.name ?? ""}
                     className="w-full cursor-default rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2
-                               border-gray-200 bg-gray-50 text-gray-700 placeholder:text-gray-300 focus:ring-bobby-lime
-                               dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-200 dark:placeholder:text-gray-600 dark:focus:ring-bobby-lime/60"
+                               border-gray-200 bg-gray-50 text-gray-700 placeholder:text-gray-300 focus:ring-primary
+                               dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-200 dark:placeholder:text-gray-600 dark:focus:ring-primary/60"
                   />
                 </div>
 
@@ -398,8 +398,8 @@ export default function AddProjectModal({
                       value={selectedWorkerId}
                       onChange={(e) => setSelectedWorkerId(e.target.value)}
                       className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2
-                                 border-gray-200 bg-white text-gray-900 focus:ring-bobby-lime
-                                 dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-bobby-lime/60"
+                                 border-gray-200 bg-white text-gray-900 focus:ring-primary
+                                 dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-primary/60"
                     >
                       {workers.map((w) => (
                         <option key={w.setupId} value={w.setupId}>
@@ -440,8 +440,8 @@ export default function AddProjectModal({
                         value={customInit}
                         onChange={(e) => setCustomInit(e.target.value)}
                         className="w-full rounded-xl border py-2.5 pl-10 pr-3 font-mono text-sm outline-none transition-colors focus:ring-2
-                                   border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:ring-bobby-lime
-                                   dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white dark:focus:bg-white/[0.06] dark:focus:ring-bobby-lime/60"
+                                   border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:ring-primary
+                                   dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white dark:focus:bg-white/[0.06] dark:focus:ring-primary/60"
                       />
                     </div>
                     <div className="relative">
@@ -454,8 +454,8 @@ export default function AddProjectModal({
                         value={customBuild}
                         onChange={(e) => setCustomBuild(e.target.value)}
                         className="w-full rounded-xl border py-2.5 pl-12 pr-3 font-mono text-sm outline-none transition-colors focus:ring-2
-                                   border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:ring-bobby-lime
-                                   dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white dark:focus:bg-white/[0.06] dark:focus:ring-bobby-lime/60"
+                                   border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:ring-primary
+                                   dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white dark:focus:bg-white/[0.06] dark:focus:ring-primary/60"
                       />
                     </div>
                   </div>
@@ -474,8 +474,8 @@ export default function AddProjectModal({
                   value={artifactPath}
                   onChange={(e) => setArtifactPath(e.target.value)}
                   className="w-full rounded-xl border px-3 py-2 font-mono text-sm outline-none focus:ring-2
-                             border-gray-200 bg-white text-gray-900 focus:ring-bobby-lime
-                             dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-bobby-lime/60"
+                             border-gray-200 bg-white text-gray-900 focus:ring-primary
+                             dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-primary/60"
                 />
               </div>
 
@@ -488,8 +488,8 @@ export default function AddProjectModal({
 
                 {/* Active tags + input */}
                 <div className="flex min-h-[42px] flex-wrap items-center gap-2 rounded-xl border px-3 py-2 focus-within:ring-2
-                                border-gray-200 bg-white focus-within:ring-bobby-lime
-                                dark:border-white/[0.10] dark:bg-white/[0.04] dark:focus-within:ring-bobby-lime/60">
+                                border-gray-200 bg-white focus-within:ring-primary
+                                dark:border-white/[0.10] dark:bg-white/[0.04] dark:focus-within:ring-primary/60">
                   {tags.map((tag) => (
                     <span
                       key={tag}
@@ -578,7 +578,7 @@ export default function AddProjectModal({
                 onClick={handleAdd}
                 disabled={!selectedRepo || !selectedWorkerId || adding || workers.length === 0}
                 className="rounded-full px-5 py-2 text-sm font-semibold transition-colors disabled:opacity-40
-                           bg-bobby-lime text-black hover:bg-bobby-lime/90"
+                           bg-primary text-black hover:bg-primary/90"
               >
                 {adding ? (
                   <span className="flex items-center gap-2">

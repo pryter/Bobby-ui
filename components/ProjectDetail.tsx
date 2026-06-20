@@ -383,7 +383,7 @@ export default function ProjectDetail({ id }: { id: string }) {
             disabled
             title="Coming soon"
             className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold
-                       bg-bobby-lime text-black shadow-lg shadow-bobby-lime/20
+                       bg-primary text-black shadow-lg shadow-primary/20
                        transition-all hover:scale-[1.02] active:scale-[0.98]
                        disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
           >
@@ -712,7 +712,7 @@ export default function ProjectDetail({ id }: { id: string }) {
               <button
                 onClick={() => handleRebuild(false)}
                 className="w-full rounded-full px-4 py-2.5 text-sm font-semibold transition-colors
-                           bg-bobby-lime text-black hover:bg-bobby-lime/90"
+                           bg-primary text-black hover:bg-primary/90"
               >
                 Keep Cache
               </button>

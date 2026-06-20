@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-label="Bobby colour swatches">
+  <title>Bobby colour swatches</title>
+  <style>
+    .label { font-family: Nunito, system-ui, sans-serif; font-weight: 700; fill: #ffffff; }
+    .hex   { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; fill: #9ca3af; font-size: 13px; }
+    .group { font-family: Nunito, system-ui, sans-serif; font-weight: 800; fill: #ffffff; font-size: 18px; letter-spacing: 0.18em; text-transform: uppercase; }
+    .name  { font-size: 15px; }
+    .invert { fill: #080808; }
+  </style>
+  <rect width="1200" height="520" fill="#080808"/>
+
+  <!-- BRAND -->
+  <text x="40" y="50" class="group">Brand</text>
+  <g transform="translate(40, 70)">
+    <rect width="260" height="120" rx="16" fill="#facc15"/>
+    <text x="20" y="40" class="label invert name">brand / yellow</text>
+    <text x="20" y="62" class="hex" style="fill:#1f2937">#facc15</text>
+    <text x="20" y="100" class="hex" style="fill:#1f2937">Primary CTA</text>
+  </g>
+  <g transform="translate(320, 70)">
+    <rect width="260" height="120" rx="16" fill="#111111" stroke="#ffffff" stroke-opacity="0.08"/>
+    <text x="20" y="40" class="label name">brand / surface</text>
+    <text x="20" y="62" class="hex">#111111</text>
+    <text x="20" y="100" class="hex">Elevated surface</text>
+  </g>
+  <g transform="translate(600, 70)">
+    <rect width="260" height="120" rx="16" fill="#080808" stroke="#ffffff" stroke-opacity="0.08"/>
+    <text x="20" y="40" class="label name">brand / bg</text>
+    <text x="20" y="62" class="hex">#080808</text>
+    <text x="20" y="100" class="hex">Page background</text>
+  </g>
+
+  <!-- TILES -->
+  <text x="40" y="232" class="group">Tiles</text>
+  <g transform="translate(40, 252)">
+    <rect width="208" height="100" rx="16" fill="#1db954"/>
+    <text x="16" y="36" class="label name invert">tile / green</text>
+    <text x="16" y="58" class="hex" style="fill:#0a0a0a">#1db954</text>
+  </g>
+  <g transform="translate(264, 252)">
+    <rect width="208" height="100" rx="16" fill="#f5a623"/>
+    <text x="16" y="36" class="label name invert">tile / orange</text>
+    <text x="16" y="58" class="hex" style="fill:#0a0a0a">#f5a623</text>
+  </g>
+  <g transform="translate(488, 252)">
+    <rect width="208" height="100" rx="16" fill="#2563eb"/>
+    <text x="16" y="36" class="label name">tile / blue</text>
+    <text x="16" y="58" class="hex" style="fill:#e5e7eb">#2563eb</text>
+  </g>
+  <g transform="translate(712, 252)">
+    <rect width="208" height="100" rx="16" fill="#f04e30"/>
+    <text x="16" y="36" class="label name">tile / red</text>
+    <text x="16" y="58" class="hex" style="fill:#e5e7eb">#f04e30</text>
+  </g>
+  <g transform="translate(936, 252)">
+    <rect width="208" height="100" rx="16" fill="#7c3aed"/>
+    <text x="16" y="36" class="label name">tile / purple</text>
+    <text x="16" y="58" class="hex" style="fill:#e5e7eb">#7c3aed</text>
+  </g>
+
+  <!-- SOFT ACCENTS + NEUTRALS -->
+  <text x="40" y="394" class="group">Soft accents</text>
+  <g transform="translate(40, 414)">
+    <rect width="100" height="80" rx="12" fill="#a2d2ff"/>
+    <text x="10" y="96" class="hex">#a2d2ff</text>
+  </g>
+  <g transform="translate(152, 414)">
+    <rect width="100" height="80" rx="12" fill="#bde0fe"/>
+    <text x="10" y="96" class="hex">#bde0fe</text>
+  </g>
+  <g transform="translate(264, 414)">
+    <rect width="100" height="80" rx="12" fill="#ffafcc"/>
+    <text x="10" y="96" class="hex">#ffafcc</text>
+  </g>
+  <g transform="translate(376, 414)">
+    <rect width="100" height="80" rx="12" fill="#ffc8dd"/>
+    <text x="10" y="96" class="hex">#ffc8dd</text>
+  </g>
+  <g transform="translate(488, 414)">
+    <rect width="100" height="80" rx="12" fill="#cdb4db"/>
+    <text x="10" y="96" class="hex">#cdb4db</text>
+  </g>
+
+  <text x="620" y="394" class="group">Neutrals</text>
+  <g transform="translate(620, 414)">
+    <rect width="90" height="80" rx="12" fill="#ffffff"/>
+    <text x="8" y="96" class="hex">#ffffff</text>
+  </g>
+  <g transform="translate(722, 414)">
+    <rect width="90" height="80" rx="12" fill="#e5e7eb"/>
+    <text x="8" y="96" class="hex">#e5e7eb</text>
+  </g>
+  <g transform="translate(824, 414)">
+    <rect width="90" height="80" rx="12" fill="#9ca3af"/>
+    <text x="8" y="96" class="hex">#9ca3af</text>
+  </g>
+  <g transform="translate(926, 414)">
+    <rect width="90" height="80" rx="12" fill="#4b5563"/>
+    <text x="8" y="96" class="hex">#4b5563</text>
+  </g>
+  <g transform="translate(1028, 414)">
+    <rect width="90" height="80" rx="12" fill="#1f2937"/>
+    <text x="8" y="96" class="hex">#1f2937</text>
+  </g>
+</svg>

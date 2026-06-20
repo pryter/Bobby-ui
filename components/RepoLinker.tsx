@@ -90,8 +90,8 @@ export default function RepoLinker({
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="mt-3 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2
-                   border-gray-200 bg-white text-gray-900 focus:ring-bobby-lime
-                   dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-bobby-lime/60"
+                   border-gray-200 bg-white text-gray-900 focus:ring-primary
+                   dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-primary/60"
       />
 
       {error && (
@@ -126,7 +126,7 @@ export default function RepoLinker({
                 className={`rounded-full px-3 py-1 text-xs font-semibold transition disabled:opacity-50 ${
                   linked
                     ? "bg-red-50 text-red-700 ring-1 ring-red-200 hover:bg-red-100 dark:bg-red-500/[0.08] dark:text-red-300 dark:ring-red-500/20 dark:hover:bg-red-500/[0.12]"
-                    : "bg-bobby-lime text-black hover:bg-bobby-lime/90"
+                    : "bg-primary text-black hover:bg-primary/90"
                 }`}
               >
                 {busy === repo.id ? "…" : linked ? "Unlink" : "Link"}
