@@ -58,8 +58,8 @@ const ImageSearchMockup = dynamic(
   () => import("@/components/landing/ImageSearchMockup"),
   { ssr: false },
 )
-const IntegrationsOrb = dynamic(
-  () => import("@/components/landing/IntegrationsOrb"),
+const ConfigPanel = dynamic(
+  () => import("@/components/landing/ConfigPanel"),
   { ssr: false },
 )
 
@@ -264,21 +264,88 @@ function HeroScrollRing({ progress, dark }: { progress: MotionValue<number>; dar
 
 // ─── Features ─────────────────────────────────────────────────────────────────
 
+type MotifMode = "dissolve" | "diagonal" | "rings" | "bars"
+
 type ShowcaseFeature = {
   title: string
   desc: string
   Art: React.ComponentType
+  accent?: string   // hero tile colour for the pixel motif
+  motif?: MotifMode // pixel pattern; omitted → no motif (last card)
 }
 
 const SHOWCASE: ShowcaseFeature[] = [
-  { title: "Zero Config",       desc: "One command and you're live — no ports, no proxies.", Art: ZeroConfigArt },
-  { title: "No-Code Pipelines", desc: "Snap stages together on a visual canvas.",            Art: PipelineArt },
-  { title: "Self-Hosted Infra", desc: "Isolated & signed, on your own machine.",             Art: InfraArt },
-  { title: "Rich Integrations", desc: "Connect GitHub, GitLab & more in a click.",            Art: IntegrationsArt },
+  { title: "Zero Config",       desc: "One command and you're live — no ports, no proxies.", Art: ZeroConfigArt,    accent: "#1db954", motif: "dissolve" },
+  { title: "No-Code Pipelines", desc: "Snap stages together on a visual canvas.",            Art: PipelineArt,     accent: "#2563eb", motif: "dissolve" },
+  { title: "Self-Hosted Infra", desc: "Isolated & signed, on your own machine.",             Art: InfraArt,        accent: "#7c3aed", motif: "dissolve" },
+  { title: "Rich Integrations", desc: "Connect GitHub, GitLab & more in a click.",            Art: IntegrationsArt, accent: "#f5a623", motif: "dissolve" },
 ]
 
+// Deterministic per-cell pseudo-random (stable across SSR/CSR — no Math.random).
+function pixHash(x: number, y: number, seed: number) {
+  const s = Math.sin(x * 127.1 + y * 311.7 + seed) * 43758.5453
+  return s - Math.floor(s)
+}
+
+// Solid-colour pixel motifs — a nod to the hero's pixel flare. An ordered (Bayer
+// 4×4) dither keeps every fade structured rather than noisy. Four geometries, all
+// square pixels filling the top-right corner; the cluster carves a gap around the
+// (left-aligned) title so the pixels flow around the heading instead of under it:
+//   dissolve — dense block at the corner melting into scattered pixels
+//   diagonal — 45° pixel ribs
+//   rings    — concentric pixel arcs rippling out of the corner
+//   bars     — vertical pixel bars rising toward the corner
+// (the size-"ramp" / shrinking variant is archived in components/PixelRamp.tsx)
+function PixelMotif({ color, mode, title, index }: { color: string; mode: MotifMode; title: string; index: number }) {
+  const COLS = 16, ROWS = 27, GAP = 0.18
+  // Carve out the title's one-line box (top-left) so no pixel sits behind the text.
+  const TITLE_RIGHT = 1.4 + title.length * 0.7 // left pad + ~0.7 cell per character
+  const TITLE_TOP = 1.4, TITLE_BOTTOM = 4.3
+  // Per-card seed (from the card index) so each card differs in size, density,
+  // dither phase and scatter — never a twin of a sibling.
+  const seed = 100 + index * 137.5
+  const REACH = 7 + (pixHash(2, 3, seed) - 0.5) * 2.4 // per-card size  (~5.8–8.2 cells)
+  const BIAS = (pixHash(5, 9, seed) - 0.5) * 0.22     // per-card density
+  const OX = Math.floor(pixHash(7, 1, seed) * 4)      // per-card Bayer dither phase (x)
+  const OY = Math.floor(pixHash(1, 7, seed) * 4)      // per-card Bayer dither phase (y)
+  const BAYER = [
+    [0, 8, 2, 10],
+    [12, 4, 14, 6],
+    [3, 11, 1, 9],
+    [15, 7, 13, 5],
+  ]
+  const cells: [number, number][] = []
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (y >= TITLE_TOP && y <= TITLE_BOTTOM && x <= TITLE_RIGHT) continue // skip the title's box
+      const thr = (BAYER[(y + OY) & 3][(x + OX) & 3] + 0.5) / 16
+      const d = Math.hypot(COLS - 1 - x, y) // cell-space distance from the top-right corner
+      const p = 1 - d / REACH               // presence: 1 at corner → 0 at REACH
+      if (p <= 0) continue
+      let on = false
+      if (mode === "dissolve") on = p >= thr + BIAS + (pixHash(x, y, seed) - 0.5) * 0.3 // per-card density + jitter
+      else if (mode === "diagonal") on = ((x + y) & 3) < 2 && p >= thr * 0.4
+      else if (mode === "rings") on = (Math.round(d) & 1) === 0 && p >= thr * 0.15
+      else if (mode === "bars") on = (x & 1) === 1 && p >= thr
+      if (on) cells.push([x, y])
+    }
+  }
+  return (
+    <svg
+      aria-hidden
+      viewBox={`0 0 ${COLS} ${ROWS}`}
+      preserveAspectRatio="xMaxYMin slice"
+      className="pointer-events-none absolute inset-0 h-full w-full"
+    >
+      {cells.map(([x, y]) => (
+        <rect key={`${x}-${y}`} x={x + GAP / 2} y={y + GAP / 2} width={1 - GAP} height={1 - GAP} rx={(1 - GAP) * 0.16} fill={color} />
+      ))}
+    </svg>
+  )
+}
+
 function ShowcaseCard({
-  title, desc, Art, index, scrollProgress,
+  title, desc, Art, accent, motif, index, scrollProgress,
 }: ShowcaseFeature & {
   index: number
   scrollProgress: MotionValue<number>
@@ -290,14 +357,15 @@ function ShowcaseCard({
 
   return (
     <motion.div style={{ opacity, y }} className="h-full w-[290px] shrink-0 lg:w-auto">
-      <div className="group flex h-full min-h-[440px] flex-col rounded-3xl border border-gray-200/80 bg-white px-6 pb-9 pt-9 text-left
+      <div className="group relative flex h-full min-h-[440px] flex-col overflow-hidden rounded-3xl border border-gray-200/80 bg-white px-6 pb-9 pt-9 text-left
                       shadow-[0_1px_2px_rgba(16,24,40,0.04),0_16px_34px_-18px_rgba(16,24,40,0.18)] transition-colors duration-300
                       hover:border-gray-300/80 dark:border-white/[0.07] dark:bg-white/[0.02] dark:shadow-none dark:hover:border-white/[0.12]">
-        <h3 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">{title}</h3>
-        <div className="flex w-full flex-1 items-center justify-center py-8">
+        {motif && accent && <PixelMotif color={accent} mode={motif} title={title} index={index} />}
+        <h3 className="relative z-10 text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">{title}</h3>
+        <div className="relative z-10 flex w-full flex-1 items-center justify-center py-8">
           <div style={{ zoom: 1.5 }}><Art /></div>
         </div>
-        <p className="text-[15px] leading-relaxed text-gray-500 dark:text-gray-400">{desc}</p>
+        <p className="relative z-10 text-[15px] leading-relaxed text-gray-500 dark:text-gray-400">{desc}</p>
       </div>
     </motion.div>
   )
@@ -439,7 +507,7 @@ const DEEP_FEATURES: {
   },
   {
     eyebrow: "Step 03",
-    title: "Self-Hosted Infra",
+    title: "Per-instance Infra",
     desc:
       "Enterprise-grade infrastructure that runs where your code lives. A built-in registry proxy caches OCI images close to the build, fully isolated micro-VMs run every step in a clean room, and every artifact is versioned and signed right on your machine. You get the guarantees of a managed platform with none of the data egress.",
     bullets: [
@@ -450,13 +518,13 @@ const DEEP_FEATURES: {
   },
   {
     eyebrow: "Step 04",
-    title: "Rich Integrations",
+    title: "Manage It All in the App",
     desc:
-      "Connect Bobby to everything your workflow already touches. Git webhooks trigger pipelines on push, PR, or tag. Container registries, secret stores, chat, and ticketing systems are one click away. Everything that isn't first-party is one tiny plugin shim — and plugins are just binaries, so you can ship your own in an afternoon.",
+      "Once you're live, the Bobby app is mission control. Tune pipeline stages, swap runners, set env vars and secrets, and flip features — all from one dashboard, no redeploy. Every change is versioned, so you can see what moved and roll back in a click. The setup from the first three steps lives here, editable any time.",
     bullets: [
-      "Git webhooks for GitHub, GitLab, Bitbucket",
-      "First-party registry, secret, and chat integrations",
-      "Plugin SDK — ship your own in minutes",
+      "Edit pipeline, infra, env & secrets in one place",
+      "Versioned config — full history, one-click rollback",
+      "Changes apply live — no redeploy required",
     ],
   },
 ]
@@ -859,9 +927,9 @@ function DeepFeatureDetail({
   // block fades and drifts upward just as the image begins its focus lift,
   // giving a brief pause at 0.30–0.38 where text + normal-size image both sit
   // fully loaded before anything moves.
-  // Only steps 1 (No-Code video) and 2 (Self-Hosted video) run the freeze/
+  // Only steps 1 (No-Code video) and 2 (Per-instance Infra video) run the freeze/
   // center focus choreography. Step 0 (Zero Config card) and step 3
-  // (Integrations orb) are decorative — their visual sits alongside the text
+  // (the config panel) are decorative — their visual sits alongside the text
   // rather than taking over, so no grow/fade-out of the text block.
   const hasVisual = index === 1 || index === 2
   const textBlockOp = useTransform(
@@ -951,8 +1019,8 @@ function DeepFeatureDetail({
 
         {/* Visual slot — index 0 (Zero Config) shows a "Start now" card that
             links to the docs, index 1 (No-Code Pipelines) embeds the
-            showcase video, index 2 (Self-Hosted) plays a recorded Docker
-            session as video, and index 3 (Integrations) renders a 3D orb. */}
+            showcase video, index 2 (Per-instance Infra) plays a recorded Docker
+            session as video, and index 3 (Manage configs) renders the app config panel. */}
         {index === 0 ? (
           // Zero Config — card sits alongside the text, no grow/freeze/center
           // choreography (matches the Integrations orb treatment at step 4).
@@ -975,7 +1043,7 @@ function DeepFeatureDetail({
                        border border-gray-200/80 dark:border-white/[0.07]"
           />
         ) : index === 2 ? (
-          // Self-Hosted — recorded Docker container-finder session. Video
+          // Per-instance Infra — recorded Docker container-finder session. Video
           // replaces the previous animated ImageSearchMockup since playback
           // is cheaper than running the mockup's framer-motion animation
           // tree on every scroll frame.
@@ -990,24 +1058,11 @@ function DeepFeatureDetail({
                        border border-gray-200/80 dark:border-white/[0.07]"
           />
         ) : (
-          // Integrations — 3D orb, rendered without any card frame and without
-          // the grow/freeze/center choreography. Wide/short aspect so the
-          // ellipsoid reads as a horizontal band of platform logos.
-          //
-          // The orb's tiles use fixed pixel coordinates (rx=260, ry=110) plus
-          // 64px tiles, so its natural extent is ~584×284. That fits a desktop
-          // column fine but blows past a ~335px mobile column on both axes.
-          // Rather than crop (which cuts the top/bottom rows of tiles), we
-          // scale the whole orb down on mobile via a CSS transform so it
-          // fits the column at its full visible extent. Wrapper height is
-          // sized to match the scaled orb height so nothing is cropped.
-          <motion.div
-            style={{ opacity: imgOp }}
-            className="relative mx-auto w-full h-[170px] md:h-auto md:aspect-[16/6] overflow-hidden"
-          >
-            <div className="absolute inset-0 origin-center scale-[0.55] md:scale-100">
-              <IntegrationsOrb />
-            </div>
+          // Manage configs — the Bobby app config panel (see ConfigPanel): the
+          // setup from steps 1–3, now editable in one place. Left-aligned to the
+          // copy, sizes to its own content.
+          <motion.div style={{ opacity: imgOp }} className="w-full">
+            <ConfigPanel />
           </motion.div>
         )}
       </motion.div>
