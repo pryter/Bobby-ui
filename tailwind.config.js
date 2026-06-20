@@ -8,6 +8,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // ── Primary brand colour — driven by CSS vars in app/globals.css ──
+        // Change the --primary-* ramp there to re-theme; opacity modifiers
+        // (bg-primary/40, ring-primary/30, …) work via <alpha-value>.
+        primary: {
+          DEFAULT: "rgb(var(--primary-400) / <alpha-value>)",
+          300: "rgb(var(--primary-300) / <alpha-value>)",
+          400: "rgb(var(--primary-400) / <alpha-value>)",
+          600: "rgb(var(--primary-600) / <alpha-value>)",
+          700: "rgb(var(--primary-700) / <alpha-value>)",
+          800: "rgb(var(--primary-800) / <alpha-value>)",
+          900: "rgb(var(--primary-900) / <alpha-value>)",
+        },
         "t-blue": "#a2d2ff",
         "t-blue-2": "#bde0fe",
         "t-pink": "#ffafcc",
@@ -21,8 +33,7 @@ module.exports = {
           blue:   "#2563eb", // rocket tile
           red:    "#f04e30", // bolt tile
           purple: "#7c3aed", // shield tile
-          // Brand accents
-          lime:    "#a3e635", // primary CTA (landing "Get started")
+          // Brand accent (`primary`, top-level) now lives in the CSS-var ramp.
           bg:      "#080808", // page background (dark)
           surface: "#111111", // nav pill / elevated surfaces
         },

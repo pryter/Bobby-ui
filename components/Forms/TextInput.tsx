@@ -17,7 +17,7 @@ export const TextInput: FC<TextInputProps> = ({
       </h2>
       <div className="relative h-11 w-full rounded-lg border border-gray-300 bg-gray-100
                     dark:border-white/10 dark:bg-white/[0.04]
-                    focus-within:border-gray-900 dark:focus-within:border-bobby-lime/60
+                    focus-within:border-gray-900 dark:focus-within:border-primary/60
                     transition-colors">
         <input
           type={type}

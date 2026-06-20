@@ -60,7 +60,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
   return (
     <>
       {text.slice(0, idx)}
-      <mark className="rounded bg-bobby-lime/25 px-0.5 text-inherit">{text.slice(idx, idx + q.length)}</mark>
+      <mark className="rounded bg-primary/25 px-0.5 text-inherit">{text.slice(idx, idx + q.length)}</mark>
       {text.slice(idx + q.length)}
     </>
   )
@@ -577,7 +577,7 @@ export default function ImagePicker({ value, onChange, placeholder, className }:
   }, [])
 
   // ── Styles (match ProjectConfiguration conventions) ──────────────────────
-  const inputBase = "rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 border-gray-200 bg-white text-gray-900 focus:ring-bobby-lime dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-bobby-lime/60"
+  const inputBase = "rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 border-gray-200 bg-white text-gray-900 focus:ring-primary dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-primary/60"
   const panel = "rounded-lg border border-gray-200 bg-white shadow-lg dark:border-white/[0.10] dark:bg-[#1a1a1a]"
 
   return (
@@ -627,7 +627,7 @@ export default function ImagePicker({ value, onChange, placeholder, className }:
                     {displayName(r.repo_name)}
                   </span>
                   {r.is_official && (
-                    <span title="Official image" className="inline-flex items-center text-bobby-lime">
+                    <span title="Official image" className="inline-flex items-center text-primary">
                       <CheckBadgeIcon className="h-4 w-4" />
                     </span>
                   )}
@@ -661,7 +661,7 @@ export default function ImagePicker({ value, onChange, placeholder, className }:
           {tagsError && <p className="text-xs text-red-500">{tagsError}</p>}
           {/* Inline validation for `repo:tag` typed directly into the search box. */}
           {tagValidation === "matched" && (
-            <p className="mb-2 text-xs text-bobby-lime">
+            <p className="mb-2 text-xs text-primary">
               ✓ Tag <span className="font-mono">{selectedTag}</span> found on Docker Hub.
             </p>
           )}
@@ -725,7 +725,7 @@ export default function ImagePicker({ value, onChange, placeholder, className }:
                             onClick={() => { applyStructured(v, pickedVariant); setVersionOpen(false) }}
                             className={`block w-full px-3 py-1.5 text-left font-mono text-xs transition ${
                               active
-                                ? "bg-bobby-lime/10 text-bobby-lime"
+                                ? "bg-primary/10 text-primary"
                                 : "text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-white/[0.04]"
                             }`}
                           >
@@ -795,7 +795,7 @@ export default function ImagePicker({ value, onChange, placeholder, className }:
                             onClick={() => { applyStructured(pickedVersion, v); setVariantOpen(false) }}
                             className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left font-mono text-xs transition ${
                               active
-                                ? "bg-bobby-lime/10 text-bobby-lime"
+                                ? "bg-primary/10 text-primary"
                                 : "text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-white/[0.04]"
                             }`}
                           >
@@ -803,7 +803,7 @@ export default function ImagePicker({ value, onChange, placeholder, className }:
                             {suggested && (
                               <span
                                 title="Recommended — small image, fast builds"
-                                className="rounded border border-bobby-lime/40 bg-bobby-lime/10 px-1.5 py-0 text-[9px] uppercase tracking-wide text-bobby-lime"
+                                className="rounded border border-primary/40 bg-primary/10 px-1.5 py-0 text-[9px] uppercase tracking-wide text-primary"
                               >
                                 suggested
                               </span>
@@ -845,8 +845,8 @@ export default function ImagePicker({ value, onChange, placeholder, className }:
                           title={`${formatBytes(meta?.full_size)} · ${formatRelativeTime(meta?.last_updated)}`}
                           className={`rounded-md border px-2 py-0.5 font-mono text-xs transition ${
                             active
-                              ? "border-bobby-lime bg-bobby-lime/10 text-bobby-lime"
-                              : "border-gray-200 bg-white text-gray-700 hover:border-bobby-lime/50 dark:border-white/[0.10] dark:bg-white/[0.03] dark:text-gray-200"
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-gray-200 bg-white text-gray-700 hover:border-primary/50 dark:border-white/[0.10] dark:bg-white/[0.03] dark:text-gray-200"
                           }`}
                         >
                           {p.raw}

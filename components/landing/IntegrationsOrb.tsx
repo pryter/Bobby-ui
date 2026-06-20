@@ -28,7 +28,7 @@ const BRANDS: Brand[] = [
   { name: "Slack",       slug: "slack",           bg: "#4a154b" },
   { name: "Discord",     slug: "discord",         bg: "#5865f2" },
   { name: "npm",         slug: "npm",             bg: "#cb3837" },
-  { name: "Bobby",       slug: null, letter: "B", bg: "#a3e635", fg: "#111111", ring: "#ffffff" },
+  { name: "Bobby",       slug: null, letter: "B", bg: "rgb(var(--primary-400))", fg: "#111111", ring: "#ffffff" },
 ]
 
 // ── Fibonacci sphere layout ──────────────────────────────────────────────────
@@ -97,7 +97,7 @@ export default function IntegrationsOrb() {
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-1/2 h-48 w-48 -translate-x-1/2 -translate-y-1/2
                    rounded-full opacity-60 blur-3xl"
-        style={{ background: "radial-gradient(closest-side, rgba(163,230,53,0.30), transparent 70%)" }}
+        style={{ background: "radial-gradient(closest-side, rgb(var(--primary-400) / 0.30), transparent 70%)" }}
       />
 
       <div className="absolute inset-0 flex items-center justify-center">
@@ -155,13 +155,13 @@ export default function IntegrationsOrb() {
         className="pointer-events-none absolute left-1/2 top-1/2 h-[320px] w-[640px] -translate-x-1/2 -translate-y-1/2 opacity-50"
       >
         <ellipse cx="0" cy="0" rx="290" ry="55"
-          fill="none" stroke="rgba(163,230,53,0.35)" strokeDasharray="2 5" />
+          fill="none" strokeDasharray="2 5" style={{ stroke: "rgb(var(--primary-400) / 0.35)" }} />
         <ellipse cx="0" cy="0" rx="265" ry="40"
-          fill="none" stroke="rgba(163,230,53,0.22)" strokeDasharray="1 4"
-          transform="rotate(10)" />
+          fill="none" strokeDasharray="1 4"
+          transform="rotate(10)" style={{ stroke: "rgb(var(--primary-400) / 0.22)" }} />
         <ellipse cx="0" cy="0" rx="300" ry="70"
-          fill="none" stroke="rgba(163,230,53,0.18)" strokeDasharray="1 6"
-          transform="rotate(-8)" />
+          fill="none" strokeDasharray="1 6"
+          transform="rotate(-8)" style={{ stroke: "rgb(var(--primary-400) / 0.18)" }} />
       </svg>
     </div>
   )
@@ -177,7 +177,7 @@ function BrandTile({ brand }: { brand: Brand }) {
         background: brand.bg,
         transform: "translate(-50%, -50%)",
         boxShadow: brand.ring
-          ? `0 0 0 2px ${brand.ring}, 0 6px 18px -6px rgba(0,0,0,0.45), 0 0 24px -6px rgba(163,230,53,0.55)`
+          ? `0 0 0 2px ${brand.ring}, 0 6px 18px -6px rgba(0,0,0,0.45), 0 0 24px -6px rgb(var(--primary-400) / 0.55)`
           : "0 6px 18px -6px rgba(0,0,0,0.45)",
       }}
     >

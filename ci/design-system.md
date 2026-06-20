@@ -1,6 +1,6 @@
 # Bobby — Corporate Identity & Design System
 
-> **Bobby** is a single workspace that turns ideas into shipped code, without forcing context-switches between half a dozen tools. The visual language is modern, dark-first, and playful — built around a signature lime accent, glass-morphic surfaces, and a colourful tile palette that signals energy and motion.
+> **Bobby** is a single workspace that turns ideas into shipped code, without forcing context-switches between half a dozen tools. The visual language is modern, dark-first, and playful — built around a signature yellow accent, glass-morphic surfaces, and a colourful tile palette that signals energy and motion.
 
 ---
 
@@ -38,7 +38,7 @@ The Bobby mark is a rounded glyph with two stylised "eyes" — a friendly, appro
 |---|---|---|
 | Mark — Light | Dark surfaces (primary) | `assets/logo-mark-light.svg` |
 | Mark — Dark | Light surfaces | `assets/logo-mark-dark.svg` |
-| Mark — Lime | Monochrome accent / merch | `assets/logo-mark-lime.svg` |
+| Mark — Yellow | Monochrome accent / merch | `assets/logo-mark-yellow.svg` |
 | Lockup — Light | Header / footer on dark | `assets/logo-lockup-light.svg` |
 | Lockup — Dark | Header / footer on light | `assets/logo-lockup-dark.svg` |
 | Favicon source | App icon / PWA | `assets/favicon-source.svg` |
@@ -60,7 +60,7 @@ All hex values come from [tailwind.config.js](../tailwind.config.js) and compone
 ### 3.1 Core brand
 | Token | Hex | Role |
 |---|---|---|
-| `brand/lime` | `#a3e635` | **Primary CTA** — "Get started", key actions, focus accents |
+| `brand/yellow` | `#facc15` | **Primary CTA** — "Get started", key actions, focus accents |
 | `brand/bg` | `#080808` | Page background (dark mode default) |
 | `brand/surface` | `#111111` | Elevated surfaces — nav pill, sidebar, cards |
 
@@ -103,7 +103,7 @@ Used on the landing hero and feature tiles. Each hue maps to a product capabilit
 |---|---|---|
 | Text / primary | `#1f2937` | `#ffffff` |
 | Text / secondary | `#6b7280` | `#9ca3af` |
-| Text / link (success) | `#16a34a` | `#a3e635` |
+| Text / link | `#a16207` | `#facc15` |
 | Text / code (error) | `#be185d` | `#f9a8d4` |
 | Border | `#e5e7eb` | `rgba(255,255,255,0.08)` |
 | Hover overlay | `rgba(0,0,0,0.06)` | `rgba(255,255,255,0.06)` |
@@ -111,7 +111,7 @@ Used on the landing hero and feature tiles. Each hue maps to a product capabilit
 
 ### 3.6 Accessibility
 Always verify contrast with WCAG AA (4.5 : 1 for body, 3 : 1 for large text).
-- `brand/lime` on `brand/bg` — AA for large text only; **do not** use lime on dark for body copy. Lime on black button: black text, never white.
+- `brand/yellow` on `brand/bg` — AA for large text only; **do not** use yellow on dark for body copy. Yellow on black button: black text, never white.
 - Neutral pairings in §3.5 are pre-validated for AA.
 
 ---
@@ -190,7 +190,7 @@ Loaded via `next/font/google` on `latin` subset — see [app/layout.tsx](../app/
 ### 6.1 Button
 | Variant | Background | Text | Radius |
 |---|---|---|---|
-| Primary | `#a3e635` | `#000000` | `radius/full` |
+| Primary | `#facc15` | `#000000` | `radius/full` |
 | Secondary (dark) | `rgba(255,255,255,0.06)` + border `rgba(255,255,255,0.12)` | `#ffffff` | `radius/full` |
 | Secondary (light) | `#ffffff` + border `#d1d5db` | `#1f2937` | `radius/full` |
 | Ghost | transparent → `rgba(255,255,255,0.06)` on hover | inherit | `radius/full` |
@@ -207,7 +207,7 @@ Interaction: `hover:scale-[1.02]`, `active:scale-[0.98]`, `transition-all` — ~
 ### 6.3 Input
 - Background: `#f3f4f6` / `rgba(255,255,255,0.04)`
 - Border: `#d1d5db` / `rgba(255,255,255,0.10)`
-- Focus border: `#111827` / `rgba(163,230,53,0.60)`
+- Focus border: `#111827` / `rgba(250,204,21,0.60)`
 - Radius: 8 – 12 px.
 
 ### 6.4 Navigation pill (desktop)
@@ -252,7 +252,7 @@ color: transparent;
 ### 8.2 Ambient glows
 | Name | Recipe |
 |---|---|
-| Lime glow | `radial-gradient(circle, rgba(163,230,53,0.25) 0%, rgba(163,230,53,0.11) 25%, rgba(163,230,53,0.04) 50%, transparent 70%)` |
+| Yellow glow | `radial-gradient(circle, rgba(250,204,21,0.25) 0%, rgba(250,204,21,0.11) 25%, rgba(250,204,21,0.04) 50%, transparent 70%)` |
 | Indigo glow | `radial-gradient(circle, rgba(99,102,241,0.14) 0%, rgba(124,77,255,0.05) 45%, transparent 70%)` |
 | Tile halo | `radial-gradient(circle, {tile-color}B3 0%, transparent 70%)` |
 
@@ -279,7 +279,7 @@ ci/
 └── assets/
     ├── logo-mark-light.svg    ← primary mark, white fill
     ├── logo-mark-dark.svg     ← mark, black fill
-    ├── logo-mark-lime.svg     ← mark, lime fill
+    ├── logo-mark-yellow.svg   ← mark, yellow fill
     ├── logo-lockup-light.svg  ← mark + wordmark, light
     ├── logo-lockup-dark.svg   ← mark + wordmark, dark
     ├── favicon-source.svg     ← favicon master

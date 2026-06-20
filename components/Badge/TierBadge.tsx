@@ -2,7 +2,7 @@ import classnames from "classnames"
 import type { FC } from "react"
 
 const ClassVariants = {
-  pro: "bg-bobby-lime/90 border-bobby-lime/60 text-black",
+  pro: "bg-primary/90 border-primary/60 text-black",
   free: "bg-gray-100 border-gray-300 text-gray-700 dark:bg-white/[0.06] dark:border-white/[0.12] dark:text-gray-300",
 }
 

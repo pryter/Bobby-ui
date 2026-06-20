@@ -121,11 +121,11 @@ export default function ImageSearchMockup() {
   return (
     <div className="relative h-full w-full rounded-2xl border border-gray-200 bg-white
                     dark:border-white/[0.08] dark:bg-[#0c0c0c] p-5 md:p-6 overflow-hidden">
-      {/* Ambient lime glow behind the card */}
+      {/* Ambient yellow glow behind the card */}
       <div
         aria-hidden
         className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl opacity-40"
-        style={{ background: "radial-gradient(closest-side, rgba(163,230,53,0.35), transparent 70%)" }}
+        style={{ background: "radial-gradient(closest-side, rgb(var(--primary-400) / 0.35), transparent 70%)" }}
       />
 
       <div className="relative flex flex-col gap-4">
@@ -136,7 +136,7 @@ export default function ImageSearchMockup() {
               "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm " +
               "bg-white dark:bg-[#141414] " +
               (showResults
-                ? "border-[#a3e635] ring-2 ring-[#a3e635]/30"
+                ? "border-primary ring-2 ring-primary/30"
                 : "border-gray-200 dark:border-white/[0.10]")
             }
           >
@@ -183,7 +183,7 @@ export default function ImageSearchMockup() {
                             {r.name.startsWith("library/") ? r.name.slice(8) : r.name}
                           </span>
                           {r.official && (
-                            <CheckBadgeIcon className="h-3.5 w-3.5 text-[#a3e635] flex-none" />
+                            <CheckBadgeIcon className="h-3.5 w-3.5 text-primary flex-none" />
                           )}
                         </div>
                         <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
@@ -216,7 +216,7 @@ export default function ImageSearchMockup() {
               <div className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-white/[0.08]
                               bg-gray-50 dark:bg-white/[0.03] px-3 py-2 text-sm">
                 <span className="font-mono text-gray-900 dark:text-white">postgres</span>
-                <CheckBadgeIcon className="h-3.5 w-3.5 text-[#a3e635]" />
+                <CheckBadgeIcon className="h-3.5 w-3.5 text-primary" />
                 <span className="text-gray-400 dark:text-gray-500 text-xs">Official image</span>
               </div>
 
@@ -256,7 +256,7 @@ export default function ImageSearchMockup() {
                           className={
                             "px-3 py-1.5 text-sm font-mono transition-colors " +
                             (hovered
-                              ? "bg-[#a3e635]/10 text-[#7ba320] dark:text-[#a3e635]"
+                              ? "bg-primary/10 text-primary-600 dark:text-primary"
                               : "text-gray-700 dark:text-gray-200")
                           }
                         >
@@ -289,15 +289,15 @@ export default function ImageSearchMockup() {
                           className={
                             "flex items-center gap-2 px-3 py-1.5 text-sm font-mono transition-colors " +
                             (hovered
-                              ? "bg-[#a3e635]/10 text-[#7ba320] dark:text-[#a3e635]"
+                              ? "bg-primary/10 text-primary-600 dark:text-primary"
                               : "text-gray-700 dark:text-gray-200")
                           }
                         >
                           <span>{v}</span>
                           {suggested && (
                             <span className="text-[9px] uppercase tracking-wider rounded
-                                             border border-[#a3e635]/40 bg-[#a3e635]/10
-                                             text-[#7ba320] dark:text-[#a3e635]
+                                             border border-primary/40 bg-primary/10
+                                             text-primary-600 dark:text-primary
                                              px-1 py-[1px]">
                               suggested
                             </span>
@@ -330,9 +330,9 @@ export default function ImageSearchMockup() {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: i * 0.06, duration: 0.25 }}
                           className="inline-flex items-center gap-1.5 rounded-md
-                                     border border-[#a3e635]/40 bg-[#a3e635]/10
+                                     border border-primary/40 bg-primary/10
                                      px-2 py-1 text-xs font-mono
-                                     text-[#5f8418] dark:text-[#a3e635]"
+                                     text-primary-700 dark:text-primary"
                         >
                           <span>{t.name}</span>
                           <span className="text-[10px] text-gray-400">{t.size}</span>
@@ -369,7 +369,7 @@ function DropdownButton({
           "flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm " +
           "bg-white dark:bg-[#141414] transition-colors " +
           (active
-            ? "border-[#a3e635] ring-2 ring-[#a3e635]/30"
+            ? "border-primary ring-2 ring-primary/30"
             : "border-gray-200 dark:border-white/[0.10]")
         }
       >

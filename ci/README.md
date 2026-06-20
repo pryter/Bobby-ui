@@ -17,7 +17,7 @@ Source of truth for the Bobby brand — colours, typography, logo, and visual la
 assets/
 ├── logo-mark-light.svg     White mark · for dark surfaces
 ├── logo-mark-dark.svg      Black mark · for light surfaces
-├── logo-mark-lime.svg      Lime mark · monochrome accent
+├── logo-mark-yellow.svg    Yellow mark · monochrome accent
 ├── logo-lockup-light.svg   Mark + wordmark · dark backgrounds
 ├── logo-lockup-dark.svg    Mark + wordmark · light backgrounds
 ├── favicon-source.svg      128 × 128 master for favicon/PWA

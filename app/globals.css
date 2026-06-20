@@ -10,6 +10,21 @@
   initial-value: 0deg;
 }
 
+/* ── Primary brand colour — single source of truth ────────────────────────
+   Change these six RGB triplets to re-theme the entire app: buttons, CTAs,
+   glows, focus rings, links, badges, accents. Values are space-separated RGB
+   so Tailwind applies opacity via `rgb(var(--primary-400) / <alpha-value>)`
+   and inline styles/SVG use `rgb(var(--primary-400) / 0.25)`.
+   Current ramp = Tailwind "yellow". To test e.g. indigo, swap in that ramp. */
+:root {
+  --primary-300: 253 224 71; /* #fde047 — light hover (dark mode)        */
+  --primary-400: 250 204 21; /* #facc15 — PRIMARY / default              */
+  --primary-600: 202 138 4;  /* #ca8a04 — accent text/icon on light bg   */
+  --primary-700: 161 98 7;   /* #a16207 — links / darker accent (light)  */
+  --primary-800: 133 77 14;  /* #854d0e — link hover (light)             */
+  --primary-900: 113 63 18;  /* #713f12 — deep accent (status dot)       */
+}
+
 .curtain {
   @apply fixed inset-0 z-50 bg-white bg-opacity-80;
 }
@@ -106,22 +121,22 @@ html.dark .docs-prose h3 { color: #fff; }
 }
 
 .docs-prose a {
-  color: #16a34a;
+  color: rgb(var(--primary-700));
   text-decoration: none;
-  border-bottom: 1px solid rgba(22, 163, 74, 0.35);
+  border-bottom: 1px solid rgb(var(--primary-700) / 0.35);
   transition: border-color 0.15s, color 0.15s;
 }
 .docs-prose a:hover {
-  color: #15803d;
-  border-bottom-color: #15803d;
+  color: rgb(var(--primary-800));
+  border-bottom-color: rgb(var(--primary-800));
 }
 html.dark .docs-prose a {
-  color: #a3e635;
-  border-bottom-color: rgba(163, 230, 53, 0.35);
+  color: rgb(var(--primary-400));
+  border-bottom-color: rgb(var(--primary-400) / 0.35);
 }
 html.dark .docs-prose a:hover {
-  color: #bef264;
-  border-bottom-color: #bef264;
+  color: rgb(var(--primary-300));
+  border-bottom-color: rgb(var(--primary-300));
 }
 
 .docs-prose strong {
@@ -174,8 +189,8 @@ html.dark .docs-prose code {
 .docs-prose blockquote {
   margin: 1.5rem 0;
   padding: 0.5rem 1rem;
-  border-left: 3px solid #a3e635;
-  background: rgba(163, 230, 53, 0.06);
+  border-left: 3px solid rgb(var(--primary-400));
+  background: rgb(var(--primary-400) / 0.06);
   border-radius: 0 10px 10px 0;
   color: #4b5563;
   font-style: italic;

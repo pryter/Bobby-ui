@@ -12,9 +12,9 @@
   <!-- BRAND -->
   <text x="40" y="50" class="group">Brand</text>
   <g transform="translate(40, 70)">
-    <rect width="260" height="120" rx="16" fill="#a3e635"/>
-    <text x="20" y="40" class="label invert name">brand / lime</text>
-    <text x="20" y="62" class="hex" style="fill:#1f2937">#a3e635</text>
+    <rect width="260" height="120" rx="16" fill="#facc15"/>
+    <text x="20" y="40" class="label invert name">brand / yellow</text>
+    <text x="20" y="62" class="hex" style="fill:#1f2937">#facc15</text>
     <text x="20" y="100" class="hex" style="fill:#1f2937">Primary CTA</text>
   </g>
   <g transform="translate(320, 70)">

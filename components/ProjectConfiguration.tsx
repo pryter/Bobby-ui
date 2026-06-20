@@ -229,8 +229,8 @@ export default function ProjectConfiguration({ id }: { id: string }) {
   }
 
   const card = "rounded-2xl border border-gray-200/80 bg-white/60 dark:border-white/[0.07] dark:bg-white/[0.02]"
-  const inputBase = "rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 border-gray-200 bg-white text-gray-900 focus:ring-bobby-lime dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-bobby-lime/60"
-  const primaryBtn = "rounded-full bg-bobby-lime px-4 py-1.5 text-sm font-semibold text-black hover:bg-bobby-lime/90 disabled:opacity-50"
+  const inputBase = "rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 border-gray-200 bg-white text-gray-900 focus:ring-primary dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-primary/60"
+  const primaryBtn = "rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-black hover:bg-primary/90 disabled:opacity-50"
   const ghostBtn = "rounded-full px-4 py-1.5 text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
 
   return (
@@ -375,8 +375,8 @@ export default function ProjectConfiguration({ id }: { id: string }) {
                         value={row.key}
                         onChange={(e) => updateEnvRow(i, "key", e.target.value)}
                         className="w-2/5 rounded-lg border px-3 py-1.5 font-mono text-xs outline-none focus:ring-2
-                                   border-gray-200 bg-white text-gray-900 focus:ring-bobby-lime
-                                   dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-bobby-lime/60"
+                                   border-gray-200 bg-white text-gray-900 focus:ring-primary
+                                   dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-primary/60"
                       />
                       <input
                         type="text"
@@ -384,8 +384,8 @@ export default function ProjectConfiguration({ id }: { id: string }) {
                         value={row.value}
                         onChange={(e) => updateEnvRow(i, "value", e.target.value)}
                         className="flex-1 rounded-lg border px-3 py-1.5 font-mono text-xs outline-none focus:ring-2
-                                   border-gray-200 bg-white text-gray-900 focus:ring-bobby-lime
-                                   dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-bobby-lime/60"
+                                   border-gray-200 bg-white text-gray-900 focus:ring-primary
+                                   dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-white dark:focus:ring-primary/60"
                       />
                       <button
                         onClick={() => removeEnvRow(i)}
@@ -433,7 +433,7 @@ export default function ProjectConfiguration({ id }: { id: string }) {
             className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
               saved
                 ? "bg-green-500 text-white"
-                : "bg-bobby-lime text-black hover:bg-bobby-lime/90 disabled:opacity-50"
+                : "bg-primary text-black hover:bg-primary/90 disabled:opacity-50"
             }`}
           >
             {saving ? "Saving…" : saved ? "Saved ✓" : "Save Pipeline"}
@@ -467,7 +467,7 @@ export default function ProjectConfiguration({ id }: { id: string }) {
               className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
                 saved
                   ? "bg-green-500 text-white"
-                  : "bg-bobby-lime text-black hover:bg-bobby-lime/90 disabled:opacity-50"
+                  : "bg-primary text-black hover:bg-primary/90 disabled:opacity-50"
               }`}
             >
               {saving ? "Saving…" : saved ? "Saved ✓" : "Save Pipeline"}

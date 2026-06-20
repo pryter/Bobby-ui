@@ -106,7 +106,7 @@ export default function Navbar({ dark, onToggle }: { dark: boolean; onToggle: ()
           <button
             onClick={() => router.push("/account")}
             className="ml-1 px-4 py-1.5 rounded-full text-sm font-bold text-black transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
-            style={{ background: "#a3e635" }}
+            style={{ background: "rgb(var(--primary-400))" }}
           >
             Get started
           </button>
@@ -264,7 +264,7 @@ export default function Navbar({ dark, onToggle }: { dark: boolean; onToggle: ()
                 setMenuOpen(false)
               }}
               className="w-full py-2.5 rounded-full text-sm font-bold text-black transition-all hover:scale-105 active:scale-95"
-              style={{ background: "#a3e635" }}
+              style={{ background: "rgb(var(--primary-400))" }}
             >
               Get started
             </button>
@@ -287,7 +287,7 @@ export default function Navbar({ dark, onToggle }: { dark: boolean; onToggle: ()
         }}
         onClick={() => router.push("/account")}
         className="fixed top-5 right-4 z-[60] sm:hidden h-11 shadow-md rounded-full font-bold text-black flex items-center justify-end overflow-hidden"
-        style={{ background: "#a3e635", pointerEvents: menuOpen ? "none" : "auto" }}
+        style={{ background: "rgb(var(--primary-400))", pointerEvents: menuOpen ? "none" : "auto" }}
         aria-label="Get started"
       >
         <motion.span

@@ -35,7 +35,7 @@ export default function PairPage({ params }: { params: Promise<{ code: string }>
       {/* Ambient glow */}
       <div
         className="pointer-events-none fixed inset-0 opacity-0 dark:opacity-100"
-        style={{ background: "radial-gradient(ellipse at 50% 30%,rgba(163,230,53,0.04) 0%,transparent 60%)" }}
+        style={{ background: "radial-gradient(ellipse at 50% 30%,rgb(var(--primary-400) / 0.04) 0%,transparent 60%)" }}
       />
 
       <motion.div
@@ -46,8 +46,8 @@ export default function PairPage({ params }: { params: Promise<{ code: string }>
                    bg-gray-50/60 dark:bg-white/[0.02] px-8 py-10"
       >
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#a3e635]/10">
-            <LinkIcon className="w-5 h-5 text-[#a3e635]" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10">
+            <LinkIcon className="w-5 h-5 text-primary" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Link Worker</h1>
         </div>
@@ -97,7 +97,7 @@ export default function PairPage({ params }: { params: Promise<{ code: string }>
             whileTap={{ scale: 0.98 }}
             className="mt-7 w-full py-3 rounded-full text-sm font-bold text-black
                        disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-            style={{ background: "#a3e635" }}
+            style={{ background: "rgb(var(--primary-400))" }}
           >
             {status === "loading" ? "Linking…" : "Confirm & Link Worker"}
           </motion.button>

@@ -13,7 +13,7 @@ export default function DocsIndex() {
   return (
     <div className="docs-content">
       <div className="mb-10">
-        <div className="text-xs uppercase tracking-wider font-semibold text-bobby-lime mb-3">
+        <div className="text-xs uppercase tracking-wider font-semibold text-primary mb-3">
           Documentation
         </div>
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">
@@ -31,7 +31,7 @@ export default function DocsIndex() {
             href={`/docs/${doc.slug}`}
             className="group relative p-5 rounded-2xl border border-black/[0.08] dark:border-white/[0.08] bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors"
           >
-            <div className="text-base font-semibold text-black dark:text-white group-hover:text-bobby-lime transition-colors">
+            <div className="text-base font-semibold text-black dark:text-white group-hover:text-primary transition-colors">
               {doc.title}
             </div>
             {doc.description && (
@@ -39,7 +39,7 @@ export default function DocsIndex() {
                 {doc.description}
               </div>
             )}
-            <span className="absolute top-5 right-5 text-gray-400 group-hover:text-bobby-lime transition-colors">→</span>
+            <span className="absolute top-5 right-5 text-gray-400 group-hover:text-primary transition-colors">→</span>
           </Link>
         ))}
       </div>

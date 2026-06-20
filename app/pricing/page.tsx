@@ -76,7 +76,7 @@ export default function PricingPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.22, 0.1, 0.35, 1] }}
         >
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#7ba320] dark:text-[#a3e635] mb-3">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary-600 dark:text-primary mb-3">
             Pricing
           </p>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-5">
@@ -141,26 +141,26 @@ export default function PricingPage() {
           <motion.div
             style={{ opacity: card2Opacity, y: card2Y }}
             className="relative rounded-3xl p-8 flex flex-col
-                       border border-[#a3e635]/30
+                       border border-primary/30
                        bg-gray-50/60 dark:bg-white/[0.02]
                        overflow-hidden"
           >
             {/* Top glow */}
             <div
               className="absolute inset-0 pointer-events-none opacity-0 dark:opacity-100"
-              style={{ background: "radial-gradient(ellipse at 50% 0%,rgba(163,230,53,0.06) 0%,transparent 60%)" }}
+              style={{ background: "radial-gradient(ellipse at 50% 0%,rgb(var(--primary-400) / 0.06) 0%,transparent 60%)" }}
             />
 
             <div className="relative flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#a3e635]/10">
-                <RocketLaunchIcon className="w-5 h-5 text-[#a3e635]" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10">
+                <RocketLaunchIcon className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <h3 className="text-lg font-bold">Cloud Workers</h3>
                 <p className="text-xs text-gray-400 dark:text-gray-500">Managed infrastructure</p>
               </div>
               <span className="ml-auto text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full
-                               bg-[#a3e635]/10 text-[#a3e635] border border-[#a3e635]/20">
+                               bg-primary/10 text-primary border border-primary/20">
                 Coming soon
               </span>
             </div>
@@ -173,7 +173,7 @@ export default function PricingPage() {
             <ul className="relative flex flex-col gap-4 text-sm text-gray-600 dark:text-gray-300 mb-10 flex-1">
               {CLOUD_FEATURES.map(({ icon: Icon, text }) => (
                 <li key={text} className="flex items-start gap-3">
-                  <Icon className="w-[18px] h-[18px] mt-0.5 text-[#a3e635] shrink-0" />
+                  <Icon className="w-[18px] h-[18px] mt-0.5 text-primary shrink-0" />
                   {text}
                 </li>
               ))}
@@ -183,7 +183,7 @@ export default function PricingPage() {
               disabled
               className="relative w-full py-3.5 rounded-full text-sm font-bold text-black
                          transition-all cursor-not-allowed opacity-60"
-              style={{ background: "#a3e635" }}
+              style={{ background: "rgb(var(--primary-400))" }}
             >
               Notify me
             </button>

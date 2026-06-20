@@ -107,12 +107,12 @@ export default function AccountPage() {
                      bg-white/80 dark:bg-white/[0.02] backdrop-blur-xl
                      shadow-xl shadow-black/5 dark:shadow-black/40"
         >
-          {/* Top accent gradient — same lime glow used on landing CTA */}
+          {/* Top accent gradient — same yellow glow used on landing CTA */}
           <div
             className="pointer-events-none absolute inset-x-0 top-0 h-40"
             style={{
               background:
-                "radial-gradient(ellipse at 50% 0%,rgba(163,230,53,0.12) 0%,transparent 70%)",
+                "radial-gradient(ellipse at 50% 0%,rgb(var(--primary-400) / 0.12) 0%,transparent 70%)",
             }}
           />
 
@@ -198,11 +198,11 @@ export default function AccountPage() {
               <TextInput placeholder="••••••••" title="Password" type="password" />
             </div>
 
-            {/* Primary CTA — lime, matches landing "Get started" */}
+            {/* Primary CTA — yellow, matches landing "Get started" */}
             <button
               onClick={() => {}}
               className="mt-6 w-full rounded-full py-3 text-sm font-bold text-black
-                         bg-bobby-lime shadow-lg shadow-bobby-lime/20
+                         bg-primary shadow-lg shadow-primary/20
                          transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               Sign in
