@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
+import type { MotionValue } from "framer-motion"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PixelGradient
@@ -103,6 +104,8 @@ export default function PixelGradient({
   bloomStart = 0.05,     // smoothstep range: lower bloomEnd = tighter, darker sooner
   bloomEnd = 1.0,
   levels = 0,            // 0 = smooth ramp; N>1 posterises into N hard steps (chunkier)
+  wipeProgress,          // MotionValue 0→1: dissolves the bloom outer→inner into the page bg
+  wipeSteps = 0,         // 0 = smooth wipe; N>1 advances the front in N hard rings (step-by-step)
   className = "",
 }: {
   stops?: Stop[]
@@ -115,6 +118,8 @@ export default function PixelGradient({
   bloomStart?: number
   bloomEnd?: number
   levels?: number
+  wipeProgress?: MotionValue<number>
+  wipeSteps?: number
   className?: string
 }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -152,6 +157,16 @@ export default function PixelGradient({
         maxR = Math.max(maxR, dist(rx, ry))
       }
 
+      const bg = activeStops[activeStops.length - 1].c
+      // Wipe: as wipeProgress goes 0→1, a page-bg "front" sweeps from the outer
+      // tiles inward, dissolving the bloom outer→inner (a pixel ripple).
+      const pRaw = wipeProgress ? Math.max(0, Math.min(1, wipeProgress.get())) : 0
+      // Snap the progress to discrete rings when wipeSteps is set, so tiles drop
+      // out ring-by-ring (each step holds, then the next outer ring disappears).
+      const p = wipeSteps > 1 ? Math.floor(pRaw * wipeSteps) / wipeSteps : pRaw
+      const front = lerp(1.04, -0.04, p)
+      const wipeEdge = wipeSteps > 1 ? 0.03 : 0.1 // harder edge → cleaner ring step
+
       const img = ctx.createImageData(cols, rows)
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
@@ -165,8 +180,13 @@ export default function PixelGradient({
           let t = smoothstep(bloomStart, bloomEnd, r)
           if (levels > 1) t = Math.round(t * (levels - 1)) / (levels - 1) // posterise → harder steps
           const c = sampleStops(activeStops, t)
+          let cr = c[0], cg = c[1], cbl = c[2]
+          if (p > 0) {
+            const wf = smoothstep(front, front + wipeEdge, r) // 0 = keep tile, 1 = page bg
+            if (wf > 0) { cr = lerp(cr, bg[0], wf); cg = lerp(cg, bg[1], wf); cbl = lerp(cbl, bg[2], wf) }
+          }
           const i = (y * cols + x) * 4
-          img.data[i] = c[0]; img.data[i + 1] = c[1]; img.data[i + 2] = c[2]; img.data[i + 3] = 255
+          img.data[i] = cr; img.data[i + 1] = cg; img.data[i + 2] = cbl; img.data[i + 3] = 255
         }
       }
       ctx.putImageData(img, 0, 0)
@@ -181,8 +201,10 @@ export default function PixelGradient({
       mo = new MutationObserver(draw)
       mo.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
     }
-    return () => { ro.disconnect(); mo?.disconnect() }
-  }, [stops, tiltDeg, tilePx, tileAspect, anchorX, anchorY, metric, bloomStart, bloomEnd, levels])
+    // Redraw imperatively as the wipe progress changes (no React re-render).
+    const unsubWipe = wipeProgress?.on("change", draw)
+    return () => { ro.disconnect(); mo?.disconnect(); unsubWipe?.() }
+  }, [stops, tiltDeg, tilePx, tileAspect, anchorX, anchorY, metric, bloomStart, bloomEnd, levels, wipeProgress, wipeSteps])
 
   return (
     <canvas

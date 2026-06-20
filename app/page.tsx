@@ -1805,6 +1805,11 @@ export default function LandingPage() {
   // Smooth spring follows scroll with inertia — lower stiffness = more lag
   const smoothProgress = useSpring(scrollYProgress, { stiffness: 60, damping: 24, restDelta: 0.001 })
 
+  // Hero flare starts dissolving once the tiles reach centre (tile rise finishes
+  // ~0.42–0.50), rippling away outer→inner ring-by-ring to the page background
+  // and completing just as the hero ends.
+  const heroFlareWipe = useTransform(smoothProgress, [0.42, 1.0], [0, 1])
+
   // ── Features section scroll timeline ──────────────────────────────────────
   const { scrollYProgress: featuresSYP } = useScroll({
     target: featuresRef,
@@ -1857,9 +1862,9 @@ export default function LandingPage() {
       <div ref={heroRef} style={{ height: tileCount === 4 ? "calc(100vh + 2500px)" : "calc(100vh + 2500px)" }}>
         <div className="sticky top-0 h-screen overflow-hidden">
 
-          {/* Background — pixelated primary flare from the top, fading into the
-              page background. The low-contrast warm→bg ramp + broad anchor keep
-              it a subtle flare, not hard concentric rings. */}
+          {/* Background — pixelated primary flare from the top. As the hero
+              scrolls away the bloom dissolves outer→inner into the page bg (a
+              pixel ripple), driven by smoothProgress via wipeProgress. */}
           <PixelGradient
             stops={dark ? HERO_FLARE_DARK : HERO_FLARE_LIGHT}
             metric="circle"
@@ -1870,6 +1875,8 @@ export default function LandingPage() {
             tileAspect={1.2}
             bloomStart={0}
             bloomEnd={0.68}
+            wipeProgress={heroFlareWipe}
+            wipeSteps={24}
           />
 
           {/* ── Hero content: text upper, tiles lower ─────────────────── */}
