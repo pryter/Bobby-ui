@@ -34,7 +34,14 @@ export default function AccountPage() {
         window.location.hostname === "localhost"
           ? "http://localhost:3000"
           : "https://bobby.host"
-      return new URL("/auth/callback", base).href
+      const callback = new URL("/auth/callback", base)
+      // Preserve a post-login return target (e.g. an in-progress /api/sso/authorize
+      // request) so the flow resumes after OAuth. The callback route forwards `next`.
+      const next = new URLSearchParams(window.location.search).get("next")
+      if (next && next.startsWith("/")) {
+        callback.searchParams.set("next", next)
+      }
+      return callback.href
     }
 
     await supabase.auth.signInWithOAuth({
