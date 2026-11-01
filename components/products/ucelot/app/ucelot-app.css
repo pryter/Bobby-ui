@@ -1,0 +1,399 @@
+/* ─── Ucelot app — static port of the real dashboard's light theme ──────────
+   Source: bobby-tracker/app/globals.css (Tailwind v4). Everything here is
+   scoped under `.ucelot-app` so it can sit inside the dark marketing site
+   without leaking. Plain CSS only (this repo is Tailwind v3): no @apply, no
+   @theme, no v4 syntax. Light theme values only.
+
+   Text colour is SET here (never inherited from the dark page around it). The
+   font family is inherited: the site font is already Nunito, same as the app. */
+
+.ucelot-app {
+    /* ── core tokens (light) ─────────────────────────────────────────────── */
+    --c-page:          #fbfbfc;
+    --c-shell:         #f1efec;
+    --c-surface:       #ffffff;
+    --c-surface-2:     #f7f7f8;
+    --c-border:        #ececef;
+    --c-border-strong: #dcdfe4;
+    --c-text:          #1f2430;
+    --c-text-muted:    #6b7280;
+    --c-text-dim:      #a3a8b0;
+    --c-overlay:       rgba(17,24,39,0.035);
+
+    --c-success:       #16a34a;
+    --c-success-bg:    #f0fdf4;
+    --c-warn:          #b45309;
+    --c-warn-bg:       #fffbeb;
+    --c-error:         #b91c1c;
+    --c-error-bg:      #fef2f2;
+
+    --c-primary:       #e9730f;
+    --c-primary-hover: #cf6310;
+    --c-primary-tint:  #fff3e6;
+    --c-ring:          rgba(233,115,15,0.22);
+    --c-accent:        #c2410c;
+    --c-accent-2:      #9a3412;
+
+    --c-secondary:      #0a0d1c;
+    --c-secondary-deep: #090c1c;
+    --c-inverse:        #18181b;
+    --c-inverse-ink:    #ffffff;
+
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 16px;
+    --r-xl: 20px;
+
+    --shadow-card:  0 1px 1px rgba(17,24,39,0.025), 0 1px 2px rgba(17,24,39,0.02);
+    --shadow-pop:   0 12px 32px -8px rgba(15,23,42,0.18), 0 2px 6px rgba(15,23,42,0.06);
+    --shadow-panel: 0 0 0 1px var(--c-border), -10px -8px 28px -18px rgba(17,24,39,0.16);
+
+    /* ── app palette — org colour chips (light bg + saturated tone) ──────── */
+    --app-crimson-bg: #FADFE0;  --app-crimson: #C0394A;
+    --app-rose-bg:    #FBE2E7;  --app-rose:    #CB4668;
+    --app-pink-bg:    #FBE3EF;  --app-pink:    #C84C86;
+    --app-blush-bg:   #FCE6EC;  --app-blush:   #D2698D;
+    --app-magenta-bg: #F8E0F0;  --app-magenta: #BC3F94;
+    --app-fuchsia-bg: #F7E2F5;  --app-fuchsia: #B642AC;
+    --app-orchid-bg:     #F2E4F7;  --app-orchid:     #9D4DBB;
+    --app-purple-bg:     #EEE6FA;  --app-purple:     #8A4FCE;
+    --app-violet-bg:     #EAE6FB;  --app-violet:     #7350D6;
+    --app-lavender-bg:   #EBEAFC;  --app-lavender:   #6257D4;
+    --app-periwinkle-bg: #E6E9FC;  --app-periwinkle: #5566D6;
+    --app-indigo-bg: #E2E8FB;  --app-indigo: #3F5BCC;
+    --app-blue-bg:   #E0EBFD;  --app-blue:   #3370D4;
+    --app-azure-bg:  #DEEDFC;  --app-azure:  #2484CC;
+    --app-sky-bg:    #DBF0FB;  --app-sky:    #1B91C2;
+    --app-cyan-bg:   #D8F3F4;  --app-cyan:   #0E9AA4;
+    --app-teal-bg:    #D7F2EC;  --app-teal:    #10917F;
+    --app-mint-bg:    #DDF5EB;  --app-mint:    #1FA06E;
+    --app-spruce-bg:  #DBF1E6;  --app-spruce:  #1C8F66;
+    --app-emerald-bg: #DCF4E4;  --app-emerald: #1E9C58;
+    --app-green-bg:   #E0F4DC;  --app-green:   #3D9A37;
+    --app-fern-bg:    #E5F3D6;  --app-fern:    #57962A;
+    --app-sage-bg:    #E9F0DE;  --app-sage:    #6E8A4E;
+    --app-lime-bg:    #EDF5CE;  --app-lime:    #7C9011;
+    --app-olive-bg:  #F0EFD2;  --app-olive:  #8C8520;
+    --app-citron-bg: #F6F2C9;  --app-citron: #9A8C0E;
+    --app-gold-bg:   #FBF1CC;  --app-gold:   #B8930C;
+    --app-yellow-bg: #FBEFCB;  --app-yellow: #C28E0A;
+    --app-amber-bg:  #FBE9C9;  --app-amber:  #C57F0C;
+    --app-honey-bg:  #FCEAC9;  --app-honey:  #CC8A22;
+    --app-tangerine-bg: #FDE7C9;  --app-tangerine: #CE7A12;
+    --app-orange-bg:    #FCE3D0;  --app-orange:    #D26B26;
+    --app-peach-bg:     #FCE6D8;  --app-peach:     #D27C40;
+    --app-coral-bg:     #FCE3DD;  --app-coral:     #D45441;
+    --app-clay-bg:      #F4E4DA;  --app-clay:      #A86A48;
+    --app-brown-bg:     #F0E7DE;  --app-brown:     #8E6648;
+    --app-sand-bg:      #F3EEE1;  --app-sand:      #897A3D;
+    --app-slate-bg:    #E7ECF1;  --app-slate:    #566377;
+    --app-stone-bg:    #EEEBE6;  --app-stone:    #786F63;
+    --app-graphite-bg: #EAEAEC;  --app-graphite: #5C5C63;
+
+    /* ── Tailwind v4 default colours the source uses by name ─────────────────
+       v4's palette is OKLCH and differs slightly from v3's hex values, so the
+       exact v4 values are pinned here and referenced as var(--tw4-*). */
+    --tw4-amber-50:    oklch(98.7% 0.022 95.277);
+    --tw4-amber-500:   oklch(76.9% 0.188 70.08);
+    --tw4-amber-600:   oklch(66.6% 0.179 58.318);
+    --tw4-orange-500:  oklch(70.5% 0.213 47.604);
+    --tw4-emerald-50:  oklch(97.9% 0.021 166.113);
+    --tw4-emerald-500: oklch(69.6% 0.17 162.48);
+    --tw4-emerald-600: oklch(59.6% 0.145 163.225);
+    --tw4-cyan-50:     oklch(98.4% 0.019 200.873);
+    --tw4-cyan-600:    oklch(60.9% 0.126 221.723);
+    --tw4-blue-50:     oklch(97% 0.014 254.604);
+    --tw4-blue-600:    oklch(54.6% 0.245 262.881);
+    --tw4-indigo-50:   oklch(96.2% 0.018 272.314);
+    --tw4-indigo-600:  oklch(51.1% 0.262 276.966);
+    --tw4-violet-50:   oklch(96.9% 0.016 293.756);
+    --tw4-violet-500:  oklch(60.6% 0.25 292.717);
+    --tw4-violet-600:  oklch(54.1% 0.281 293.009);
+    --tw4-rose-50:     oklch(96.9% 0.015 12.422);
+    --tw4-rose-600:    oklch(58.6% 0.253 17.585);
+
+    /* ── squircles ───────────────────────────────────────────────────────────
+       border-radius sets the corner SIZE, corner-shape the curve. Where
+       `corner-shape` is native (Chromium) the squircle is drawn natively —
+       pixel-identical to the app. Elsewhere it is pre-rendered as a mask (see
+       "squircles, pre-rendered" at the end of this file). */
+    --corner-scale: 1;
+
+    /* ── base text (the dark page around must not leak in) ─────────────────── */
+    color: var(--c-text);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: normal;
+    text-align: left;
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* squircle utilities (source: globals.css .rounded-sq*). */
+.ucelot-app .rounded-sq {
+    border-radius: calc(16px * var(--corner-scale));
+    corner-shape: squircle;
+}
+.ucelot-app .rounded-sq-l {
+    border-radius: calc(24px * var(--corner-scale));
+    corner-shape: squircle;
+}
+.ucelot-app .rounded-sq-xl {
+    border-radius: calc(32px * var(--corner-scale));
+    corner-shape: squircle;
+}
+.ucelot-app .rounded-sq-t-xl {
+    border-radius: calc(32px * var(--corner-scale)) calc(32px * var(--corner-scale)) 0 0;
+    corner-shape: squircle;
+}
+
+/* ─── floating content panel (.app-panel, md+ treatment) ─────────────────────
+   Only the surface: white fill, 22px top-left corner, hairline + halo shadow.
+   The real one is also the scroll container; this port is static. */
+.ucelot-app .app-panel {
+    background-color: var(--c-surface);
+    border-top-left-radius: 22px;
+    box-shadow: var(--shadow-panel);
+}
+
+/* ─── buttons ────────────────────────────────────────────────────────────── */
+.ucelot-app .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    border-radius: calc(16px * var(--corner-scale));
+    corner-shape: squircle;
+    background-color: var(--c-primary);
+    box-shadow: 0 1px 2px rgba(180,83,9,0.22);
+}
+.ucelot-app .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--c-text);
+    border: 1px solid var(--c-border);
+    background-color: var(--c-surface);
+    border-radius: calc(16px * var(--corner-scale));
+    corner-shape: squircle;
+}
+
+/* ─── headings ───────────────────────────────────────────────────────────── */
+.ucelot-app .h-page {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+.ucelot-app .h-section {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--c-text-muted);
+}
+
+/* ─── card (not on this screen, kept for reuse) ──────────────────────────── */
+.ucelot-app .card {
+    border-radius: 14px;
+    border: 1px solid var(--c-border);
+    padding: 0.875rem;
+    background-color: var(--c-surface);
+    box-shadow: var(--shadow-card);
+}
+
+/* ─── minimal field-table (ProjectTile non-minimal body) ─────────────────── */
+.ucelot-app .field-table {
+    overflow: hidden;
+    border-radius: 11px;
+    border: 1px solid var(--c-border);
+    background-color: var(--c-surface-2);
+}
+.ucelot-app .field-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 7px 0.625rem;
+    font-size: 12px;
+    line-height: 1.25;
+}
+.ucelot-app .field-row + .field-row {
+    border-top: 1px solid var(--c-border);
+}
+.ucelot-app .field-label {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.375rem;
+    font-weight: 500;
+    color: var(--c-text-muted);
+}
+.ucelot-app .field-label svg {
+    color: var(--c-text-dim);
+}
+.ucelot-app .field-value {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.375rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
+    font-weight: 600;
+    color: var(--c-text);
+}
+
+/* ─── mini-icon — circular tinted glyph (tone colours set per element) ───── */
+.ucelot-app .mini-icon {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 9999px;
+}
+
+/* ─── segmented progress ─────────────────────────────────────────────────── */
+.ucelot-app .seg-track {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+.ucelot-app .seg {
+    height: 13px;
+    width: 5px;
+    flex-shrink: 0;
+    border-radius: 2px;
+    background: var(--c-border-strong);
+}
+.ucelot-app .seg-on {
+    background: #f59e0b;
+    box-shadow: 0 0 0 0.5px rgba(180,83,9,0.18);
+}
+
+/* ─── pills (not on this screen, kept for reuse) ─────────────────────────── */
+.ucelot-app .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 9999px;
+    border: 1px solid var(--c-border);
+    background-color: var(--c-surface-2);
+    padding: 2px 0.5rem;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--c-text);
+}
+.ucelot-app .pill-success { background: var(--c-success-bg); border-color: rgba(22,163,74,0.20); color: var(--c-success); }
+.ucelot-app .pill-warn    { background: var(--c-warn-bg);    border-color: rgba(180,83,9,0.20);  color: var(--c-warn); }
+.ucelot-app .pill-error   { background: var(--c-error-bg);   border-color: rgba(185,28,28,0.18); color: var(--c-error); }
+
+/* ─── loading shimmer (not on this screen, kept for reuse) ───────────────── */
+.ucelot-app .skeleton {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.25rem;
+    background-color: var(--c-surface-2);
+}
+.ucelot-app .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%);
+    transform: translateX(-100%);
+    animation: ucelot-app-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes ucelot-app-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+/* ─── the topbar search field: placeholder colour + no native search chrome ─ */
+.ucelot-app .ua-search::placeholder { color: var(--c-text-dim); opacity: 1; }
+.ucelot-app .ua-search::-webkit-search-decoration,
+.ucelot-app .ua-search::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+
+/* ─── squircles, pre-rendered (browsers without native corner-shape) ─────────
+   Chrome draws the squircles natively (corner-shape above). Safari and Firefox
+   don't support corner-shape, and the app's runtime polyfill (hyperellipse)
+   is far too heavy for an animated 3D scene — per-element observers, clip-paths
+   and drop-shadow filters re-rendered every frame. So the corner shape is
+   pre-rendered instead: the exact CSS superellipse (`squircle` = exponent 4),
+   sampled once into four static SVG corners and applied as a mask — no JS, no
+   observers, no filters. Corners clamp to half the box like border-radius
+   does; the fill bands overlap the corners by a pixel so no antialiasing seam
+   shows where they meet. The mask also trims the 1px border/shadow right at
+   the corners.
+   `data-squircle-fallback` on .ucelot-app forces this path (for checking it in
+   Chrome). */
+.ucelot-app {
+    --sq-tl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1' preserveAspectRatio='none'%3E%3Cpath d='M0.0000 1.0000 L0.0011 0.7443 L0.0043 0.6387 L0.0097 0.5583 L0.0172 0.4913 L0.0269 0.4330 L0.0388 0.3814 L0.0530 0.3350 L0.0694 0.2929 L0.0882 0.2546 L0.1093 0.2198 L0.1329 0.1880 L0.1591 0.1591 L0.1880 0.1329 L0.2198 0.1093 L0.2546 0.0882 L0.2929 0.0694 L0.3350 0.0530 L0.3814 0.0388 L0.4330 0.0269 L0.4913 0.0172 L0.5583 0.0097 L0.6387 0.0043 L0.7443 0.0011 L1.0000 0.0000 L1 1 Z'/%3E%3C/svg%3E");
+    --sq-tr: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1' preserveAspectRatio='none'%3E%3Cpath d='M1.0000 1.0000 L0.9989 0.7443 L0.9957 0.6387 L0.9903 0.5583 L0.9828 0.4913 L0.9731 0.4330 L0.9612 0.3814 L0.9470 0.3350 L0.9306 0.2929 L0.9118 0.2546 L0.8907 0.2198 L0.8671 0.1880 L0.8409 0.1591 L0.8120 0.1329 L0.7802 0.1093 L0.7454 0.0882 L0.7071 0.0694 L0.6650 0.0530 L0.6186 0.0388 L0.5670 0.0269 L0.5087 0.0172 L0.4417 0.0097 L0.3613 0.0043 L0.2557 0.0011 L0.0000 0.0000 L0 1 Z'/%3E%3C/svg%3E");
+    --sq-br: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1' preserveAspectRatio='none'%3E%3Cpath d='M1.0000 0.0000 L0.9989 0.2557 L0.9957 0.3613 L0.9903 0.4417 L0.9828 0.5087 L0.9731 0.5670 L0.9612 0.6186 L0.9470 0.6650 L0.9306 0.7071 L0.9118 0.7454 L0.8907 0.7802 L0.8671 0.8120 L0.8409 0.8409 L0.8120 0.8671 L0.7802 0.8907 L0.7454 0.9118 L0.7071 0.9306 L0.6650 0.9470 L0.6186 0.9612 L0.5670 0.9731 L0.5087 0.9828 L0.4417 0.9903 L0.3613 0.9957 L0.2557 0.9989 L0.0000 1.0000 L0 0 Z'/%3E%3C/svg%3E");
+    --sq-bl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1' preserveAspectRatio='none'%3E%3Cpath d='M0.0000 0.0000 L0.0011 0.2557 L0.0043 0.3613 L0.0097 0.4417 L0.0172 0.5087 L0.0269 0.5670 L0.0388 0.6186 L0.0530 0.6650 L0.0694 0.7071 L0.0882 0.7454 L0.1093 0.7802 L0.1329 0.8120 L0.1591 0.8409 L0.1880 0.8671 L0.2198 0.8907 L0.2546 0.9118 L0.2929 0.9306 L0.3350 0.9470 L0.3814 0.9612 L0.4330 0.9731 L0.4913 0.9828 L0.5583 0.9903 L0.6387 0.9957 L0.7443 0.9989 L1.0000 1.0000 L1 0 Z'/%3E%3C/svg%3E");
+}
+.ucelot-app .rounded-sq, .ucelot-app .btn-primary, .ucelot-app .btn-ghost { --sq-r: 16px; }
+.ucelot-app .rounded-sq-l { --sq-r: 24px; }
+.ucelot-app .rounded-sq-xl, .ucelot-app .rounded-sq-t-xl { --sq-r: 32px; }
+.ucelot-app :is(.rounded-sq, .rounded-sq-l, .rounded-sq-xl, .rounded-sq-t-xl, .btn-primary, .btn-ghost) {
+    --sq-c: min(var(--sq-r), 50%);
+}
+@supports not (corner-shape: squircle) {
+.ucelot-app :is(.rounded-sq, .rounded-sq-l, .rounded-sq-xl, .btn-primary, .btn-ghost) {
+    border-radius: 0; /* the mask draws the corners */
+    -webkit-mask-image: var(--sq-tl), var(--sq-tr), var(--sq-br), var(--sq-bl), linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+            mask-image: var(--sq-tl), var(--sq-tr), var(--sq-br), var(--sq-bl), linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    -webkit-mask-position: left top, right top, right bottom, left bottom, center, center;
+            mask-position: left top, right top, right bottom, left bottom, center, center;
+    -webkit-mask-size: var(--sq-c) var(--sq-c), var(--sq-c) var(--sq-c), var(--sq-c) var(--sq-c), var(--sq-c) var(--sq-c),
+                       calc(100% - 2 * var(--sq-c) + 2px) 100%, 100% calc(100% - 2 * var(--sq-c) + 2px);
+            mask-size: var(--sq-c) var(--sq-c), var(--sq-c) var(--sq-c), var(--sq-c) var(--sq-c), var(--sq-c) var(--sq-c),
+                       calc(100% - 2 * var(--sq-c) + 2px) 100%, 100% calc(100% - 2 * var(--sq-c) + 2px);
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+}
+.ucelot-app .rounded-sq-t-xl {
+    border-radius: 0;
+    -webkit-mask-image: var(--sq-tl), var(--sq-tr), linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+            mask-image: var(--sq-tl), var(--sq-tr), linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    -webkit-mask-position: left top, right top, center top, center bottom;
+            mask-position: left top, right top, center top, center bottom;
+    -webkit-mask-size: var(--sq-c) var(--sq-c), var(--sq-c) var(--sq-c), calc(100% - 2 * var(--sq-c) + 2px) var(--sq-c), 100% calc(100% - var(--sq-c) + 1px);
+            mask-size: var(--sq-c) var(--sq-c), var(--sq-c) var(--sq-c), calc(100% - 2 * var(--sq-c) + 2px) var(--sq-c), 100% calc(100% - var(--sq-c) + 1px);
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+}
+}
+.ucelot-app[data-squircle-fallback] :is(.rounded-sq, .rounded-sq-l, .rounded-sq-xl, .btn-primary, .btn-ghost) {
+    border-radius: 0; /* the mask draws the corners */
+    -webkit-mask-image: var(--sq-tl), var(--sq-tr), var(--sq-br), var(--sq-bl), linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+            mask-image: var(--sq-tl), var(--sq-tr), var(--sq-br), var(--sq-bl), linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    -webkit-mask-position: left top, right top, right bottom, left bottom, center, center;
+            mask-position: left top, right top, right bottom, left bottom, center, center;
+    -webkit-mask-size: var(--sq-c) var(--sq-c), var(--sq-c) var(--sq-c), var(--sq-c) var(--sq-c), var(--sq-c) var(--sq-c),
+                       calc(100% - 2 * var(--sq-c) + 2px) 100%, 100% calc(100% - 2 * var(--sq-c) + 2px);
+            mask-size: var(--sq-c) var(--sq-c), var(--sq-c) var(--sq-c), var(--sq-c) var(--sq-c), var(--sq-c) var(--sq-c),
+                       calc(100% - 2 * var(--sq-c) + 2px) 100%, 100% calc(100% - 2 * var(--sq-c) + 2px);
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+}
+.ucelot-app[data-squircle-fallback] .rounded-sq-t-xl {
+    border-radius: 0;
+    -webkit-mask-image: var(--sq-tl), var(--sq-tr), linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+            mask-image: var(--sq-tl), var(--sq-tr), linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    -webkit-mask-position: left top, right top, center top, center bottom;
+            mask-position: left top, right top, center top, center bottom;
+    -webkit-mask-size: var(--sq-c) var(--sq-c), var(--sq-c) var(--sq-c), calc(100% - 2 * var(--sq-c) + 2px) var(--sq-c), 100% calc(100% - var(--sq-c) + 1px);
+            mask-size: var(--sq-c) var(--sq-c), var(--sq-c) var(--sq-c), calc(100% - 2 * var(--sq-c) + 2px) var(--sq-c), 100% calc(100% - var(--sq-c) + 1px);
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+}

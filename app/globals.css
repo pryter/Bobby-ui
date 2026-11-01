@@ -54,14 +54,6 @@ html {
   -ms-overflow-style: none; /* IE/Edge */
 }
 
-/* Gradient text utility */
-.text-gradient {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, #a78bfa 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
 /* Noise texture overlay for depth */
 .noise::after {
   content: "";

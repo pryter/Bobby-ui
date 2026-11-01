@@ -2,21 +2,24 @@
 
 import { createContext, useContext, useEffect, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { RocketLaunchIcon } from "@heroicons/react/24/solid"
+import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/solid"
 
 export const NAV_LINKS: { label: string; href: string }[] = [
-  { label: "Features", href: "/#features" },
+  { label: "Research", href: "/#research" },
+  { label: "Products", href: "/#products" },
   { label: "Docs", href: "/docs" },
-  { label: "Pricing", href: "/pricing" },
   { label: "FAQ", href: "/docs/faq" },
 ]
+
+// Primary CTA — sends visitors to our flagship product.
+const CTA_LABEL = "Try Ucelot"
+const CTA_HREF = "https://ucelot.com"
 
 // Shared state between DeepDiveSection (producer) and Navbar (consumer). When
 // the mobile timeline has fully morphed into its pill AND the deep-dive
 // section is still on-screen, we ask the mobile nav to collapse to just
-// [logo | menu button] and hide the floating "Get started" CTA — this gives
+// [logo | menu button] and hide the floating "Try Ucelot" CTA — this gives
 // the centered pill timeline room to breathe and turns the nav row into a
 // three-part composition: logo · pill · menu.
 export const DeepDiveNavContext = createContext<{
@@ -37,7 +40,6 @@ const BobbyMark = () => (
 )
 
 export default function Navbar({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
-  const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const [winH, setWinH] = useState(844)
 
@@ -104,11 +106,11 @@ export default function Navbar({ dark, onToggle }: { dark: boolean; onToggle: ()
             {dark ? "○" : "●"}
           </button>
           <button
-            onClick={() => router.push("/account")}
+            onClick={() => window.open(CTA_HREF, "_blank", "noopener,noreferrer")}
             className="ml-1 px-4 py-1.5 rounded-full text-sm font-bold text-black transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
             style={{ background: "rgb(var(--primary-400))" }}
           >
-            Get started
+            {CTA_LABEL}
           </button>
         </div>
       </motion.div>
@@ -260,13 +262,13 @@ export default function Navbar({ dark, onToggle }: { dark: boolean; onToggle: ()
             </button>
             <button
               onClick={() => {
-                router.push("/account")
+                window.open(CTA_HREF, "_blank", "noopener,noreferrer")
                 setMenuOpen(false)
               }}
               className="w-full py-2.5 rounded-full text-sm font-bold text-black transition-all hover:scale-105 active:scale-95"
               style={{ background: "rgb(var(--primary-400))" }}
             >
-              Get started
+              {CTA_LABEL}
             </button>
           </motion.div>
         </motion.div>
@@ -285,10 +287,10 @@ export default function Navbar({ dark, onToggle }: { dark: boolean; onToggle: ()
           y: { duration: 0.5, ease: [0.22, 0.1, 0.35, 1] },
           width: spring,
         }}
-        onClick={() => router.push("/account")}
+        onClick={() => window.open(CTA_HREF, "_blank", "noopener,noreferrer")}
         className="fixed top-5 right-4 z-[60] sm:hidden h-11 shadow-md rounded-full font-bold text-black flex items-center justify-end overflow-hidden"
         style={{ background: "rgb(var(--primary-400))", pointerEvents: menuOpen ? "none" : "auto" }}
-        aria-label="Get started"
+        aria-label={CTA_LABEL}
       >
         <motion.span
           animate={{ opacity: compact ? 0 : 1 }}
@@ -296,7 +298,7 @@ export default function Navbar({ dark, onToggle }: { dark: boolean; onToggle: ()
           className="px-4 text-xs whitespace-nowrap"
           aria-hidden={compact}
         >
-          Get started
+          {CTA_LABEL}
         </motion.span>
         <motion.span
           animate={{
@@ -307,7 +309,7 @@ export default function Navbar({ dark, onToggle }: { dark: boolean; onToggle: ()
           className="pointer-events-none absolute right-0 top-0 h-11 w-11 flex items-center justify-center"
           aria-hidden={!compact}
         >
-          <RocketLaunchIcon className="w-5 h-5" />
+          <ArrowTopRightOnSquareIcon className="w-5 h-5" />
         </motion.span>
       </motion.button>
     </>
