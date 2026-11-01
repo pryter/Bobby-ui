@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
+import { Fragment, startTransition, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
     animate, motion, motionValue, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform,
     type MotionValue,
@@ -44,9 +44,13 @@ import {
 //   off again when scrolled back. Planning goes on forever. The heading clears
 //   left early; scrolling back reverses everything.
 //
-// Runtime: the intro is one framer animation of one clock; the tiles are
-// driven by one rAF loop (TileDirector) writing per-tile motion values — no
-// React render per frame. Transforms and opacity only; masks are static.
+// Runtime: the intro is one framer animation of one clock. Each tile flight
+// (drop or lift) is baked into keyframes when it launches and played by the
+// compositor (Web Animations), so a busy main thread can't stutter it; one
+// light rAF loop (TileDirector) only schedules launches and notes landings —
+// no per-frame writes, no React render per frame. Transforms and opacity
+// only; masks are static. The exit's future work mounts ahead of time in
+// small low-priority slices.
 //
 // 3D: perspective wrapper (flat, unclipped) → plane root → floor, covers,
 // contact shadows (leaves) and tile movers → slab layers + face, preserve-3d
@@ -305,6 +309,8 @@ function liftPose(l: Lift, tau: number): Pose {
 const TILES: PlacedTile[] = [...PB_TILES, ...PB_FUTURE]
 const N0 = PB_TILES.length
 const NT = TILES.length
+const NF = NT - N0
+const FUTURE_SLICE = 6 // future tiles mounted per idle slice
 const byTime = (a: number, b: number) => TILES[a].issue.startDay - TILES[b].issue.startDay || TILES[a].issue.row! - TILES[b].issue.row!
 
 // Rank order: through time — by start day, far lane first; the plan, then the
@@ -389,18 +395,29 @@ type TileMVs = {
     vis: MotionValue<string>
 }
 type TileState =
-    | { mode: "hidden"; pose: Pose }
-    | { mode: "rest"; pose: Pose }
-    | { mode: "fall"; pose: Pose; t0: number; d: Drop; landed: boolean }
-    | { mode: "lift"; pose: Pose; t0: number; l: Lift }
+    | { mode: "hidden" }
+    | { mode: "rest" }
+    | { mode: "fall"; t0: number; d: Drop; landed: boolean }
+    | { mode: "lift"; t0: number; l: Lift }
+
+/** The DOM a tile's baked flights play on: the mover (transform), the contact
+ *  shadow (transform + opacity) and the leaves that fade (edge layers, face). */
+type TileEls = { mover: HTMLElement; shadow: HTMLElement; leaves: HTMLElement[] }
 
 const tfOf = (p: Pose) =>
     p === REST ? "none" : `translateZ(${p.z}px) rotateX(${p.rx}deg) rotateZ(${p.rz}deg) scale3d(${p.sxy}, ${p.sxy}, ${p.sz})`
+// Keyframes always spell out the full list, so every pair interpolates alike.
+const tfFull = (p: Pose) => `translateZ(${p.z}px) rotateX(${p.rx}deg) rotateZ(${p.rz}deg) scale3d(${p.sxy}, ${p.sxy}, ${p.sz})`
+const BAKE_FPS = 60 // keyframe density of a baked flight
 
 class TileDirector {
     readonly mvs: TileMVs[]
     readonly pulse = motionValue(PULSE_IDLE)
     private st: TileState[]
+    private els: (TileEls | null)[] = new Array(NT).fill(null)
+    private anims: Animation[][] = TILES.map(() => [])
+    /** Finished flights, cancelled a frame later once the still pose is drawn. */
+    private retired: Animation[] = []
     private dueMain = 0 // plan tiles due (scroll waves)
     private dueFuture = 0 // future tiles due (exit drift)
     private ready = false
@@ -411,7 +428,7 @@ class TileDirector {
     private raf: number | null = null
 
     constructor() {
-        this.st = TILES.map((_, i) => ({ mode: "hidden", pose: hiddenPose(i) }))
+        this.st = TILES.map(() => ({ mode: "hidden" }))
         this.mvs = TILES.map((_, i) => {
             const p = hiddenPose(i)
             return {
@@ -422,6 +439,16 @@ class TileDirector {
                 vis: motionValue("hidden"),
             }
         })
+    }
+
+    /** A mounted tile hands over its DOM; returns the unregister. */
+    register(i: number, els: TileEls) {
+        this.els[i] = els
+        this.kick()
+        return () => {
+            this.cancel(i)
+            this.els[i] = null
+        }
     }
 
     /** How many plan tiles (by rank) the scroll waves say are due. */
@@ -454,7 +481,11 @@ class TileDirector {
     /** Reduced motion: everything placed, no animation. */
     placeAll() {
         this.stop()
-        for (let i = 0; i < N0; i++) this.set(i, { mode: "rest", pose: REST })
+        for (let i = 0; i < N0; i++) {
+            this.cancel(i)
+            this.st[i] = { mode: "rest" }
+            this.still(i, REST, true)
+        }
     }
     stop() {
         if (this.raf != null) cancelAnimationFrame(this.raf)
@@ -469,34 +500,83 @@ class TileDirector {
         const near = 1 - clamp01(p.z / PHYS[i].h)
         return `translateZ(1.5px) scale(${(0.55 + 0.45 * near) * p.sxy})`
     }
-
-    private set(i: number, s: TileState) {
-        this.st[i] = s
-        const p = s.pose
-        const m = this.mvs[i]
+    private shadowOp(i: number, p: Pose) {
         const near = 1 - clamp01(p.z / PHYS[i].h)
+        return SHADOW_REST * near * near * near * Math.min(1, p.o * 1.5)
+    }
+
+    /** Where tile i is at time t — flights are pure functions of their clock. */
+    private poseAt(i: number, t: number): Pose {
+        const s = this.st[i]
+        if (s.mode === "fall") return dropPose(s.d, t - s.t0)
+        if (s.mode === "lift") return liftPose(s.l, t - s.t0)
+        return s.mode === "rest" ? REST : hiddenPose(i)
+    }
+
+    /** A still pose, written through the motion values (rest, hidden, and the
+     *  first frame of a flight). */
+    private still(i: number, p: Pose, visible: boolean) {
+        const m = this.mvs[i]
         m.tf.set(tfOf(p))
         m.op.set(p.o)
         m.shTf.set(this.shadowTf(i, p))
-        m.shOp.set(SHADOW_REST * near * near * near * Math.min(1, p.o * 1.5))
-        m.vis.set(s.mode === "hidden" ? "hidden" : "visible")
+        m.shOp.set(this.shadowOp(i, p))
+        m.vis.set(visible ? "visible" : "hidden")
+    }
+
+    /** Bake a whole flight into keyframes and hand it to the compositor: it
+     *  plays off the main thread, so a busy page (or a slow phone) can't make
+     *  it stutter, and nothing is written per frame. */
+    private play(i: number, dur: number, poseOf: (tau: number) => Pose) {
+        this.cancel(i)
+        const el = this.els[i]
+        if (!el) return
+        const n = Math.max(2, Math.ceil(dur * BAKE_FPS) + 1)
+        const tf: Keyframe[] = []
+        const sh: Keyframe[] = []
+        const op: Keyframe[] = []
+        for (let k = 0; k < n; k++) {
+            const p = poseOf((dur * k) / (n - 1))
+            tf.push({ transform: tfFull(p) })
+            sh.push({ transform: this.shadowTf(i, p), opacity: this.shadowOp(i, p) })
+            op.push({ opacity: p.o })
+        }
+        const timing: KeyframeAnimationOptions = { duration: dur * 1000, easing: "linear", fill: "forwards" }
+        this.anims[i] = [el.mover.animate(tf, timing), el.shadow.animate(sh, timing), ...el.leaves.map((l) => l.animate(op, timing))]
+    }
+    private cancel(i: number) {
+        for (const a of this.anims[i]) a.cancel()
+        this.anims[i] = []
+    }
+    /** A flight is over: its end pose goes into the motion values now, and the
+     *  animation (holding that same pose) is dropped next frame — no flash. */
+    private settle(i: number, s: TileState, p: Pose, visible: boolean) {
+        this.st[i] = s
+        this.still(i, p, visible)
+        this.retired.push(...this.anims[i])
+        this.anims[i] = []
     }
 
     private launch(i: number, t: number, k: number) {
-        const cur = this.st[i]
-        const ph = PHYS[i]
         // From hidden: a full drop. From a lift: fall from wherever it is.
-        const from = cur.mode === "lift" ? cur.pose : hiddenPose(i)
+        const cur = this.st[i]
+        const from = cur.mode === "lift" ? this.poseAt(i, t) : hiddenPose(i)
+        const ph = PHYS[i]
         const d = buildDrop(ph, Math.min(from.z, ph.h), cur.mode === "lift" ? from.o : 0, from.rx, from.rz, k)
-        this.set(i, { mode: "fall", pose: dropPose(d, 0), t0: t, d, landed: false })
+        this.st[i] = { mode: "fall", t0: t, d, landed: false }
+        this.still(i, dropPose(d, 0), true)
+        this.play(i, d.end, (tau) => dropPose(d, tau))
     }
 
     private lift(i: number, t: number) {
-        const from = this.st[i].pose
+        // From wherever it is — resting, or caught mid-fall.
+        const from = this.poseAt(i, t)
         const ph = PHYS[i]
         const dur = LIFT * (0.35 + 0.65 * (1 - clamp01(from.z / ph.h)))
         const l: Lift = { from, to: { z: ph.h, rx: TUMBLE[i].rx, rz: TUMBLE[i].rz }, dur }
-        this.set(i, { mode: "lift", pose: liftPose(l, 0), t0: t, l })
+        this.st[i] = { mode: "lift", t0: t, l }
+        this.still(i, from, true)
+        this.play(i, dur, (tau) => liftPose(l, tau))
     }
 
     private tick = (now: number) => {
@@ -505,26 +585,24 @@ class TileDirector {
         let busy = false
         let landedNow = false
 
-        // 1. Advance every tile in flight on its own clock.
+        // 0. Drop the animations of flights that settled last frame.
+        for (const a of this.retired) a.cancel()
+        this.retired = []
+
+        // 1. Flights run on the compositor; here we only note where each is.
         for (let i = 0; i < NT; i++) {
             const s = this.st[i]
             if (s.mode === "fall") {
                 const tau = t - s.t0
-                if (tau >= s.d.end) this.set(i, { mode: "rest", pose: REST })
-                else {
-                    const landed = s.landed || tau >= s.d.land
-                    if (landed && !s.landed && i < N0) landedNow = true
-                    this.set(i, { ...s, pose: dropPose(s.d, tau), landed })
-                    busy = true
+                if (!s.landed && tau >= s.d.land) {
+                    s.landed = true
+                    if (i < N0) landedNow = true
                 }
-                if (tau >= s.d.end && !s.landed && i < N0) landedNow = true
+                if (tau >= s.d.end) this.settle(i, { mode: "rest" }, REST, true)
+                busy = true
             } else if (s.mode === "lift") {
-                const tau = t - s.t0
-                if (tau >= s.l.dur) this.set(i, { mode: "hidden", pose: hiddenPose(i) })
-                else {
-                    this.set(i, { ...s, pose: liftPose(s.l, tau) })
-                    busy = true
-                }
+                if (t - s.t0 >= s.l.dur) this.settle(i, { mode: "hidden" }, hiddenPose(i), false)
+                busy = true
             }
         }
 
@@ -542,7 +620,8 @@ class TileDirector {
         }
 
         // 3. Dispatch: lift off what is no longer due (reverse order), launch
-        //    what is (in order), each queue with its own minimum gap.
+        //    what is (in order), each queue with its own minimum gap. A tile
+        //    whose DOM isn't mounted yet waits its turn.
         let pending = false
         if (this.ready) {
             const due = this.due
@@ -577,7 +656,7 @@ class TileDirector {
             for (let r = 0; r < due && budget > 0; r++) {
                 const i = RANKED[r]
                 const m = this.st[i].mode
-                if (m === "hidden" || m === "lift") {
+                if ((m === "hidden" || m === "lift") && this.els[i]) {
                     this.launch(i, t, k)
                     this.lastLaunch = t
                     budget--
@@ -587,7 +666,7 @@ class TileDirector {
             if (backlog > 0) pending = true
         }
 
-        if (busy || pending) this.kick()
+        if (busy || pending || this.retired.length) this.kick()
     }
 }
 
@@ -597,7 +676,15 @@ class TileDirector {
 
 const P3D = { transformStyle: "preserve-3d" } as const
 
-function DropTile({ tile, mv }: { tile: PlacedTile; mv: TileMVs }) {
+function DropTile({ tile, i, director }: { tile: PlacedTile; i: number; director: TileDirector }) {
+    const mv = director.mvs[i]
+    const mover = useRef<HTMLDivElement>(null)
+    const shadow = useRef<HTMLDivElement>(null)
+    const leaves = useRef<HTMLDivElement[]>([])
+    useIsoLayoutEffect(
+        () => director.register(i, { mover: mover.current!, shadow: shadow.current!, leaves: leaves.current.filter(Boolean) }),
+        [director, i],
+    )
     const card = brickCard(tile, CELL)
     const { bg, fg } = pastelFor(tile.issue.id)
     const cardBox = { left: card.left, top: card.top, width: card.width, height: card.height, borderRadius: card.radius }
@@ -606,6 +693,7 @@ function DropTile({ tile, mv }: { tile: PlacedTile; mv: TileMVs }) {
             {/* Contact shadow: lies on the plane; faint and small while the tile
                 is high, growing and darkening as it comes down. */}
             <motion.div
+                ref={shadow}
                 aria-hidden
                 className="pointer-events-none absolute"
                 style={{
@@ -622,6 +710,7 @@ function DropTile({ tile, mv }: { tile: PlacedTile; mv: TileMVs }) {
                 }}
             />
             <motion.div
+                ref={mover}
                 className="absolute"
                 style={{
                     left: tile.left,
@@ -640,12 +729,21 @@ function DropTile({ tile, mv }: { tile: PlacedTile; mv: TileMVs }) {
                 {LAYERS.map((z, k) => (
                     <motion.div
                         key={z}
+                        ref={(el: HTMLDivElement | null) => {
+                            if (el) leaves.current[k] = el
+                        }}
                         className="absolute"
                         style={{ ...cardBox, background: `color-mix(in srgb, ${fg} ${LAYER_SHADE[k]}%, ${bg})`, transform: `translateZ(${z}px)`, opacity: mv.op }}
                     />
                 ))}
                 {/* Top face — the real tile, exactly. */}
-                <motion.div className="absolute inset-0" style={{ transform: `translateZ(${DEPTH}px)`, opacity: mv.op }}>
+                <motion.div
+                    ref={(el: HTMLDivElement | null) => {
+                        if (el) leaves.current[LAYERS.length] = el
+                    }}
+                    className="absolute inset-0"
+                    style={{ transform: `translateZ(${DEPTH}px)`, opacity: mv.op }}
+                >
                     <Brick issue={tile.issue} cell={CELL} origin={PB_ORIGIN} style={{ left: 0, top: 0 }} />
                 </motion.div>
             </motion.div>
@@ -726,13 +824,13 @@ function Bloom({ intro }: { intro: MotionValue<number> }) {
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect
 
 function Stage({
-    intro, exit, director, future,
+    intro, exit, director, futureN,
 }: {
     intro: MotionValue<number>
     exit: MotionValue<number>
     director: TileDirector
-    /** Mount the future work (from the hold on — it costs nothing before). */
-    future: boolean
+    /** How many of the exit's future tiles are mounted (in rank order). */
+    futureN: number
 }) {
     const ref = useRef<HTMLDivElement>(null)
     const [rig, setRig] = useState<Rig | null>(null)
@@ -755,6 +853,7 @@ function Stage({
         return () => ro.disconnect()
     }, [resized])
 
+    const mountedFuture = useMemo(() => new Set(RANKED.slice(N0, N0 + futureN)), [futureN])
     const camera = useTransform([intro, resized], ([t]: number[]) => (rigRef.current ? camAt(t, rigRef.current) : "none"))
     // The covers and bloom are spent once the floor is out — drop them then.
     const [opening, setOpening] = useState(true)
@@ -790,9 +889,9 @@ function Stage({
                         <TodayFlash pulse={director.pulse} />
                         {opening && HOLES.map((hole, k) => <Cover key={k} hole={hole} k={k} intro={intro} />)}
                         {TILES.map((tile, i) =>
-                            i < N0 || future ? (
+                            i < N0 || mountedFuture.has(i) ? (
                                 <Fragment key={tile.issue.id}>
-                                    <DropTile tile={tile} mv={director.mvs[i]} />
+                                    <DropTile tile={tile} i={i} director={director} />
                                 </Fragment>
                             ) : null,
                         )}
@@ -818,7 +917,21 @@ export default function TimelineSection() {
     const [director] = useState(() => new TileDirector())
     const reduce = useReducedMotion()
     const introStarted = useRef(false)
-    const [future, setFuture] = useState(false)
+    // The exit's future work mounts ahead of time, FUTURE_SLICE tiles per idle
+    // slice as a low-priority update, from when the intro finishes. (Mounting
+    // it all at once as the plan completed froze slower phones for a moment.)
+    const [futureN, setFutureN] = useState(0)
+    const [growFuture, setGrowFuture] = useState(false)
+    useEffect(() => {
+        if (!growFuture || futureN >= NF) return
+        const next = () => startTransition(() => setFutureN((n) => Math.min(NF, n + FUTURE_SLICE)))
+        if (typeof window.requestIdleCallback === "function") {
+            const id = window.requestIdleCallback(next, { timeout: 600 })
+            return () => window.cancelIdleCallback(id)
+        }
+        const id = window.setTimeout(next, 120)
+        return () => window.clearTimeout(id)
+    }, [growFuture, futureN])
 
     // Scroll since the stage pinned, in px — measured on through the release
     // until the section's end reaches the top (the stage is gone by then).
@@ -859,18 +972,22 @@ export default function TimelineSection() {
     // A scroll that's already into the third wave while the floor is still
     // opening plays the rest of the opening quicker, so the tiles aren't held up.
     const introAnim = useRef<ReturnType<typeof animate> | null>(null)
+    const introDone = () => {
+        director.setReady()
+        setGrowFuture(true)
+    }
     const introHurried = useRef(false)
     const startIntro = () => {
         if (introStarted.current) return
         introStarted.current = true
-        introAnim.current = animate(intro, INTRO, { duration: INTRO, ease: "linear", onComplete: () => director.setReady() })
+        introAnim.current = animate(intro, INTRO, { duration: INTRO, ease: "linear", onComplete: introDone })
     }
     const hurryIntro = () => {
         const left = INTRO - intro.get()
         if (introHurried.current || !introAnim.current || left <= 0) return
         introHurried.current = true
         introAnim.current.stop()
-        introAnim.current = animate(intro, INTRO, { duration: Math.max(0.3, left * 0.35), ease: "linear", onComplete: () => director.setReady() })
+        introAnim.current = animate(intro, INTRO, { duration: Math.max(0.3, left * 0.35), ease: "linear", onComplete: introDone })
     }
     const onScrolled = (px: number) => {
         if (px > 0) startIntro()
@@ -879,7 +996,9 @@ export default function TimelineSection() {
         const n = dueCount(dvh)
         director.setDue(n)
         director.setRush(clamp01((dvh - RUSH_FROM_VH) / (RUSH_FULL_VH - RUSH_FROM_VH)))
-        if (n === N0) setFuture(true)
+        if (n === N0) setGrowFuture(true)
+        // Already at the exit (a fast scroll): mount whatever is left now.
+        if (dvh >= EXIT_FROM_VH - 10) startTransition(() => setFutureN(NF))
     }
     useMotionValueEvent(scrolled, "change", (px) => {
         if (!reduce) onScrolled(px)
@@ -933,7 +1052,7 @@ export default function TimelineSection() {
                     that edge is only ever page colour: a scaled or fractional-pixel
                     edge can't blend a bright row into a seam as the stage rises. */}
                 <div className="absolute inset-x-0 top-0 bottom-[3px] overflow-hidden">
-                    <Stage intro={intro} exit={exit} director={director} future={future} />
+                    <Stage intro={intro} exit={exit} director={director} futureN={futureN} />
                 </div>
                 <motion.div
                     aria-hidden

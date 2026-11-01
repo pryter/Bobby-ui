@@ -72,6 +72,10 @@ export type BoardMotion = {
   // the app's real collapse, played in real time with its own transitions
   // (not scrubbed), and reversed if you scroll back.
   collapseAt?: number
+  // Lighter build for phones and low-memory devices: no slab layers (on a
+  // small screen their edge is a pixel or two, yet they were the biggest share
+  // of the scene's GPU layers) and a cheaper board shadow.
+  lite?: boolean
 }
 
 const BoardCtx = createContext<BoardMotion | null>(null)
@@ -117,8 +121,9 @@ function Piece({
   style?: React.CSSProperties
   children?: React.ReactNode
 }) {
-  const { p, schedule, arrival, flatStart, flatEnd } = useContext(BoardCtx)!
+  const { p, schedule, arrival, flatStart, flatEnd, lite } = useContext(BoardCtx)!
   const { at, dur } = schedule(meta)
+  const slabs = slab && !lite
   // fly: in from the left and slightly toward you. lay: straight down onto
   // the board from above, settling with a touch of scale.
   const fly = arrival === "fly"
@@ -151,12 +156,12 @@ function Piece({
           // FLIP scales from the top-left corner (the delta is measured there)
           className={"origin-top-left " + (className.includes("absolute") ? "absolute inset-0 " : "relative ") + (slab ? P3 : "")}
         >
-          {slab && <SlabLayers {...slab} />}
+          {slabs && <SlabLayers {...slab} />}
           {children}
         </div>
       ) : (
         <>
-          {slab && <SlabLayers {...slab} />}
+          {slabs && <SlabLayers {...slab} />}
           {children}
         </>
       )}
@@ -438,7 +443,8 @@ export function Board({ motion: m, children }: { motion: BoardMotion; children?:
   }, [collapsed])
 
   useEffect(() => {
-    if (collapseAt != null && m.p.get() >= collapseAt) toggle(true)
+    // No collapse point (the lite build): stay expanded.
+    toggle(collapseAt != null && m.p.get() >= collapseAt)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collapseAt, m.p])
   useMotionValueEvent(m.p, "change", (v) => {
@@ -449,7 +455,10 @@ export function Board({ motion: m, children }: { motion: BoardMotion; children?:
   return (
     <>
       <div
-        className="absolute inset-0 rounded-[22px] bg-[#cfc9c0] shadow-[0_80px_140px_-40px_rgba(0,0,0,0.75)]"
+        className={
+          "absolute inset-0 rounded-[22px] bg-[#cfc9c0] " +
+          (m.lite ? "shadow-[0_40px_60px_-24px_rgba(0,0,0,0.7)]" : "shadow-[0_80px_140px_-40px_rgba(0,0,0,0.75)]")
+        }
         style={{ transform: "translateZ(-16px)" }}
       />
       <div className="absolute inset-x-0 bottom-0 rounded-b-[22px] bg-[color:var(--c-shell)]" style={{ top: FRAME_H }} />

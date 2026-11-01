@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react"
 import { easeInOut, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue } from "framer-motion"
 import { BOARD_H, Board, FRAME_H, P3, W, type BoardMotion, type PieceMeta } from "./BoardPieces"
 import { GRAIN } from "./AmbientBackground"
+import { useLiteGraphics } from "@/lib/useLiteGraphics"
 
 // ─── Dashboard assembly — cinematic camera ────────────────────────────────────
 // The same real Projects screen, filmed like a product reveal. The board lies
@@ -142,7 +143,16 @@ export default function AssemblyCinematic({ story }: { story?: MotionValue<numbe
 
   // The sidebar collapses to its icon rail as the layers start pressing flush,
   // so the app's real collapse plays out during the flush.
-  const boardMotion: BoardMotion = { p, schedule, arrival: "lay", flatStart: FLAT_START, flatEnd: FLAT_END, collapseAt: FLAT_START }
+  // Phones and low-memory devices get the lighter build: no slab layers, and
+  // no sidebar collapse — it re-lays out and repaints the whole board at the
+  // very moment every piece is on screen and pressing flat, the peak that got
+  // the tab killed on low-end phones.
+  const lite = useLiteGraphics()
+  const boardMotion: BoardMotion = {
+    p, schedule, arrival: "lay", flatStart: FLAT_START, flatEnd: FLAT_END,
+    collapseAt: lite ? undefined : FLAT_START,
+    lite,
+  }
 
   return (
     <section ref={sectionRef} className="relative h-[900vh]">
@@ -165,8 +175,9 @@ export default function AssemblyCinematic({ story }: { story?: MotionValue<numbe
 
         <motion.div aria-hidden style={{ opacity: falloff }} className="pointer-events-none absolute inset-0">
           <div className="absolute inset-0 bg-[linear-gradient(to_bottom,#05060e_0%,rgba(5,6,14,0)_22%,rgba(5,6,14,0)_72%,#05060e_100%)]" />
-          {/* the same grain as the page background, so the faded bands match it */}
-          <div
+          {/* the same grain as the page background, so the faded bands match it
+              (left out on the lite build: a full-screen masked layer) */}
+          {!lite && <div
             className="absolute inset-0 opacity-[0.07]"
             style={{
               backgroundImage: GRAIN,
@@ -174,7 +185,7 @@ export default function AssemblyCinematic({ story }: { story?: MotionValue<numbe
               maskImage: "linear-gradient(to bottom, #000 0%, transparent 22%, transparent 72%, #000 100%)",
               WebkitMaskImage: "linear-gradient(to bottom, #000 0%, transparent 22%, transparent 72%, #000 100%)",
             }}
-          />
+          />}
         </motion.div>
       </div>
     </section>
