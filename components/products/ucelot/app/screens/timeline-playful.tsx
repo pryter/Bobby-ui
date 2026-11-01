@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactNode } from "react"
+import type { ReactNode, Ref } from "react"
 import { motion, type MotionStyle } from "framer-motion"
 import {
     ColHeader, MonthCell, WeekCell,
@@ -311,10 +311,16 @@ export const FLOOR_BOX = {
  * Two layers: a fixed WINDOW at FLOOR_BOX carrying the static mask — a lit area
  * around the plan falling off into the dark, so there is no visible edge — and
  * inside it the SURFACE, which runs on far to the right (FLOOR_SURFACE_C1) and
- * can be panned (`surfaceStyle`, e.g. a motion `x`) while the lit area stays
+ * can be panned (`surfaceStyle`, or `surfaceRef` for an animation) while the lit area stays
  * put: an endless timeline sliding by. Holds no 3D children.
  */
-export function PlayfulFloor({ wrapToday, surfaceStyle }: { wrapToday?: (pill: ReactNode) => ReactNode; surfaceStyle?: MotionStyle }) {
+export function PlayfulFloor({
+    wrapToday, surfaceStyle, surfaceRef,
+}: {
+    wrapToday?: (pill: ReactNode) => ReactNode
+    surfaceStyle?: MotionStyle
+    surfaceRef?: Ref<HTMLDivElement>
+}) {
     const cell = PB_CELL
     const { x: x0, y: y0, w, h } = FLOOR_BOX
     const surfaceW = (FLOOR_SURFACE_C1 - FLOOR.c0) * cell
@@ -350,6 +356,7 @@ export function PlayfulFloor({ wrapToday, surfaceStyle }: { wrapToday?: (pill: R
             }}
         >
             <motion.div
+                ref={surfaceRef}
                 className="absolute left-0 top-0"
                 style={{
                     width: surfaceW,

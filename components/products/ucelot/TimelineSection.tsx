@@ -1,11 +1,13 @@
 "use client"
 
-import { Fragment, startTransition, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { Fragment, startTransition, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type Ref } from "react"
 import {
-    animate, motion, motionValue, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform,
+    animate, motion, motionValue, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useTransform,
     type MotionValue,
 } from "framer-motion"
 import { GRAIN } from "./AmbientBackground"
+import { bakeScrub } from "@/lib/scrollScrub"
+import { useLiteGraphics } from "@/lib/useLiteGraphics"
 import { Brick, brickCard, mix, pastelFor, weekStartMs } from "./app/screens/timeline"
 import {
     FLOOR_BOX, PB_CELL, PB_FUTURE, PB_ORIGIN, PB_PLAN, PB_TILES, PB_TODAY_COL, PlayfulFloor, type PlacedTile,
@@ -50,7 +52,10 @@ import {
 // light rAF loop (TileDirector) only schedules launches and notes landings —
 // no per-frame writes, no React render per frame. Transforms and opacity
 // only; masks are static. The exit's future work mounts ahead of time in
-// small low-priority slices.
+// small low-priority slices. Everything scroll-linked (the drift, the rise,
+// the fades, the heading clearing) is pre-baked into keyframes the browser
+// plays against the scroll itself (lib/scrollScrub) — no JavaScript per
+// scroll frame.
 //
 // 3D: perspective wrapper (flat, unclipped) → plane root → floor, covers,
 // contact shadows (leaves) and tile movers → slab layers + face, preserve-3d
@@ -165,6 +170,10 @@ function Cover({ hole, k, intro }: { hole: Rect; k: number; intro: MotionValue<n
 const DEPTH = 9.5 // px the top face stands off the plane
 const LAYERS = [2, 4.5, 7] // z of the stacked edge layers under the face
 const LAYER_SHADE = [52, 40, 28] // % of the tile's accent mixed into its pastel (bottom → top)
+// The lite build (phones, low-memory devices) keeps one mid edge layer: about
+// half the composited layers per tile, still reading as a slab at phone size.
+const EDGE_FULL = LAYERS.map((z, k) => ({ z, shade: LAYER_SHADE[k] }))
+const EDGE_LITE = [{ z: LAYERS[1], shade: LAYER_SHADE[1] }]
 const SHADOW_INSET = 6 // contact shadow core, inside the card's footprint
 const SHADOW_REST = 0.6 // its opacity once the tile sits on the plane
 
@@ -676,15 +685,15 @@ class TileDirector {
 
 const P3D = { transformStyle: "preserve-3d" } as const
 
-function DropTile({ tile, i, director }: { tile: PlacedTile; i: number; director: TileDirector }) {
+function DropTile({ tile, i, director, lite }: { tile: PlacedTile; i: number; director: TileDirector; lite: boolean }) {
     const mv = director.mvs[i]
     const mover = useRef<HTMLDivElement>(null)
     const shadow = useRef<HTMLDivElement>(null)
-    const leaves = useRef<HTMLDivElement[]>([])
-    useIsoLayoutEffect(
-        () => director.register(i, { mover: mover.current!, shadow: shadow.current!, leaves: leaves.current.filter(Boolean) }),
-        [director, i],
-    )
+    useIsoLayoutEffect(() => {
+        const m = mover.current!
+        return director.register(i, { mover: m, shadow: shadow.current!, leaves: [...m.querySelectorAll<HTMLElement>("[data-leaf]")] })
+    }, [director, i, lite])
+    const edge = lite ? EDGE_LITE : EDGE_FULL
     const card = brickCard(tile, CELL)
     const { bg, fg } = pastelFor(tile.issue.id)
     const cardBox = { left: card.left, top: card.top, width: card.width, height: card.height, borderRadius: card.radius }
@@ -726,21 +735,17 @@ function DropTile({ tile, i, director }: { tile: PlacedTile; i: number; director
             >
                 {/* The slab's edge: stacked layers in darker shades of the tile's
                     own pastel, under the card only (the dashed tail is not a task). */}
-                {LAYERS.map((z, k) => (
+                {edge.map(({ z, shade }) => (
                     <motion.div
                         key={z}
-                        ref={(el: HTMLDivElement | null) => {
-                            if (el) leaves.current[k] = el
-                        }}
+                        data-leaf
                         className="absolute"
-                        style={{ ...cardBox, background: `color-mix(in srgb, ${fg} ${LAYER_SHADE[k]}%, ${bg})`, transform: `translateZ(${z}px)`, opacity: mv.op }}
+                        style={{ ...cardBox, background: `color-mix(in srgb, ${fg} ${shade}%, ${bg})`, transform: `translateZ(${z}px)`, opacity: mv.op }}
                     />
                 ))}
                 {/* Top face — the real tile, exactly. */}
                 <motion.div
-                    ref={(el: HTMLDivElement | null) => {
-                        if (el) leaves.current[LAYERS.length] = el
-                    }}
+                    data-leaf
                     className="absolute inset-0"
                     style={{ transform: `translateZ(${DEPTH}px)`, opacity: mv.op }}
                 >
@@ -824,18 +829,22 @@ function Bloom({ intro }: { intro: MotionValue<number> }) {
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect
 
 function Stage({
-    intro, exit, director, futureN,
+    intro, director, futureN, panRefs, triggersRef, lite,
 }: {
     intro: MotionValue<number>
-    exit: MotionValue<number>
     director: TileDirector
+    /** The two layers the exit's drift pans (baked by the section). */
+    panRefs: { surface: Ref<HTMLDivElement>; sheet: Ref<HTMLDivElement> }
+    /** Where each future group comes due, for the section's scroll handler. */
+    triggersRef: { current: number[] }
+    /** Lighter tiles for phones and low-memory devices. */
+    lite: boolean
     /** How many of the exit's future tiles are mounted (in rank order). */
     futureN: number
 }) {
     const ref = useRef<HTMLDivElement>(null)
     const [rig, setRig] = useState<Rig | null>(null)
     const rigRef = useRef<Rig | null>(null)
-    const triggersRef = useRef<number[]>([])
     const resized = useMotionValue(0)
     useIsoLayoutEffect(() => {
         const el = ref.current
@@ -861,12 +870,9 @@ function Stage({
         if (t >= INTRO) setOpening(false)
     })
     // Exit: the timeline drifts left along its own X axis, inside the tilt —
-    // on past the release until the stage has left the screen; the future work
-    // comes due as its weeks pass TRIGGER_X.
-    const pan = useTransform(exit, (u) => -PAN_TOTAL * drift(Math.max(0, u)))
-    useMotionValueEvent(pan, "change", (x) => director.setFutureDue(futureDue(-x, triggersRef.current)))
-    const [exiting, setExiting] = useState(false)
-    useMotionValueEvent(exit, "change", (u) => setExiting(u > 0))
+    // on past the release until the stage has left the screen (baked by the
+    // section onto panRefs); the future work comes due as its weeks pass
+    // TRIGGER_X.
 
     return (
         <div ref={ref} className="absolute inset-0" style={{ visibility: rig ? undefined : "hidden" }}>
@@ -882,20 +888,20 @@ function Stage({
                         endless timeline slides by under a fixed light. */}
                     <PlayfulFloor
                         wrapToday={(pill) => <TodayPill pulse={director.pulse}>{pill}</TodayPill>}
-                        surfaceStyle={{ x: pan, willChange: exiting ? "transform" : undefined }}
+                        surfaceRef={panRefs.surface}
                     />
                     {/* Everything else on the plane, panned with it as one rigid sheet. */}
-                    <motion.div className="absolute left-0 top-0" style={{ ...P3D, x: pan, willChange: exiting ? "transform" : undefined }}>
+                    <div ref={panRefs.sheet} className="absolute left-0 top-0" style={P3D}>
                         <TodayFlash pulse={director.pulse} />
                         {opening && HOLES.map((hole, k) => <Cover key={k} hole={hole} k={k} intro={intro} />)}
                         {TILES.map((tile, i) =>
                             i < N0 || mountedFuture.has(i) ? (
                                 <Fragment key={tile.issue.id}>
-                                    <DropTile tile={tile} i={i} director={director} />
+                                    <DropTile tile={tile} i={i} director={director} lite={lite} />
                                 </Fragment>
                             ) : null,
                         )}
-                    </motion.div>
+                    </div>
                 </motion.div>
             </div>
             {opening && <Bloom intro={intro} />}
@@ -916,6 +922,7 @@ export default function TimelineSection() {
     const intro = useMotionValue(0)
     const [director] = useState(() => new TileDirector())
     const reduce = useReducedMotion()
+    const lite = useLiteGraphics()
     const introStarted = useRef(false)
     // The exit's future work mounts ahead of time, FUTURE_SLICE tiles per idle
     // slice as a low-priority update, from when the intro finishes. (Mounting
@@ -942,6 +949,7 @@ export default function TimelineSection() {
     const geo = useRef({ H: 0, vh: 1, from: 0, E: 1 })
     const geoTick = useMotionValue(0)
     const [overlap, setOverlap] = useState(0)
+    const [geoV, setGeoV] = useState(0)
     useIsoLayoutEffect(() => {
         const sec = sectionRef.current
         const stage = stageRef.current
@@ -954,6 +962,7 @@ export default function TimelineSection() {
             geo.current = { H, vh, from, E }
             setOverlap(Math.round(E * RISE_TOTAL))
             geoTick.set(geoTick.get() + 1)
+            setGeoV((v) => v + 1)
         }
         update()
         const ro = new ResizeObserver(update)
@@ -989,8 +998,12 @@ export default function TimelineSection() {
         introAnim.current.stop()
         introAnim.current = animate(intro, INTRO, { duration: Math.max(0.3, left * 0.35), ease: "linear", onComplete: introDone })
     }
+    const triggersRef = useRef<number[]>([])
+    const exitOf = (px: number) => (px - geo.current.from) / geo.current.E
     const onScrolled = (px: number) => {
         if (px > 0) startIntro()
+        // The future work comes due as its weeks pass TRIGGER_X in the drift.
+        director.setFutureDue(futureDue(PAN_TOTAL * drift(Math.max(0, exitOf(px))), triggersRef.current))
         const dvh = px / geo.current.vh
         if (dvh >= WAVE_VH[Math.min(2, WAVE_VH.length - 1)]) hurryIntro()
         const n = dueCount(dvh)
@@ -1014,58 +1027,79 @@ export default function TimelineSection() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [reduce])
 
-    // Exit progress u: 0 at the start of the exit, 1 at the release, and on
-    // beyond it. The drift reads it through a light spring so trackpad steps
-    // don't judder; the rise reads it raw, locked to the page's own scroll.
-    // None of it when reduced motion is on.
-    const still = useMotionValue(0)
-    useEffect(() => still.set(reduce ? 1 : 0), [reduce, still])
-    const exitOf = (px: number) => (px - geo.current.from) / geo.current.E
-    const smooth = useSpring(scrolled, { stiffness: 260, damping: 36, mass: 0.5, restDelta: 0.01 })
-    const exit = useTransform([smooth, still, geoTick], ([px, r]: number[]) => (r ? 0 : Math.max(0, exitOf(px))))
-    const exitRaw = useTransform([scrolled, still, geoTick], ([px, r]: number[]) => (r ? 0 : exitOf(px)))
-    // Whole pixels, so the stage's clipped bottom edge and its fade line up exactly.
-    const rise = useTransform(exitRaw, (u) => -Math.round(riseOf(u) * geo.current.E))
+    // Everything scroll-linked is baked: each element's styles are sampled
+    // along the scroll into keyframes, which the browser then plays against
+    // the scroll itself (lib/scrollScrub) — on the compositor where scroll
+    // timelines exist, so nothing runs per scroll frame. Rebuilt on resize.
+    // Exit progress u (exitOf): 0 at the start of the exit, 1 at the release,
+    // and on beyond it. None of it with reduced motion.
+    const surfaceRef = useRef<HTMLDivElement>(null)
+    const sheetRef = useRef<HTMLDivElement>(null)
+    const fadeRef = useRef<HTMLDivElement>(null)
+    const grainRef = useRef<HTMLDivElement>(null)
+    const headingRef = useRef<HTMLDivElement>(null)
+    useEffect(() => {
+        const sec = sectionRef.current
+        const els = [stageRef.current, fadeRef.current, grainRef.current, headingRef.current, surfaceRef.current, sheetRef.current]
+        if (reduce || !sec || els.some((e) => !e) || geoV === 0) return
+        const [stage, fade, grain, heading, surface, sheet] = els as HTMLElement[]
+        const { H, vh, from, E } = geo.current
+        // The stage's rise (locked to the page's scroll), and the soft bottom
+        // edge that grows with it: a thin edge as it lifts off, deepening as it
+        // climbs, fading in over the first few px. It carries the page's grain
+        // so the stage's flat dark meets the textured page without a seam.
+        const riseAt = (px: number) => riseOf(exitOf(px)) * E
+        const edge = (px: number) => {
+            const r = riseAt(px)
+            return { scale: Math.min(1, (EDGE_MIN + r * EDGE_GROW) / (EDGE_H * 100 * vh)), near: clamp01(r / 24) }
+        }
+        const riseFrom = from + RISE_AT * E
+        const riseTo = from + E
+        // The heading clears left, ahead of the drift, over the first ~30% of
+        // the exit; the drift then pans the floor's surface and the plan.
+        const pan = (px: number) => ({ transform: `translateX(${-PAN_TOTAL * drift(Math.max(0, exitOf(px)))}px)` })
+        return bakeScrub(sec, [
+            { el: stage, from: riseFrom, to: riseTo, samples: 60, at: (px) => ({ transform: `translateY(${-riseAt(px)}px)` }) },
+            { el: fade, from: riseFrom, to: riseTo, samples: 60, at: (px) => { const e = edge(px); return { transform: `scaleY(${e.scale})`, opacity: e.near } } },
+            { el: grain, from: riseFrom, to: riseTo, samples: 60, at: (px) => { const e = edge(px); return { transform: `scaleY(${e.scale})`, opacity: 0.07 * e.near } } },
+            {
+                el: heading, from, to: from + 0.3 * E, samples: 30,
+                at: (px) => { const u = exitOf(px); return { opacity: 1 - clamp01(u / 0.27), transform: `translateX(${-60 * easeIn(clamp01(u / 0.3))}%)` } },
+            },
+            { el: surface, from, to: H, samples: 90, at: pan },
+            { el: sheet, from, to: H, samples: 90, at: pan },
+        ], { H, viewport: vh * 100 })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [reduce, geoV])
 
-    // The heading fades in as the floor settles and clears left, ahead of the
-    // drift, over the first ~30% of the exit.
-    const headingOpacity = useTransform([intro, exit], ([t, u]: number[]) => Math.min(clamp01((t - 0.85) / 0.65), 1 - clamp01(u / 0.27)))
+    // The heading fades in as the floor settles (its clearing is baked above).
+    const headingOpacity = useTransform(intro, (t) => clamp01((t - 0.85) / 0.65))
     const headingY = useTransform(intro, [0.85, 1.5], [18, 0])
-    const headingX = useTransform(exit, (u) => `${-60 * easeIn(clamp01(u / 0.3))}%`)
-    // As the stage rises its bottom melts into the page, so it never shows a
-    // bright edge above the page (and the next section). The fade grows with
-    // the rise itself: a thin soft edge as it lifts off, deepening as it climbs
-    // (scaleY from the bottom, never a sudden band); it fades in over the first
-    // few px of rise.
-    const fadeScale = useTransform(rise, (y) => Math.min(1, (EDGE_MIN + -y * EDGE_GROW) / (EDGE_H * 100 * geo.current.vh)))
-    const nearFade = useTransform(rise, [0, -24], [0, 1])
-    // …and carries the page's grain (AmbientBackground) at its edge, so the
-    // stage's flat dark meets the textured page below without a seam.
-    const edgeGrain = useTransform(nearFade, (o) => 0.07 * o)
 
     return (
         // The negative bottom margin lets the next section ride up over the end
         // of this one by exactly the stage's rise (none with reduced motion).
         <section ref={sectionRef} className="relative h-[390vh]" style={{ marginBottom: reduce ? 0 : -overlap }}>
-            <motion.div ref={stageRef} className="sticky top-0 h-svh w-full overflow-hidden bg-[#05060e]" style={{ y: rise }}>
+            <div ref={stageRef} className="sticky top-0 h-svh w-full overflow-hidden bg-[#05060e]">
                 {/* The lit floor stops a few px short of the stage's bottom edge, so
                     that edge is only ever page colour: a scaled or fractional-pixel
                     edge can't blend a bright row into a seam as the stage rises. */}
                 <div className="absolute inset-x-0 top-0 bottom-[3px] overflow-hidden">
-                    <Stage intro={intro} exit={exit} director={director} futureN={futureN} />
+                    <Stage intro={intro} director={director} futureN={futureN} panRefs={{ surface: surfaceRef, sheet: sheetRef }} triggersRef={triggersRef} lite={lite} />
                 </div>
-                <motion.div
+                <div
+                    ref={fadeRef}
                     aria-hidden
-                    style={{ opacity: nearFade, scaleY: fadeScale, height: `${EDGE_H * 100}%` }}
+                    style={{ opacity: 0, height: `${EDGE_H * 100}%` }}
                     className="pointer-events-none absolute inset-x-0 bottom-0 origin-bottom bg-gradient-to-t from-[#05060e] via-[#05060e]/70 to-transparent"
                 />
-                <motion.div
+                <div
+                    ref={grainRef}
                     aria-hidden
                     className="pointer-events-none absolute inset-x-0 bottom-0 origin-bottom"
                     style={{
                         height: `${EDGE_H * 100}%`,
-                        scaleY: fadeScale,
-                        opacity: edgeGrain,
+                        opacity: 0,
                         backgroundImage: GRAIN,
                         backgroundSize: "160px 160px",
                         maskImage: "linear-gradient(to top, #000 30%, transparent)",
@@ -1075,10 +1109,8 @@ export default function TimelineSection() {
 
                 {/* Heading, over the dark far end of the plane. */}
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-[52%] bg-gradient-to-b from-[#05060e] via-[#05060e]/80 to-transparent" />
-                <motion.div
-                    style={{ opacity: headingOpacity, x: headingX, y: headingY }}
-                    className="absolute inset-x-0 top-0 px-5 pt-24 md:px-12 md:pt-28"
-                >
+                <div ref={headingRef} className="absolute inset-x-0 top-0">
+                <motion.div style={{ opacity: headingOpacity, y: headingY }} className="px-5 pt-24 md:px-12 md:pt-28">
                     <div className="mx-auto grid max-w-[1240px] gap-4 md:grid-cols-[1.15fr_1fr] md:items-end md:gap-16">
                         <div>
                             <p className="mb-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[#e89440] md:mb-4">Plan together</p>
@@ -1093,7 +1125,8 @@ export default function TimelineSection() {
                         </p>
                     </div>
                 </motion.div>
-            </motion.div>
+                </div>
+            </div>
         </section>
     )
 }
