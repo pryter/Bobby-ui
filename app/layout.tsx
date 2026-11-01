@@ -4,7 +4,7 @@ import {Nunito} from "next/font/google"
 
 export const metadata: Metadata = {
   title: "Bobby",
-  description: "Your personal project builder",
+  description: "Bobby is a lab researching intelligence and RAG systems, and building products like Ucelot.",
 }
 
 

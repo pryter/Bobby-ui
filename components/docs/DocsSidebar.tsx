@@ -135,13 +135,19 @@ function CategorySection({
   }, [hasActive])
 
   const desktop = variant === "desktop"
+  // Nested folders (e.g. Products → Bobby CI) read as an indented sub-group
+  // rather than another top-level section.
+  const nested = depth > 0
 
   return (
-    <div className="flex flex-col mt-5 first:mt-0">
+    <div className={"flex flex-col " + (nested ? "mt-1" : "mt-5 first:mt-0")}>
       <button
         onClick={() => setOpen((v) => !v)}
         className={
-          "flex items-center justify-between mb-2 text-[11px] uppercase tracking-wider font-semibold transition-colors " +
+          "flex items-center justify-between transition-colors " +
+          (nested
+            ? "px-3 py-2 text-sm font-semibold "
+            : "mb-2 text-[11px] uppercase tracking-wider font-semibold ") +
           (desktop
             ? "text-gray-500 hover:text-black dark:hover:text-white"
             : "text-gray-500 hover:text-white")
@@ -178,7 +184,7 @@ function CategorySection({
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="pt-0.5">
+            <div className={nested ? "ml-3 pl-2 border-l border-black/[0.08] dark:border-white/[0.08]" : "pt-0.5"}>
               <NodeList
                 nodes={node.children}
                 pathname={pathname}

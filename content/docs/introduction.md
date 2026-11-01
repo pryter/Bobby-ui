@@ -1,30 +1,34 @@
 ---
-title: Introduction
-description: What Bobby is and why it exists.
+title: About Bobby
+description: Who we are, what we research, and what we've built.
 order: 1
 ---
 
-# Introduction
+# About Bobby
 
-**Bobby** is your personal project builder — a single workspace that turns ideas into shipped code without forcing you to context-switch between half a dozen tools.
+**Bobby** is a lab. We're exploring how machines understand and reason over knowledge, and we turn the parts that hold up into products.
 
-These docs walk through the concepts, the day-to-day workflow, and the integrations that make Bobby fit into how you already build.
+## What we research
 
-## What you'll find here
+- **[Intelligence](/docs/research/intelligence)**: systems that work out what a question means from its context.
+- **[RAG](/docs/research/rag)**: retrieval-augmented generation that answers from your own code and documents, and shows its sources.
+- **[Integration](/docs/research/integration)**: fitting into the tools a team already uses, so the work carries on without switching.
+- **[Evaluation](/docs/research/evaluation)**: checking that an answer is correct and backed by its sources before anything ships.
 
-- **Getting started** — install, sign in, and run your first build in under five minutes.
-- **Core concepts** — projects, workers, pipelines, and how they fit together.
-- **Integrations** — connecting GitHub, Supabase, and the rest of your stack.
-- **FAQ** — answers to the questions that come up most often.
+## What we've built
 
-## A quick mental model
+| Product | What it does | Status |
+|---|---|---|
+| [Ucelot](/products/ucelot) | Understands your codebase and documents, and answers with sources. | Live |
+| [Component Zoo](/products/component-zoo) | A live canvas for React components. | Live |
+| [Interactive Smart Conversation Engine](/products/conversation-engine) | Real-time conversation that replies quickly and keeps track of context. | Beta |
+| [Bobby CI](/docs/archived/bobby-ci) | Self-hosted build pipelines. | Archived |
 
-Think of Bobby as three layers:
+## How we work
 
-1. A **workspace** where your projects live.
-2. A **runtime** that executes your build pipelines.
-3. A **stream** that surfaces what's happening, live, as it happens.
+1. **Start with a hard question.** Pick a problem worth solving.
+2. **Build to learn.** Prototype quickly and test on real data.
+3. **Ship what holds up.** Prototypes that prove themselves become products.
+4. **Learn from use.** What people do with our products shapes the next question.
 
-Everything else in these docs is a variation on those three ideas.
-
-> Tip: if you're skimming, jump straight to *Getting started* — the rest will make more sense once you've poked at the dashboard.
+> Want to see it in action? [Try Ucelot](https://ucelot.com).

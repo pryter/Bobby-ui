@@ -1,33 +1,31 @@
 ---
 title: FAQ
-description: Common questions and answers.
-order: 4
+description: Common questions about Bobby and our products.
+order: 2
 ---
 
 # FAQ
 
-## Is Bobby open source?
+## What is Bobby?
 
-The CLI and worker runtime are open source under MIT. The hosted dashboard is closed-source for now.
+Bobby is a lab researching intelligence and retrieval-augmented generation (RAG), and building products from that research. See [About Bobby](/docs/introduction).
 
-## Can I self-host?
+## What's the difference between Bobby and Ucelot?
 
-Yes — point a worker at your own machine or a VPS. The dashboard has a self-hosted tier in private beta.
+Bobby is the lab. [Ucelot](/products/ucelot) is one of our products, and the one where most of our RAG research ends up. It lives at [ucelot.com](https://ucelot.com).
 
-## What languages are supported?
+## Which products can I use today?
 
-Anything you can build from a shell. First-class templates exist for TypeScript, Python, Go, and Rust, but the pipeline is just a script — bring whatever toolchain you like.
+[Ucelot](/products/ucelot) and [Component Zoo](/products/component-zoo) are live. The [Interactive Smart Conversation Engine](/products/conversation-engine) is in beta.
 
-## How are secrets handled?
+## What does "Beta" mean?
 
-Secrets are encrypted at rest with per-project keys and only decrypted inside the worker process at build time. They never leave the worker.
+The product works and people use it, but it's still changing quickly. Expect rough edges; we fix them as we go.
 
-## How do I get help?
+## What does "Archived" mean?
 
-- File an issue on [GitHub](https://github.com)
-- Ask in the community chat (link in your dashboard)
-- Email support if you're on a paid plan
+We've stopped developing the product. [Bobby CI](/docs/archived/bobby-ci) is archived, and its page stays up so older links still work.
 
-## What's on the roadmap?
+## Where do I find product-specific help?
 
-The short list: native deploy targets, scheduled pipelines, and a marketplace for community pipeline steps.
+Each product has its own page under [Products](/#products). Ucelot has full documentation at [ucelot.com/docs](https://ucelot.com/docs).
