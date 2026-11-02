@@ -3,6 +3,7 @@
 import { Fragment, useRef } from "react"
 import Image from "next/image"
 import { ArrowPathIcon, CommandLineIcon, ShieldCheckIcon } from "@heroicons/react/24/outline"
+import { ChevronRightIcon } from "@heroicons/react/20/solid"
 import { motion, useMotionValue, useReducedMotion, useScroll, useTransform, type MotionValue } from "framer-motion"
 import Navbar from "@/components/Navbar"
 import SiteFooter from "@/components/SiteFooter"
@@ -49,8 +50,8 @@ function PrimaryCTA({ children = "Open Ucelot" }: { children?: React.ReactNode }
 
 function TextLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="text-[15px] font-semibold text-[#ffc068] hover:underline">
-      {children} ›
+    <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-[15px] font-semibold text-[#ffc068] hover:underline">
+      {children} <ChevronRightIcon className="h-4 w-4" aria-hidden />
     </a>
   )
 }
@@ -62,7 +63,7 @@ function TextLink({ href, children }: { href: string; children: React.ReactNode 
 function Hero() {
   return (
     <section className="relative flex min-h-[86vh] items-center justify-center overflow-hidden px-5 pb-16 pt-32 md:px-12">
-      <div className="relative max-w-4xl text-center">
+      <div className="relative max-w-6xl text-center">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -78,19 +79,19 @@ function Hero() {
           initial={{ opacity: 0, y: 28 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, ease: EASE, delay: 0.08 }}
-          className="text-[clamp(2.6rem,7vw,5.75rem)] font-bold leading-[1.0] tracking-tight"
+          className="text-balance text-[clamp(2.6rem,7vw,5.75rem)] font-bold leading-[1.0] tracking-tight"
         >
-          The issue tracker
-          <br />
-          that <Ember>reads your code.</Ember>
+          The system that
+          {/* two lines on a wide screen; phones balance their own */}
+          <br className="hidden md:block" /> <Ember>knows your code.</Ember>
         </motion.h1>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: EASE, delay: 0.2 }}
-          className="mx-auto mt-7 max-w-2xl text-lg leading-relaxed text-[#9ba4c4] md:text-xl"
+          className="mx-auto mt-7 max-w-2xl text-balance text-lg leading-relaxed text-[#9ba4c4] md:text-xl"
         >
-          Ucelot knows how your codebase fits together. Every issue arrives with the files and lines behind it, and why they matter.
+          Ucelot learns your code and docs, and brings that knowledge into the tools you already use.
         </motion.p>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -285,7 +286,7 @@ function Features() {
       <div className="mx-auto max-w-[1400px] rounded-[32px] bg-[#121527] px-4 py-14 ring-1 ring-white/[0.04] sm:px-8 md:rounded-[44px] md:px-[6%] md:py-24">
         <div className="mx-auto max-w-6xl">
           <motion.h2 {...inView()} className="mb-12 text-[clamp(2.2rem,4.4vw,3.6rem)] font-semibold leading-[1.08] tracking-tight md:mb-16">
-            <span className="text-[#8a93b5]">Here&apos;s what else you get</span>
+            <span className="text-[#8a93b5]">Here&apos;s what else</span>
             <br />
             <span className="text-[#f6f7fb]" style={{ textShadow: GLOW }}>with Ucelot.</span>
           </motion.h2>

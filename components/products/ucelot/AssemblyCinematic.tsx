@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { easeInOut, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue } from "framer-motion"
 import { BOARD_H, Board, FRAME_H, P3, W, type BoardMotion, type PieceMeta } from "./BoardPieces"
 import { GRAIN } from "./AmbientBackground"
@@ -60,16 +60,19 @@ function schedule({ region, order, y }: PieceMeta) {
 // in between:
 //   slow    the top of the sidebar landing, through the credits pill (≈0.10)
 //   faster  the rest of the sidebar and the camera pulling back
-//   slow    the first two project tiles landing (≈0.54–0.63)
-//   faster  the remaining tiles
+//   brisk   the project tiles (≈0.54 on): the sidebar is the highlight, so
+//           the page fills in at about its pace, then quicker
 //   slow    the final settle to head-on
-// A monotone cubic through the knots keeps the speed changes gradual.
+// A monotone cubic through the knots keeps the speed changes gradual. The
+// knots are scroll fractions of the section's pinned length (660vh: 144vh to
+// the credits pill, 232vh for the sidebar, 56 + 64vh for the tiles, 164vh to
+// settle) — change the section's height with them.
 const TEMPO: [number, number][] = [
   [0, 0],
-  [0.18, 0.1],
-  [0.47, 0.54],
-  [0.65, 0.63],
-  [0.79, 0.84],
+  [144 / 660, 0.1],
+  [376 / 660, 0.54],
+  [432 / 660, 0.63],
+  [496 / 660, 0.84],
   [1, 1],
 ]
 
@@ -99,6 +102,14 @@ function monotoneCurve(points: [number, number][], easeEnds = 0.5) {
 const tempo = monotoneCurve(TEMPO)
 
 const NAV_CLEARANCE = 88
+// As the board settles head-on (END_FROM → END_TO of the story) a caption
+// fades in above it and the board makes room: smaller if the screen is short
+// (desktop), lower on a tall one (phones), the two centred as a group.
+const END_FROM = 0.9
+const END_TO = 0.98
+// The caption's gap to the board: clearly more than the heading's to its
+// line, so heading and line read as one block and the board as the next.
+const captionGap = (w: number) => (w < 768 ? 44 : 36)
 
 // `story` (optional) receives the build's progress, so the page's ambient
 // background can follow the camera.
@@ -115,26 +126,51 @@ export default function AssemblyCinematic({ story }: { story?: MotionValue<numbe
   useMotionValueEvent(p, "change", (v) => story?.set(v))
 
   const fitMV = useMotionValue(0.8)
+  const vhMV = useMotionValue(8)
+  // The settled board: its scale relative to the fit, and how far it moves
+  // down to leave room for the caption; the caption's top edge (px).
+  const endRatio = useMotionValue(1)
+  const endShift = useMotionValue(0)
+  const captionRef = useRef<HTMLDivElement>(null)
+  const [captionTop, setCaptionTop] = useState(0)
   useEffect(() => {
     const el = stageBoxRef.current
-    if (!el) return
-    const update = () => fitMV.set(Math.min((el.clientWidth - 48) / W, (el.clientHeight - NAV_CLEARANCE - 32) / BOARD_H, 1.15))
+    const cap = captionRef.current
+    if (!el || !cap) return
+    const update = () => {
+      const w = el.clientWidth
+      const h = el.clientHeight
+      const fit = Math.min((w - 48) / W, (h - NAV_CLEARANCE - 32) / BOARD_H, 1.15)
+      fitMV.set(fit)
+      vhMV.set(h / 100)
+      const textH = cap.offsetHeight
+      const gap = captionGap(w)
+      const endFit = Math.min(fit, (h - NAV_CLEARANCE - 32 - textH - gap) / BOARD_H)
+      endRatio.set(endFit / fit)
+      endShift.set((textH + gap) / 2)
+      const centre = NAV_CLEARANCE / 2 + h / 2
+      setCaptionTop(centre - (textH + gap + BOARD_H * endFit) / 2)
+    }
     update()
     const ro = new ResizeObserver(update)
     ro.observe(el)
+    ro.observe(cap)
     return () => ro.disconnect()
-  }, [fitMV])
+  }, [fitMV, vhMV, endRatio, endShift])
 
   const ease = { ease: easeInOut }
   const rotateX = useTransform(p, T, CAM.tilt, ease)
   const rotateZ = useTransform(p, T, CAM.roll, ease)
   const zoom = useTransform(p, T, CAM.zoom, ease)
-  const scale = useTransform([zoom, fitMV], ([z, f]: number[]) => z * f)
+  const endP = useTransform(p, [END_FROM, END_TO], [0, 1], ease)
+  const scale = useTransform([zoom, fitMV, endP, endRatio], ([z, f, e, r]: number[]) => z * f * (1 + (r - 1) * e))
   const boardX = useTransform(p, T, CAM.fx.map((v) => -v), ease)
   const boardY = useTransform(p, T, CAM.fy.map((v) => -v), ease)
   // Frame the close-up higher (less empty space above the board's top edge),
   // easing back to centre as the camera pulls out.
-  const frameY = useTransform(p, [0, 0.42, 0.64], ["-16vh", "-10vh", "0vh"], ease)
+  const frameVh = useTransform(p, [0, 0.42, 0.64], [-16, -10, 0], ease)
+  const frameY = useTransform([frameVh, vhMV, endP, endShift], ([a, v, e, s]: number[]) => a * v + e * s)
+  const captionY = useTransform(endP, [0, 1], [14, 0])
 
   // Focus falloff at the top and bottom of the frame while the camera is
   // close, lifting as it pulls back.
@@ -158,7 +194,7 @@ export default function AssemblyCinematic({ story }: { story?: MotionValue<numbe
   }
 
   return (
-    <section ref={sectionRef} className="relative h-[900vh]">
+    <section ref={sectionRef} className="relative h-[760vh]">
       <div className="sticky top-0 h-screen overflow-hidden" style={{ visibility: near ? undefined : "hidden" }}>
 
         <div ref={stageBoxRef} className="absolute inset-0 [perspective:2600px]">
@@ -189,6 +225,20 @@ export default function AssemblyCinematic({ story }: { story?: MotionValue<numbe
               WebkitMaskImage: "linear-gradient(to bottom, #000 0%, transparent 22%, transparent 72%, #000 100%)",
             }}
           />}
+        </motion.div>
+
+        {/* What it all adds up to, once the board is all there. */}
+        <motion.div
+          ref={captionRef}
+          style={{ top: captionTop, opacity: endP, y: captionY }}
+          className="pointer-events-none absolute inset-x-0 px-6 text-left md:text-center"
+        >
+          <h2 className="max-w-4xl text-balance text-[clamp(2.4rem,5.6vw,4.5rem)] font-bold leading-[1.02] tracking-tight text-[#f6f7fb] md:mx-auto">
+            Everything in one place.
+          </h2>
+          <p className="mt-3 max-w-[34ch] text-pretty text-[15px] leading-[1.45] text-[#9ba4c4] md:mx-auto md:mt-4 md:max-w-xl md:text-balance md:text-lg md:leading-relaxed">
+            Ideas, issues, docs and the code behind them live together, and Ucelot keeps track of how they connect.
+          </p>
         </motion.div>
       </div>
     </section>

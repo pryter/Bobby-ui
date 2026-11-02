@@ -15,7 +15,7 @@ import {
 } from "./app/screens/timeline-playful"
 
 // ─── Plan together: the timeline planning tool ──────────────────────────────
-// A tall section (390vh) with a pinned, full-bleed stage holding one endless
+// A tall section (520vh) with a pinned, full-bleed stage holding one endless
 // timeline floor (./app/screens/timeline-playful) at 60°.
 //
 //   Intro — time-based, once, when the stage first pins. A blank sheet — the
@@ -45,7 +45,8 @@ import {
 //   under a lit area that stays put, while later dates slide in from the right
 //   and more planned work keeps landing on them — each week of it drops in
 //   (same gravity) as its first slot passes ~80% across the stage. Planning
-//   goes on forever. The heading clears left early. Scrolling back just runs
+//   goes on forever. The heading clears left early and a second one ("The
+//   timeline keeps going.") comes in from the right. Scrolling back just runs
 //   the drift backwards: the whole timeline, landed work and all, slides
 //   flat back to the right.
 //
@@ -153,6 +154,9 @@ const PAN_TOTAL = PAN_DAYS * CELL
 const PAPER_SCALE = 0.5
 const LIGHT_SCALE = 0.125
 const SHADOW_SCALE = 0.25 // the tiles' contact shadows (all blur)
+/** Where (fraction of the exit) the drift's heading starts coming in: once
+ *  the first heading has cleared (gone by 0.27–0.3), so they never overlap. */
+const DRIFT_HEADING_AT = 0.28
 /** The pan is attached this far (vh of scroll) ahead of the exit, and only
  *  let go again well back from it (so swiping to and fro doesn't keep
  *  rebuilding its layers). */
@@ -223,7 +227,7 @@ const SPREAD = 0.09 // in-plane bulge per unit of thickness squash
 
 // Scroll → due tiles; the launch queue.
 // Scroll budget, in vh of pinned scroll (the section's height minus the stage).
-// The section is h-[390vh]; its stage (100vh) pins for the rest. Positions are
+// The section is h-[520vh]; its stage (100vh) pins for the rest. Positions are
 // in vh of scroll since the stage pinned.
 const WAVES_FROM_VH = 15 // first wave's threshold
 const WAVES_TO_VH = 112.5 // last wave's
@@ -231,14 +235,15 @@ const HOLD_VH = 30 // the finished plan, held
 const EXIT_FROM_VH = WAVES_TO_VH + HOLD_VH // exit: from here to the unpin (~148vh) and on
 
 // During the exit the stage also rises, so the page moves on while the
-// timeline drifts by. The rise waits until RISE_AT of the exit (the drift has
-// the screen to itself first), eases in over RISE_RAMP to ALPHA of the scroll
+// timeline drifts by. The rise waits until RISE_AT of the exit (the drift,
+// and its heading, have the screen to themselves for a good while first),
+// eases in over RISE_RAMP to ALPHA of the scroll
 // speed, and over the last BLEND eases up to 1, so the hand-over to the plain
 // scroll at the sticky's release is seamless. The section's negative bottom
 // margin is that total rise, so the next section meets the stage's bottom edge
 // exactly as it lets go. riseOf: the rise so far, as a fraction of the exit's
 // length (∫ of that rate; ∫ smoothstep = x³ − x⁴/2).
-const RISE_AT = 0.55
+const RISE_AT = 0.72
 const RISE_RAMP = 0.15
 const ALPHA = 0.28
 const BLEND = 0.1
@@ -1223,11 +1228,12 @@ export default function TimelineSection() {
     const fadeRef = useRef<HTMLDivElement>(null)
     const grainRef = useRef<HTMLDivElement>(null)
     const headingRef = useRef<HTMLDivElement>(null)
+    const driftHeadingRef = useRef<HTMLDivElement>(null)
     useEffect(() => {
         const sec = sectionRef.current
-        const els = [stageRef.current, fadeRef.current, grainRef.current, headingRef.current]
+        const els = [stageRef.current, fadeRef.current, grainRef.current, headingRef.current, driftHeadingRef.current]
         if (reduce || !sec || els.some((e) => !e) || geoV === 0) return
-        const [stage, fade, grain, heading] = els as HTMLElement[]
+        const [stage, fade, grain, heading, driftHeading] = els as HTMLElement[]
         const { H, vh, from, E } = geo.current
         // The stage's rise (locked to the page's scroll), and the soft bottom
         // edge that grows with it: a thin edge as it lifts off, deepening as it
@@ -1241,7 +1247,8 @@ export default function TimelineSection() {
         const riseFrom = from + RISE_AT * E
         const riseTo = from + E
         // The heading clears left, ahead of the drift, over the first ~30% of
-        // the exit.
+        // the exit; the drift's own heading follows it in from the right
+        // (DRIFT_IN … DRIFT_IN + 0.18 of the exit) and rides the stage out.
         return bakeScrub(sec, [
             { el: stage, from: riseFrom, to: riseTo, samples: 60, at: (px) => ({ transform: `translateY(${-riseAt(px)}px)` }) },
             { el: fade, from: riseFrom, to: riseTo, samples: 60, at: (px) => { const e = edge(px); return { transform: `scaleY(${e.scale})`, opacity: e.near } } },
@@ -1249,6 +1256,10 @@ export default function TimelineSection() {
             {
                 el: heading, from, to: from + 0.3 * E, samples: 30,
                 at: (px) => { const u = exitOf(px); return { opacity: 1 - clamp01(u / 0.27), transform: `translateX(${-60 * easeIn(clamp01(u / 0.3))}%)` } },
+            },
+            {
+                el: driftHeading, from: from + DRIFT_HEADING_AT * E, to: from + (DRIFT_HEADING_AT + 0.18) * E, samples: 30,
+                at: (px) => { const v = clamp01((exitOf(px) - DRIFT_HEADING_AT) / 0.18); return { opacity: easeOut(v), transform: `translateX(${40 * (1 - easeOut(v))}%)` } },
             },
         ], { H, viewport: vh * 100 })
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1302,7 +1313,7 @@ export default function TimelineSection() {
     return (
         // The negative bottom margin lets the next section ride up over the end
         // of this one by exactly the stage's rise (none with reduced motion).
-        <section ref={sectionRef} className="relative h-[390vh]" style={{ marginBottom: reduce ? 0 : -overlap }}>
+        <section ref={sectionRef} className="relative h-[520vh]" style={{ marginBottom: reduce ? 0 : -overlap }}>
             <div ref={stageRef} className="sticky top-0 h-svh w-full overflow-hidden bg-[#05060e]" style={{ visibility: near ? undefined : "hidden" }}>
                 {/* The lit floor stops a few px short of the stage's bottom edge, so
                     that edge is only ever page colour: a scaled or fractional-pixel
@@ -1348,6 +1359,22 @@ export default function TimelineSection() {
                         </p>
                     </div>
                 </div>
+                </div>
+                {/* The drift's heading: the timeline runs on, and so does the plan. */}
+                <div ref={driftHeadingRef} style={{ opacity: 0 }} className="pointer-events-none absolute inset-x-0 top-0 px-5 pt-24 md:px-12 md:pt-28">
+                    <div className="mx-auto grid max-w-[1240px] gap-4 md:grid-cols-[1.15fr_1fr] md:items-end md:gap-16">
+                        <div>
+                            <p className="mb-3 text-[12px] font-bold uppercase tracking-[0.2em] text-[#e89440] md:mb-4">Plan ahead</p>
+                            <h2 className="text-[clamp(2.1rem,5vw,4rem)] font-bold leading-[1.04] tracking-tight">
+                                The timeline
+                                <br />
+                                <Ember>keeps going.</Ember>
+                            </h2>
+                        </div>
+                        <p className="max-w-md text-[15px] leading-relaxed text-[#9ba4c4] md:pb-2 md:text-xl">
+                            Plan the next sprint or the next quarter on the same view. New work lands as its dates come up.
+                        </p>
+                    </div>
                 </div>
             </div>
         </section>
