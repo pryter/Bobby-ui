@@ -16,6 +16,7 @@ export type ProductImage = {
   src: string // e.g. "/products/ucelot/cover.png" — also the poster when there's a video
   alt: string
   video?: string // optional short muted loop (mp4) that plays in place of the still
+  focus?: string // which part to keep when a slot crops it (CSS object-position), default centre
 }
 
 export type Product = {
@@ -61,6 +62,12 @@ export const PRODUCTS: Product[] = [
       { title: "Ucelot reads it", desc: "Your code and documents are analysed in an isolated workspace, and kept current as they change." },
       { title: "Work from grounded answers", desc: "Ask questions and open issues that cite the exact files, lines and pages worth looking at." },
     ],
+    image: {
+      src: "/products/ucelot/cover.jpg",
+      video: "/products/ucelot/timeline-loop.mp4",
+      focus: "12% 50%", // the plan's first weeks, where the drops start
+      alt: "Ucelot's planning timeline: issues drop onto a shared timeline week by week, then the timeline slides on as new work lands on later dates",
+    },
     primary: { label: "Open Ucelot", href: UCELOT_URL, external: true },
     secondary: { label: "Ucelot docs", href: `${UCELOT_URL}/docs`, external: true },
   },

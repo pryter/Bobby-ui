@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { motion, animate, useMotionValue, useReducedMotion, type MotionValue, type PanInfo } from "framer-motion"
 import { ArrowLeftIcon, ArrowRightIcon } from "@heroicons/react/20/solid"
-import StatusBadge from "@/components/products/StatusBadge"
 import ProductVisual from "@/components/products/ProductVisual"
 import { ACTIVE_PRODUCTS, type Product } from "@/lib/products"
 
@@ -98,16 +97,12 @@ function ProductSlide({
       <div className="flex h-full">
         {/* Summary column — same width whether the card is open or compact */}
         <div className="flex h-full shrink-0 flex-col p-5" style={{ width: dims.compact }}>
-          <div className="flex items-center justify-between">
-            <StatusBadge status={product.status} />
-            <span className="font-mono text-xs tabular-nums text-gray-400 dark:text-gray-500">{pad(index + 1)}</span>
-          </div>
           <ProductVisual
             product={product}
             zoom={1.3}
             sizes="300px"
             priority={index === 0}
-            className="mt-4 flex-1 rounded-2xl"
+            className="flex-1 rounded-2xl"
           />
           <h3 className="mt-5 text-xl font-semibold leading-tight tracking-tight text-gray-900 dark:text-white">
             {product.name}
@@ -119,9 +114,9 @@ function ProductSlide({
             <Link
               href={`/products/${product.slug}`}
               tabIndex={isOpen ? 0 : -1}
-              className="mt-3 text-sm font-semibold text-gray-900 dark:text-white"
+              className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-gray-900 dark:text-white"
             >
-              Explore →
+              Explore <ArrowRightIcon className="h-4 w-4" aria-hidden />
             </Link>
           )}
         </div>
@@ -163,7 +158,7 @@ function ProductSlide({
                 className="rounded-full bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors
                            hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
               >
-                Explore {product.shortName} →
+                Explore {product.shortName}
               </Link>
               {product.primary?.external && (
                 <a
@@ -173,7 +168,7 @@ function ProductSlide({
                   tabIndex={isOpen ? 0 : -1}
                   className="text-sm font-semibold text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
                 >
-                  {product.primary.label} ↗
+                  {product.primary.label}
                 </a>
               )}
             </div>

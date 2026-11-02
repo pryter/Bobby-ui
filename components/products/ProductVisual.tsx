@@ -25,9 +25,9 @@ export default function ProductVisual({
       style={{ background: `${product.accent}14` }}
     >
       {img?.video ? (
-        <LoopVideo src={img.video} poster={img.src} label={img.alt} className="absolute inset-0 h-full w-full object-cover" />
+        <LoopVideo src={img.video} poster={img.src} label={img.alt} focus={img.focus} className="absolute inset-0 h-full w-full object-cover" />
       ) : img ? (
-        <Image src={img.src} alt={img.alt} fill sizes={sizes} priority={priority} className="object-cover" />
+        <Image src={img.src} alt={img.alt} fill sizes={sizes} priority={priority} className="object-cover" style={img.focus ? { objectPosition: img.focus } : undefined} />
       ) : (
         <>
           <PixelMotif color={product.accent} index={PRODUCTS.indexOf(product)} className="opacity-90" />

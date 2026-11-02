@@ -7,12 +7,13 @@ import { useReducedMotion } from "framer-motion"
 // screen, and under reduced motion it stays on its poster (the loop's first
 // frame, so the hand-off from poster to video is seamless).
 export default function LoopVideo({
-  src, poster, label, className = "",
+  src, poster, label, className = "", focus,
 }: {
   src: string
   poster: string
   label: string
   className?: string
+  focus?: string // object-position when the slot crops it
 }) {
   const ref = useRef<HTMLVideoElement>(null)
   const reduce = useReducedMotion()
@@ -43,6 +44,7 @@ export default function LoopVideo({
       preload="none"
       disablePictureInPicture
       className={className}
+      style={focus ? { objectPosition: focus } : undefined}
     />
   )
 }
