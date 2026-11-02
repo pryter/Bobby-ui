@@ -5,6 +5,7 @@ import { easeInOut, motion, useMotionValue, useMotionValueEvent, useReducedMotio
 import { BOARD_H, Board, FRAME_H, P3, W, type BoardMotion, type PieceMeta } from "./BoardPieces"
 import { GRAIN } from "./AmbientBackground"
 import { useLiteGraphics } from "@/lib/useLiteGraphics"
+import { useNearViewport } from "@/lib/useNearViewport"
 
 // ─── Dashboard assembly — cinematic camera ────────────────────────────────────
 // The same real Projects screen, filmed like a product reveal. The board lies
@@ -148,6 +149,8 @@ export default function AssemblyCinematic({ story }: { story?: MotionValue<numbe
   // very moment every piece is on screen and pressing flat, the peak that got
   // the tab killed on low-end phones.
   const lite = useLiteGraphics()
+  // Far off screen (the page has moved on) the board's layers are dropped.
+  const near = useNearViewport(sectionRef)
   const boardMotion: BoardMotion = {
     p, schedule, arrival: "lay", flatStart: FLAT_START, flatEnd: FLAT_END,
     collapseAt: lite ? undefined : FLAT_START,
@@ -156,7 +159,7 @@ export default function AssemblyCinematic({ story }: { story?: MotionValue<numbe
 
   return (
     <section ref={sectionRef} className="relative h-[900vh]">
-      <div className="sticky top-0 h-screen overflow-hidden">
+      <div className="sticky top-0 h-screen overflow-hidden" style={{ visibility: near ? undefined : "hidden" }}>
 
         <div ref={stageBoxRef} className="absolute inset-0 [perspective:2600px]">
           {/* Rig: pivots on the focus point at the centre of the frame. */}

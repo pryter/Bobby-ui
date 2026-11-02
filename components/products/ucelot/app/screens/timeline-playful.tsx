@@ -294,12 +294,64 @@ function DateTiers({ c0, c1, wrapToday }: { c0: number; c1: number; wrapToday?: 
 const mod = (a: number, n: number) => ((a % n) + n) % n
 const WEEKEND_SHADE = "rgba(17,24,39,0.022)"
 
+/** A part of the floor, in whole cells. */
+export type FloorCells = { c0: number; c1: number; r0: number; r1: number }
+
+const boxOf = (f: FloorCells) => ({ x: f.c0 * PB_CELL, y: f.r0 * PB_CELL, w: (f.c1 - f.c0) * PB_CELL, h: (f.r1 - f.r0) * PB_CELL })
+
 /** The floor's box on the lattice. */
-export const FLOOR_BOX = {
-    x: FLOOR.c0 * PB_CELL,
-    y: FLOOR.r0 * PB_CELL,
-    w: (FLOOR.c1 - FLOOR.c0) * PB_CELL,
-    h: (FLOOR.r1 - FLOOR.r0) * PB_CELL,
+export const FLOOR_BOX = boxOf(FLOOR)
+
+/** The lit area, in lattice px: a radial falloff around the plan (sides, far
+ *  end) — opaque to 34%, half at 62%, gone at its edge — intersected with a
+ *  fade before the floor's near edge. The floor's mask; also the shape of the
+ *  blank sheet (floorSheetImage). */
+const LIT = {
+    cx: PB_PLAN.x,
+    cy: PB_PLAN.y,
+    rx: 46 * PB_CELL,
+    ry: 30 * PB_CELL,
+    stops: [[0.34, 1], [0.62, 0.5], [1, 0]] as const,
+    near: [(FLOOR.r1 - 7) * PB_CELL, (FLOOR.r1 - 1) * PB_CELL] as const,
+}
+
+/**
+ * The floor with nothing on it — its paper in the lit shape — as a small
+ * image (`pxPerCell` px a cell) to show at FLOOR_BOX. Browsers composite an
+ * image at its own size and let the GPU scale it, so it can zoom across the
+ * screen for next to nothing, where the real floor would be rasterised at
+ * every new scale. Its edges are soft gradients, so the low resolution
+ * doesn't show. Client only (canvas).
+ */
+export function floorSheetImage(paper: string, pxPerCell = 4): string {
+    const q = pxPerCell / PB_CELL
+    const W = Math.round(FLOOR_BOX.w * q)
+    const H = Math.round(FLOOR_BOX.h * q)
+    const canvas = document.createElement("canvas")
+    canvas.width = W
+    canvas.height = H
+    const ctx = canvas.getContext("2d")!
+    ctx.fillStyle = paper
+    ctx.fillRect(0, 0, W, H)
+    ctx.globalCompositeOperation = "destination-in"
+    // The radial falloff: a circle squashed to the ellipse.
+    ctx.save()
+    ctx.translate((LIT.cx - FLOOR_BOX.x) * q, (LIT.cy - FLOOR_BOX.y) * q)
+    ctx.scale(1, LIT.ry / LIT.rx)
+    const r = ctx.createRadialGradient(0, 0, 0, 0, 0, LIT.rx * q)
+    r.addColorStop(0, "#000")
+    for (const [at, a] of LIT.stops) r.addColorStop(at, `rgba(0,0,0,${a})`)
+    ctx.fillStyle = r
+    const far = (W + H) * (LIT.rx / LIT.ry) * 2
+    ctx.fillRect(-far, -far, far * 2, far * 2)
+    ctx.restore()
+    // The near fade.
+    const n = ctx.createLinearGradient(0, (LIT.near[0] - FLOOR_BOX.y) * q, 0, (LIT.near[1] - FLOOR_BOX.y) * q)
+    n.addColorStop(0, "#000")
+    n.addColorStop(1, "rgba(0,0,0,0)")
+    ctx.fillStyle = n
+    ctx.fillRect(0, 0, W, H)
+    return canvas.toDataURL("image/png")
 }
 
 /**
@@ -313,17 +365,22 @@ export const FLOOR_BOX = {
  * inside it the SURFACE, which runs on far to the right (FLOOR_SURFACE_C1) and
  * can be panned (`surfaceStyle`, or `surfaceRef` for an animation) while the lit area stays
  * put: an endless timeline sliding by. Holds no 3D children.
+ *
+ * `cells` draws only that part of the window (what a camera can see) — the
+ * same floor, lit the same way, with less of it to rasterise; the window
+ * clips the surface to it.
  */
 export function PlayfulFloor({
-    wrapToday, surfaceStyle, surfaceRef,
+    wrapToday, surfaceStyle, surfaceRef, cells = FLOOR,
 }: {
     wrapToday?: (pill: ReactNode) => ReactNode
     surfaceStyle?: MotionStyle
     surfaceRef?: Ref<HTMLDivElement>
+    cells?: FloorCells
 }) {
     const cell = PB_CELL
-    const { x: x0, y: y0, w, h } = FLOOR_BOX
-    const surfaceW = (FLOOR_SURFACE_C1 - FLOOR.c0) * cell
+    const { x: x0, y: y0, w, h } = boxOf(cells)
+    const surfaceW = (FLOOR_SURFACE_C1 - cells.c0) * cell
     // Background tiles anchored to the lattice: lines on whole cells, the
     // weekend pair starting on a Saturday, and the paper's dots where the
     // panel's paper starts (its board area's top-left).
@@ -331,17 +388,17 @@ export function PlayfulFloor({
     const dots = { x: mod(PB_FRAME.x - x0, 22), y: mod(PB_FRAME.y + WORKSPACE_HEADER_H - y0, 22) }
     const lines = `linear-gradient(to right, ${GRID_LINE} 1px, transparent 1px), linear-gradient(to bottom, ${GRID_LINE} 1px, transparent 1px)`
     const weekend = `linear-gradient(to right, ${WEEKEND_SHADE} ${2 * cell}px, transparent ${2 * cell}px)`
-    // A lit area around the plan falling off into the dark: a radial falloff
-    // (sides, far end), intersected with a fade before the near edge.
-    const lit = { x: PB_PLAN.x - x0, y: PB_PLAN.y - y0 }
+    // The lit area (LIT), placed on the lattice, so a part of the floor is lit
+    // just as the whole of it.
+    const [[s0, a0], [s1, a1], [s2, a2]] = LIT.stops
     const mask =
-        `radial-gradient(ellipse ${46 * cell}px ${30 * cell}px at ${lit.x}px ${lit.y}px, #000 34%, rgba(0,0,0,0.5) 62%, transparent 100%), ` +
-        `linear-gradient(to bottom, #000 ${h - 7 * cell}px, transparent ${h - cell}px)`
+        `radial-gradient(ellipse ${LIT.rx}px ${LIT.ry}px at ${LIT.cx - x0}px ${LIT.cy - y0}px, rgba(0,0,0,${a0}) ${s0 * 100}%, rgba(0,0,0,${a1}) ${s1 * 100}%, rgba(0,0,0,${a2}) ${s2 * 100}%), ` +
+        `linear-gradient(to bottom, #000 ${LIT.near[0] - y0}px, transparent ${LIT.near[1] - y0}px)`
     const strip = { left: DATE_ROW.c0 * cell - x0, top: -(HEADER_H + 1) - DATE_GAP - y0, width: (DATE_ROW.c1 - DATE_ROW.c0 + 1) * cell }
 
     return (
         <div
-            className="ucelot-app pointer-events-none absolute select-none"
+            className="ucelot-app pointer-events-none absolute select-none overflow-hidden"
             style={{
                 left: x0,
                 top: y0,
