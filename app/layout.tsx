@@ -15,8 +15,10 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // data-scroll-behavior: Next jumps (not glides) to the top on navigation,
+  // while the page keeps smooth scrolling for in-page links.
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         {/* Runs synchronously before first paint — sets dark class + theme-color
             so there is zero flash of wrong background on any device/mode.

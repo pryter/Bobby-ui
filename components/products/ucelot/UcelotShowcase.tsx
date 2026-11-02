@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useRef } from "react"
+import { Fragment, useLayoutEffect, useRef } from "react"
 import Image from "next/image"
 import { ArrowPathIcon, CommandLineIcon, ShieldCheckIcon } from "@heroicons/react/24/outline"
 import { ChevronRightIcon } from "@heroicons/react/20/solid"
@@ -333,6 +333,19 @@ function Closing() {
 
 export default function UcelotShowcase() {
   const { dark, toggle } = useTheme()
+  // Always start at the very top. The page is one long scroll-driven story:
+  // landing part-way down (scroll carried over from the previous page, or
+  // restored on reload / Back) would scrub through it mid-animation. So jump
+  // there instantly before the first paint, and don't let the browser
+  // restore a position while this page is open.
+  useLayoutEffect(() => {
+    const prev = history.scrollRestoration
+    history.scrollRestoration = "manual"
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" })
+    return () => {
+      history.scrollRestoration = prev
+    }
+  }, [])
   // The dashboard build's progress, for the shared background to follow.
   const story = useMotionValue(0)
   return (
