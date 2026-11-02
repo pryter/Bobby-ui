@@ -35,8 +35,8 @@ import {
 //   A backlog (a fast scroll) shortens the gap and quickens the falls so the
 //   plan rains in rather than trickling, and past the last wave everything
 //   still due rushes in — the plan is down before the stage leaves.
-//   Scrolling back lifts whole waves off in reverse (ease-in up + fade); a
-//   tile caught mid-flight just turns around from where it is.
+//   Drops only go one way: a tile falls once, on the way down, and stays.
+//   Scrolling back leaves the plan where it is.
 //
 //   Exit — scroll-scrubbed, after a short hold on the finished plan: a calm,
 //   endless drift. The timeline pans left along its own axis in plane space
@@ -44,13 +44,14 @@ import {
 //   weekend shading, date row, today's column and the plan slide out left
 //   under a lit area that stays put, while later dates slide in from the right
 //   and more planned work keeps landing on them — each week of it drops in
-//   (same gravity) as its first slot passes ~80% across the stage, and lifts
-//   off again when scrolled back. Planning goes on forever. The heading clears
-//   left early; scrolling back reverses everything.
+//   (same gravity) as its first slot passes ~80% across the stage. Planning
+//   goes on forever. The heading clears left early. Scrolling back just runs
+//   the drift backwards: the whole timeline, landed work and all, slides
+//   flat back to the right.
 //
 // Runtime: the intro is baked into keyframes once and played by the compositor
 // (IntroPlayer), so it never re-rasterises the floor from script. Each tile flight
-// (drop or lift) is baked into keyframes when it launches and played by the
+// is baked into keyframes when it launches and played by the
 // compositor (Web Animations), so a busy main thread can't stutter it; one
 // light rAF loop (TileDirector) only schedules launches and notes landings —
 // no per-frame writes, no React render per frame. Transforms and opacity
@@ -200,9 +201,8 @@ const HEAVY: Phys = { h: 270, T: 0.26, e: 0.24, q: 0.38, st: 0.22 }
 const CONTACT = [0.075, 0.055, 0.04] // time on the plane at each impact (s)
 const SQUASH_DECAY = 0.42 // each later impact squashes this much of the last
 const SPREAD = 0.09 // in-plane bulge per unit of thickness squash
-const LIFT = 0.34 // s to lift a resting tile off and fade it out
 
-// Scroll → due tiles; the launch / lift queues.
+// Scroll → due tiles; the launch queue.
 // Scroll budget, in vh of pinned scroll (the section's height minus the stage).
 // The section is h-[390vh]; its stage (100vh) pins for the rest. Positions are
 // in vh of scroll since the stage pinned.
@@ -247,7 +247,6 @@ const RUSH_GAP = 0.2
 const RUSH_TIME = 0.6
 const RUSH_FROM_VH = WAVES_TO_VH + 8 // past here the plan should already be down…
 const RUSH_FULL_VH = EXIT_FROM_VH // …and by here, everything still due rushes
-const LIFT_GAP = 0.06 // s between lift-offs (reverse order)
 const FRAME_SLACK = 0.008 // half a 60 Hz frame, so a gap isn't rounded up a whole frame
 
 /** z: height above the plane · sxy / sz: in-plane / thickness scale · rx, rz: tilt (deg) · o: opacity */
@@ -260,7 +259,6 @@ type Seg =
     | { kind: "bounce"; t0: number; dur: number; h: number }
 
 type Drop = { h0: number; o0: number; rx0: number; rz0: number; st: number; segs: Seg[]; land: number; end: number }
-type Lift = { from: Pose; to: { z: number; rx: number; rz: number }; dur: number }
 
 /** A drop from rest at height h0 (≤ p.h) under the tile's gravity: a lower
  *  start falls for less time and hits softer (impact speed ∝ √h0). `k` scales
@@ -307,20 +305,6 @@ function dropPose(d: Drop, tau: number): Pose {
         return { z: s.h * 4 * u * (1 - u), sxy: 1, sz: 1, rx: 0, rz: 0, o: 1 }
     }
     return REST
-}
-
-/** Lift-off: ease-in up to the drop height, tipping into its tumble, fading. */
-function liftPose(l: Lift, tau: number): Pose {
-    const u = clamp01(tau / l.dur)
-    const e = u * u
-    return {
-        z: lerp(l.from.z, l.to.z, e),
-        sxy: lerp(l.from.sxy, 1, u),
-        sz: lerp(l.from.sz, 1, u),
-        rx: lerp(l.from.rx, l.to.rx, e),
-        rz: lerp(l.from.rz, l.to.rz, e),
-        o: l.from.o * (1 - u),
-    }
 }
 
 // All tiles: the plan (0 … N0−1), then the future work (N0 … NT−1).
@@ -416,7 +400,6 @@ type TileState =
     | { mode: "hidden" }
     | { mode: "rest" }
     | { mode: "fall"; t0: number; d: Drop; landed: boolean }
-    | { mode: "lift"; t0: number; l: Lift }
 
 /** The DOM a tile's baked flights play on: the mover (transform), the contact
  *  shadow (transform + opacity) and the leaves that fade (edge layers, face). */
@@ -440,7 +423,6 @@ class TileDirector {
     private dueFuture = 0 // future tiles due (exit drift)
     private ready = false
     private lastLaunch = -Infinity
-    private lastLift = -Infinity
     private rush = 0 // 0…1, from the scroll running past the last wave
     private pulseAt: number | null = null
     private raf: number | null = null
@@ -471,13 +453,14 @@ class TileDirector {
 
     /** How many plan tiles (by rank) the scroll waves say are due. */
     setDue(n: number) {
-        if (n === this.dueMain) return
+        // Drops only go one way: scrolling back never takes a tile back off.
+        if (n <= this.dueMain) return
         this.dueMain = n
         this.kick()
     }
     /** How many future tiles (by rank) the exit's drift says are due. */
     setFutureDue(n: number) {
-        if (n === this.dueFuture) return
+        if (n <= this.dueFuture) return
         this.dueFuture = n
         this.kick()
     }
@@ -521,14 +504,6 @@ class TileDirector {
     private shadowOp(i: number, p: Pose) {
         const near = 1 - clamp01(p.z / PHYS[i].h)
         return SHADOW_REST * near * near * near * Math.min(1, p.o * 1.5)
-    }
-
-    /** Where tile i is at time t — flights are pure functions of their clock. */
-    private poseAt(i: number, t: number): Pose {
-        const s = this.st[i]
-        if (s.mode === "fall") return dropPose(s.d, t - s.t0)
-        if (s.mode === "lift") return liftPose(s.l, t - s.t0)
-        return s.mode === "rest" ? REST : hiddenPose(i)
     }
 
     /** A still pose, written through the motion values (rest, hidden, and the
@@ -575,26 +550,13 @@ class TileDirector {
         this.anims[i] = []
     }
 
+    /** A full drop from the tile's hidden pose. */
     private launch(i: number, t: number, k: number) {
-        // From hidden: a full drop. From a lift: fall from wherever it is.
-        const cur = this.st[i]
-        const from = cur.mode === "lift" ? this.poseAt(i, t) : hiddenPose(i)
         const ph = PHYS[i]
-        const d = buildDrop(ph, Math.min(from.z, ph.h), cur.mode === "lift" ? from.o : 0, from.rx, from.rz, k)
+        const d = buildDrop(ph, ph.h, 0, TUMBLE[i].rx, TUMBLE[i].rz, k)
         this.st[i] = { mode: "fall", t0: t, d, landed: false }
         this.still(i, dropPose(d, 0), true)
         this.play(i, d.end, (tau) => dropPose(d, tau))
-    }
-
-    private lift(i: number, t: number) {
-        // From wherever it is — resting, or caught mid-fall.
-        const from = this.poseAt(i, t)
-        const ph = PHYS[i]
-        const dur = LIFT * (0.35 + 0.65 * (1 - clamp01(from.z / ph.h)))
-        const l: Lift = { from, to: { z: ph.h, rx: TUMBLE[i].rx, rz: TUMBLE[i].rz }, dur }
-        this.st[i] = { mode: "lift", t0: t, l }
-        this.still(i, from, true)
-        this.play(i, dur, (tau) => liftPose(l, tau))
     }
 
     private tick = (now: number) => {
@@ -618,13 +580,10 @@ class TileDirector {
                 }
                 if (tau >= s.d.end) this.settle(i, { mode: "rest" }, REST, true)
                 busy = true
-            } else if (s.mode === "lift") {
-                if (t - s.t0 >= s.l.dur) this.settle(i, { mode: "hidden" }, hiddenPose(i), false)
-                busy = true
             }
         }
 
-        // 2. Today pulses each time the plan's last tile lands.
+        // 2. Today pulses when the plan's last tile lands.
         if (landedNow && this.st.slice(0, N0).every((s) => s.mode === "rest" || (s.mode === "fall" && s.landed))) this.pulseAt = t
         if (this.pulseAt != null) {
             const pv = t - this.pulseAt
@@ -637,30 +596,15 @@ class TileDirector {
             }
         }
 
-        // 3. Dispatch: lift off what is no longer due (reverse order), launch
-        //    what is (in order), each queue with its own minimum gap. A tile
+        // 3. Dispatch: launch what is due (in order) with a minimum gap. A tile
         //    whose DOM isn't mounted yet waits its turn.
         let pending = false
         if (this.ready) {
             const due = this.due
-            for (let r = NT - 1; r >= due; r--) {
-                const i = RANKED[r]
-                const m = this.st[i].mode
-                if (m === "fall" || m === "rest") {
-                    pending = true
-                    if (t - this.lastLift >= LIFT_GAP - FRAME_SLACK) {
-                        this.lift(i, t)
-                        this.lastLift = t
-                        busy = true
-                    }
-                    break
-                }
-            }
             let backlog = 0
             let planBehind = false
             for (let r = 0; r < due; r++) {
-                const m = this.st[RANKED[r]].mode
-                if (m === "hidden" || m === "lift") {
+                if (this.st[RANKED[r]].mode === "hidden") {
                     backlog++
                     if (r < N0) planBehind = true
                 }
@@ -674,7 +618,7 @@ class TileDirector {
             for (let r = 0; r < due && budget > 0; r++) {
                 const i = RANKED[r]
                 const m = this.st[i].mode
-                if ((m === "hidden" || m === "lift") && this.els[i]) {
+                if (m === "hidden" && this.els[i]) {
                     this.launch(i, t, k)
                     this.lastLaunch = t
                     budget--
