@@ -90,7 +90,7 @@ function Hero() {
           transition={{ duration: 0.8, ease: EASE, delay: 0.2 }}
           className="mx-auto mt-7 max-w-2xl text-lg leading-relaxed text-[#9ba4c4] md:text-xl"
         >
-          Every issue arrives with the files and lines worth investigating — so your team spends its time fixing, not hunting.
+          Ucelot knows how your codebase fits together. Every issue arrives with the files and lines behind it, and why they matter.
         </motion.p>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
