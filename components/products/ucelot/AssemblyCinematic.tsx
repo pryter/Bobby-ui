@@ -63,18 +63,21 @@ function schedule({ region, order, y }: PieceMeta) {
 //   brisk   the project tiles (≈0.54 on): the sidebar is the highlight, so
 //           the page fills in at about its pace, then quicker
 //   slow    the final settle to head-on
-// A monotone cubic through the knots keeps the speed changes gradual. The
-// knots are scroll fractions of the section's pinned length (660vh: 144vh to
-// the credits pill, 232vh for the sidebar, 56 + 64vh for the tiles, 164vh to
-// settle) — change the section's height with them.
-const TEMPO: [number, number][] = [
-  [0, 0],
-  [144 / 660, 0.1],
-  [376 / 660, 0.54],
-  [432 / 660, 0.63],
-  [496 / 660, 0.84],
-  [1, 1],
-]
+// A monotone cubic through the knots keeps the speed changes gradual.
+// STRETCHES are the scroll (vh) each stretch gets — to the credits pill, the
+// sidebar, the first tiles, the rest of the tiles, the settle — and add up
+// to the section's pinned length, so change the section's height with them.
+// Phones get a shorter run (a thumb covers a screen or two per swipe; at the
+// desktop's length the slow stretches invited flinging past them, and the
+// rest then flushed through): the same story, evenly paced, in ~60% of it.
+const STORY_KNOTS = [0.1, 0.54, 0.63, 0.84, 1]
+const STRETCHES_WIDE = [144, 232, 56, 64, 164] // 660vh pinned: h-[760vh]
+const STRETCHES_PHONE = [80, 150, 40, 46, 94] // 410vh pinned: h-[510vh]
+function tempoFor(stretches: number[]): [number, number][] {
+  const total = stretches.reduce((a, b) => a + b, 0)
+  let at = 0
+  return [[0, 0], ...stretches.map((s, i): [number, number] => [(at += s) / total, STORY_KNOTS[i]])]
+}
 
 // Monotone cubic (Fritsch–Carlson) through the knots: smooth, never runs
 // backwards. Ends ease in and out.
@@ -99,7 +102,8 @@ function monotoneCurve(points: [number, number][], easeEnds = 0.5) {
   }
 }
 
-const tempo = monotoneCurve(TEMPO)
+const tempoWide = monotoneCurve(tempoFor(STRETCHES_WIDE))
+const tempoPhone = monotoneCurve(tempoFor(STRETCHES_PHONE))
 
 const NAV_CLEARANCE = 88
 // As the board settles head-on (END_FROM → END_TO of the story) a caption
@@ -118,9 +122,22 @@ export default function AssemblyCinematic({ story }: { story?: MotionValue<numbe
   const stageBoxRef = useRef<HTMLDivElement>(null)
   const reduce = useReducedMotion()
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start start", "end end"] })
-  // A little inertia on the scroll makes the camera feel like a dolly, not a scrubber.
-  const smooth = useSpring(scrollYProgress, { stiffness: 110, damping: 28, restDelta: 0.0005 })
-  const storyTime = useTransform(smooth, tempo)
+  // A little inertia on the scroll makes the camera feel like a dolly, not a
+  // scrubber. On phones it's tighter, so a quick swipe doesn't build up lag
+  // that then surges on after the finger stops.
+  const smoothWide = useSpring(scrollYProgress, { stiffness: 110, damping: 28, restDelta: 0.0005 })
+  const smoothPhone = useSpring(scrollYProgress, { stiffness: 190, damping: 34, restDelta: 0.0005 })
+  // Phones (below md) get their own tempo, matching the section's shorter
+  // height; one story clock either way.
+  const phone = useRef(false)
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)")
+    const update = () => (phone.current = mq.matches)
+    update()
+    mq.addEventListener("change", update)
+    return () => mq.removeEventListener("change", update)
+  }, [])
+  const storyTime = useTransform([smoothWide, smoothPhone], ([w, ph]: number[]) => (phone.current ? tempoPhone(ph) : tempoWide(w)))
   const still = useMotionValue(1)
   const p = reduce ? still : storyTime
   useMotionValueEvent(p, "change", (v) => story?.set(v))
@@ -194,7 +211,7 @@ export default function AssemblyCinematic({ story }: { story?: MotionValue<numbe
   }
 
   return (
-    <section ref={sectionRef} className="relative h-[760vh]">
+    <section ref={sectionRef} className="relative h-[510vh] md:h-[760vh]">
       <div className="sticky top-0 h-screen overflow-hidden" style={{ visibility: near ? undefined : "hidden" }}>
 
         <div ref={stageBoxRef} className="absolute inset-0 [perspective:2600px]">
