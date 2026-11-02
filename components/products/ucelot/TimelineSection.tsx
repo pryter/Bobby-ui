@@ -11,7 +11,7 @@ import { useLiteGraphics } from "@/lib/useLiteGraphics"
 import { useNearViewport } from "@/lib/useNearViewport"
 import { Brick, brickCard, mix, pastelFor, weekStartMs } from "./app/screens/timeline"
 import {
-    FLOOR, FLOOR_BOX, floorSheetImage, PB_CELL, PB_FUTURE, PB_ORIGIN, PB_PLAN, PB_TILES, PB_TODAY_COL, PlayfulFloor, type FloorCells, type PlacedTile,
+    FLOOR, FLOOR_BOX, FLOOR_PERIOD, FloorLight, floorLightImage, FloorPaper, FloorStrips, PB_CELL, PB_FUTURE, PB_ORIGIN, PB_PLAN, PB_TILES, PB_TODAY_COL, type FloorCells, type PlacedTile,
 } from "./app/screens/timeline-playful"
 
 // ─── Plan together: the timeline planning tool ──────────────────────────────
@@ -61,11 +61,16 @@ import {
 // plays against the scroll itself (lib/scrollScrub) — no JavaScript per
 // scroll frame.
 //
-// 3D: perspective wrapper (flat, unclipped) → plane root → floor, blank sheet,
-// contact shadows (leaves) and tile movers → slab layers + face, preserve-3d
-// the whole way; fades sit on leaves only. The stage clips, outside 3D.
+// Planes: under one perspective wrapper (flat, unclipped), several planes
+// share the camera, back to front — the floor's paper (half size), today's
+// column and the date row, the light (falloff, blank sheet; an eighth), the
+// contact shadows (a quarter), then the plan in 3D: tile movers → slab layer
+// + face, preserve-3d, fades on leaves only. Mobile Safari rasterises every
+// layer of a tilted scene whole, so each part is drawn only as sharp as it
+// needs to be (PAPER_SCALE). The stage clips, outside 3D.
 
 const CELL = PB_CELL
+const PAGE = "#05060e" // the stage's (and page's) colour
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(v, hi))
 const clamp01 = (v: number) => clamp(v, 0, 1)
 const lerp = (a: number, b: number, u: number) => a + (b - a) * u
@@ -137,8 +142,22 @@ const easeIn = (v: number) => v * v * v
 /** The exit's drift: PAN_DAYS of timeline (lattice px), the same everywhere. */
 const PAN_DAYS = 84
 const PAN_TOTAL = PAN_DAYS * CELL
-/** The pan is attached this far (vh of scroll) ahead of the exit. */
+/** The stage is drawn in planes under one camera, each at the resolution its
+ *  content needs: inside a tilted 3D scene mobile Safari rasterises every
+ *  layer whole, at full device resolution, however small it looks on screen,
+ *  so a layer costs its drawn area (a floor-sized image alone was ~320 MB on
+ *  an iPhone). The floor's paper is faint and drawn at half size; the light
+ *  (the falloff, the intro's blank sheet) is a soft image drawn at an eighth;
+ *  the tiles' contact shadows are all blur, drawn at a quarter; today's
+ *  column, the date row and the tiles stay sharp. */
+const PAPER_SCALE = 0.5
+const LIGHT_SCALE = 0.125
+const SHADOW_SCALE = 0.25 // the tiles' contact shadows (all blur)
+/** The pan is attached this far (vh of scroll) ahead of the exit, and only
+ *  let go again well back from it (so swiping to and fro doesn't keep
+ *  rebuilding its layers). */
 const PAN_AHEAD_VH = 20
+const PAN_KEEP_VH = 70
 /** Brief ease-in (the first DRIFT_IN of the exit), then a constant speed. */
 const DRIFT_IN = 0.15
 const drift = (u: number) => {
@@ -152,7 +171,7 @@ const drift = (u: number) => {
 
 /** The part of the floor the stage shows: what the camera sees at rest, in
  *  whole cells plus a margin (the real floor only appears once the zoom is
- *  over, and the exit pans the surface inside this fixed window). On a phone
+ *  over, and the exit pans the floor inside this fixed window). On a phone
  *  that is under a third of it. */
 function floorCellsFor(rig: Rig): FloorCells {
     const c = rig.c1
@@ -401,9 +420,10 @@ type TileState =
     | { mode: "rest" }
     | { mode: "fall"; t0: number; d: Drop; landed: boolean }
 
-/** The DOM a tile's baked flights play on: the mover (transform), the contact
- *  shadow (transform + opacity) and the leaves that fade (edge layers, face). */
-type TileEls = { mover: HTMLElement; shadow: HTMLElement; leaves: HTMLElement[] }
+/** The DOM a tile's baked flights play on: the mover (transform) and the
+ *  leaves that fade (edge layers, face). Its contact shadow (transform +
+ *  opacity) lives in another plane and registers on its own. */
+type TileEls = { mover: HTMLElement; leaves: HTMLElement[] }
 
 const tfOf = (p: Pose) =>
     p === REST ? "none" : `translateZ(${p.z}px) rotateX(${p.rx}deg) rotateZ(${p.rz}deg) scale3d(${p.sxy}, ${p.sxy}, ${p.sz})`
@@ -416,6 +436,7 @@ class TileDirector {
     readonly pulse = motionValue(PULSE_IDLE)
     private st: TileState[]
     private els: (TileEls | null)[] = new Array(NT).fill(null)
+    private shadows: (HTMLElement | null)[] = new Array(NT).fill(null)
     private anims: Animation[][] = TILES.map(() => [])
     /** Finished flights, cancelled a frame later once the still pose is drawn. */
     private retired: Animation[] = []
@@ -448,6 +469,13 @@ class TileDirector {
         return () => {
             this.cancel(i)
             this.els[i] = null
+        }
+    }
+    /** …and its contact shadow (it joins flights from the next one on). */
+    registerShadow(i: number, el: HTMLElement) {
+        this.shadows[i] = el
+        return () => {
+            this.shadows[i] = null
         }
     }
 
@@ -499,7 +527,7 @@ class TileDirector {
 
     private shadowTf(i: number, p: Pose) {
         const near = 1 - clamp01(p.z / PHYS[i].h)
-        return `translateZ(1.5px) scale(${(0.55 + 0.45 * near) * p.sxy})`
+        return `scale(${(0.55 + 0.45 * near) * p.sxy})`
     }
     private shadowOp(i: number, p: Pose) {
         const near = 1 - clamp01(p.z / PHYS[i].h)
@@ -535,7 +563,8 @@ class TileDirector {
             op.push({ opacity: p.o })
         }
         const timing: KeyframeAnimationOptions = { duration: dur * 1000, easing: "linear", fill: "forwards" }
-        this.anims[i] = [el.mover.animate(tf, timing), el.shadow.animate(sh, timing), ...el.leaves.map((l) => l.animate(op, timing))]
+        const shadow = this.shadows[i]
+        this.anims[i] = [el.mover.animate(tf, timing), ...(shadow ? [shadow.animate(sh, timing)] : []), ...el.leaves.map((l) => l.animate(op, timing))]
     }
     private cancel(i: number) {
         for (const a of this.anims[i]) a.cancel()
@@ -654,19 +683,22 @@ const headingAt = (t: number) => {
     return { opacity: v, transform: `translateY(${18 * (1 - v)}px)` }
 }
 
-type IntroEls = { plane: HTMLElement | null; floor: HTMLElement | null; blank: HTMLElement | null; bloom: HTMLElement | null; heading: HTMLElement | null }
+/** A plane of the stage: content laid out `s` times its lattice size. */
+type Plane = { el: HTMLElement; s: number }
+/** The camera for a plane drawn at `s`: it makes up the scale. */
+const camFor = (t: number, rig: Rig, s: number) => camAt(t, rig) + (s === 1 ? "" : ` scale3d(${1 / s}, ${1 / s}, ${1 / s})`)
+
+type IntroEls = { planes: Plane[]; floors: HTMLElement[]; blank: HTMLElement | null; bloom: HTMLElement | null; heading: HTMLElement | null }
 
 /** Plays the opening once: every piece sampled into keyframes and handed to
  *  the compositor (Web Animations), the way the tiles' flights are. Only the
- *  blank sheet — a small image the GPU scales — moves with the camera; the
- *  real floor isn't drawn until the camera is at rest. (Zooming the real
- *  floor had Safari rasterise it again at every new scale: the memory spike
- *  that took mobile Safari down as the section started.) Still poses
- *  (before, after, reduced motion, a resize) are written straight to the
- *  elements. */
+ *  blank sheet — a soft image, drawn small — moves with the camera; the real
+ *  floor isn't shown until the camera is at rest. The camera drives every
+ *  plane of the stage (Plane). Still poses (before, after, reduced motion, a
+ *  resize) are written straight to the elements. */
 class IntroPlayer {
     private rig: Rig | null = null
-    private els: IntroEls = { plane: null, floor: null, blank: null, bloom: null, heading: null }
+    private els: IntroEls = { planes: [], floors: [], blank: null, bloom: null, heading: null }
     private anims: Animation[] = []
     private phase: "idle" | "playing" | "done" = "idle"
     private rate = 1
@@ -716,9 +748,10 @@ class IntroPlayer {
         this.anims = []
     }
     private still(t: number) {
-        const { plane, floor, blank, bloom, heading } = this.els
-        if (plane && this.rig) plane.style.transform = camAt(t, this.rig)
-        if (floor) Object.assign(floor.style, floorAt(t))
+        const { planes, floors, blank, bloom, heading } = this.els
+        const rig = this.rig
+        if (rig) for (const p of planes) p.el.style.transform = camFor(t, rig, p.s)
+        for (const f of floors) Object.assign(f.style, floorAt(t))
         if (blank) Object.assign(blank.style, blankAt(t))
         if (bloom) Object.assign(bloom.style, bloomAt(t))
         if (heading) Object.assign(heading.style, headingAt(t))
@@ -726,9 +759,9 @@ class IntroPlayer {
     private bake(t0: number) {
         this.cancel()
         const rig = this.rig
-        const { plane, floor, blank, bloom, heading } = this.els
+        const { planes, floors, blank, bloom, heading } = this.els
         // The camera is the clock: without it (not measured yet) nothing plays.
-        if (!rig || !plane) return
+        if (!rig || !planes.length) return
         const n = Math.ceil(INTRO * BAKE_FPS) + 1
         const ts = Array.from({ length: n }, (_, k) => (INTRO * k) / (n - 1))
         const timing: KeyframeAnimationOptions = { duration: INTRO * 1000, easing: "linear", fill: "forwards" }
@@ -738,8 +771,8 @@ class IntroPlayer {
             a.playbackRate = this.rate
             this.anims.push(a)
         }
-        play(plane, ts.map((t) => ({ transform: camAt(t, rig) })))
-        if (floor) play(floor, ts.map(floorAt))
+        for (const p of planes) play(p.el, ts.map((t) => ({ transform: camFor(t, rig, p.s) })))
+        for (const f of floors) play(f, ts.map(floorAt))
         if (blank) play(blank, ts.map(blankAt))
         if (bloom) play(bloom, ts.map(bloomAt))
         if (heading) play(heading, ts.map(headingAt))
@@ -763,13 +796,42 @@ class IntroPlayer {
 
 const P3D = { transformStyle: "preserve-3d" } as const
 
+/** A tile's contact shadow: lies on the plane, faint and small while the tile
+ *  is high, growing and darkening as it comes down. Soft, so it's drawn in
+ *  the shadow plane at SHADOW_SCALE. */
+function TileShadow({ tile, i, director }: { tile: PlacedTile; i: number; director: TileDirector }) {
+    const mv = director.mvs[i]
+    const ref = useRef<HTMLDivElement>(null)
+    useIsoLayoutEffect(() => director.registerShadow(i, ref.current!), [director, i])
+    const card = brickCard(tile, CELL)
+    const z = (v: number) => v * SHADOW_SCALE
+    return (
+        <motion.div
+            ref={ref}
+            aria-hidden
+            className="pointer-events-none absolute"
+            style={{
+                left: z(tile.left + card.left + SHADOW_INSET),
+                top: z(tile.top + card.top + SHADOW_INSET + 3),
+                width: z(card.width - SHADOW_INSET * 2),
+                height: z(card.height - SHADOW_INSET * 2),
+                borderRadius: z(card.radius),
+                background: "rgba(38, 28, 22, 0.2)",
+                boxShadow: `0 0 ${z(20)}px ${z(9)}px rgba(38, 28, 22, 0.17)`,
+                transform: mv.shTf,
+                opacity: mv.shOp,
+                visibility: mv.vis,
+            }}
+        />
+    )
+}
+
 function DropTile({ tile, i, director, lite }: { tile: PlacedTile; i: number; director: TileDirector; lite: boolean }) {
     const mv = director.mvs[i]
     const mover = useRef<HTMLDivElement>(null)
-    const shadow = useRef<HTMLDivElement>(null)
     useIsoLayoutEffect(() => {
         const m = mover.current!
-        return director.register(i, { mover: m, shadow: shadow.current!, leaves: [...m.querySelectorAll<HTMLElement>("[data-leaf]")] })
+        return director.register(i, { mover: m, leaves: [...m.querySelectorAll<HTMLElement>("[data-leaf]")] })
     }, [director, i, lite])
     const edge = lite ? EDGE_LITE : EDGE_FULL
     const card = brickCard(tile, CELL)
@@ -777,25 +839,6 @@ function DropTile({ tile, i, director, lite }: { tile: PlacedTile; i: number; di
     const cardBox = { left: card.left, top: card.top, width: card.width, height: card.height, borderRadius: card.radius }
     return (
         <>
-            {/* Contact shadow: lies on the plane; faint and small while the tile
-                is high, growing and darkening as it comes down. */}
-            <motion.div
-                ref={shadow}
-                aria-hidden
-                className="pointer-events-none absolute"
-                style={{
-                    left: tile.left + card.left + SHADOW_INSET,
-                    top: tile.top + card.top + SHADOW_INSET + 3,
-                    width: card.width - SHADOW_INSET * 2,
-                    height: card.height - SHADOW_INSET * 2,
-                    borderRadius: card.radius,
-                    background: "rgba(38, 28, 22, 0.2)",
-                    boxShadow: "0 0 20px 9px rgba(38, 28, 22, 0.17)",
-                    transform: mv.shTf,
-                    opacity: mv.shOp,
-                    visibility: mv.vis,
-                }}
-            />
             <motion.div
                 ref={mover}
                 className="absolute"
@@ -877,26 +920,15 @@ function TodayFlash({ pulse }: { pulse: MotionValue<number> }) {
     )
 }
 
-/** The floor with nothing on it, as one small image (floorSheetImage) laid
- *  over the floor's box: what the intro zooms in. */
+/** The floor with nothing on it (floorLightImage, in the light plane): what
+ *  the intro zooms in. */
 function BlankSheet({ src, player }: { src: string; player: IntroPlayer }) {
     const ref = useRef<HTMLImageElement>(null)
     useIsoLayoutEffect(() => {
         player.attach({ blank: ref.current })
         return () => player.attach({ blank: null })
     }, [player])
-    return (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-            ref={ref}
-            src={src}
-            alt=""
-            aria-hidden
-            draggable={false}
-            className="pointer-events-none absolute max-w-none select-none"
-            style={{ left: FLOOR_BOX.x, top: FLOOR_BOX.y, width: FLOOR_BOX.w, height: FLOOR_BOX.h, transform: "translateZ(0.5px)", ...blankAt(0) }}
-        />
-    )
+    return <FloorLight src={src} scale={LIGHT_SCALE} imgRef={ref} style={blankAt(0)} />
 }
 
 /** Ember bloom from the centre as the sheet comes in (screen space, over it;
@@ -936,7 +968,7 @@ function Stage({
     opening: boolean
     director: TileDirector
     /** The two layers the exit's drift pans (baked by the section). */
-    panRefs: { surface: Ref<HTMLDivElement>; sheet: Ref<HTMLDivElement> }
+    panRefs: { grid: Ref<HTMLDivElement>; today: Ref<HTMLDivElement>; dates: Ref<HTMLDivElement>; sheet: Ref<HTMLDivElement>; shadows: Ref<HTMLDivElement> }
     /** Where each future group comes due, for the section's scroll handler. */
     triggersRef: { current: number[] }
     /** Lighter tiles for phones and low-memory devices. */
@@ -945,15 +977,30 @@ function Stage({
     futureN: number
 }) {
     const ref = useRef<HTMLDivElement>(null)
+    // The stage's planes, back to front (see PAPER_SCALE), all under one camera.
+    const paperPlane = useRef<HTMLDivElement>(null)
+    const stripsPlane = useRef<HTMLDivElement>(null)
+    const lightPlane = useRef<HTMLDivElement>(null)
+    const shadowPlane = useRef<HTMLDivElement>(null)
     const plane = useRef<HTMLDivElement>(null)
-    const floor = useRef<HTMLDivElement>(null)
+    // The floor's parts, hidden until the intro's zoom is over (floorAt).
+    const paper = useRef<HTMLDivElement>(null)
+    const strips = useRef<HTMLDivElement>(null)
+    const shade = useRef<HTMLDivElement>(null)
     const [rig, setRig] = useState<Rig | null>(null)
     // Only the part of the floor this stage shows is drawn.
     const [cells, setCells] = useState<FloorCells>(FLOOR)
     useIsoLayoutEffect(() => {
         const el = ref.current
         if (!el) return
-        player.attach({ plane: plane.current, floor: floor.current })
+        const planes = [
+            { el: paperPlane.current!, s: PAPER_SCALE },
+            { el: stripsPlane.current!, s: 1 },
+            { el: lightPlane.current!, s: LIGHT_SCALE },
+            { el: shadowPlane.current!, s: SHADOW_SCALE },
+            { el: plane.current!, s: 1 },
+        ]
+        player.attach({ planes, floors: [paper.current!, strips.current!, shade.current!] })
         const update = () => {
             const r = rigFor(el.clientWidth, el.clientHeight)
             const c = floorCellsFor(r)
@@ -967,15 +1014,16 @@ function Stage({
         ro.observe(el)
         return () => {
             ro.disconnect()
-            player.attach({ plane: null, floor: null })
+            player.attach({ planes: [], floors: [] })
         }
     }, [player])
-    // The blank sheet, painted once in the floor's own paper colour.
-    const [blankSrc, setBlankSrc] = useState<string | null>(null)
+    // The light, painted once: the blank sheet in the floor's own paper
+    // colour, and the falloff in the page's.
+    const [light, setLight] = useState<{ blank: string; shade: string } | null>(null)
     useEffect(() => {
-        const app = floor.current?.querySelector(".ucelot-app")
-        const paper = (app && getComputedStyle(app).getPropertyValue("--c-shell").trim()) || "#f1efec"
-        setBlankSrc(floorSheetImage(paper))
+        const app = strips.current?.querySelector(".ucelot-app")
+        const paperColor = (app && getComputedStyle(app).getPropertyValue("--c-shell").trim()) || "#f1efec"
+        setLight({ blank: floorLightImage(paperColor, "lit"), shade: floorLightImage(PAGE, "shade") })
     }, [])
 
     const mountedFuture = useMemo(() => new Set(RANKED.slice(N0, N0 + futureN)), [futureN])
@@ -984,27 +1032,47 @@ function Stage({
     // section onto panRefs); the future work comes due as its weeks pass
     // TRIGGER_X.
 
+    const flat = { position: "absolute", left: 0, top: 0, transformOrigin: "0 0" } as const
     return (
         <div ref={ref} className="absolute inset-0" style={{ visibility: rig ? undefined : "hidden" }}>
-            {/* Perspective wrapper — flat, unclipped. */}
+            {/* Perspective wrapper — flat, unclipped. Its planes share the
+                camera (the IntroPlayer's); lattice (0, 0) = day 0 · lane 0. The
+                floor's window stays put under a fixed light while its paper,
+                today's column, date row and the plan pan: an endless timeline
+                sliding by. */}
             <div className="absolute inset-0" style={{ perspective: rig?.P ?? 1200, perspectiveOrigin: `50% ${rig?.oy ?? 0}px` }}>
-                {/* The plane: lattice (0, 0) = day 0 · lane 0. Its transform
-                    (the camera) is the IntroPlayer's. */}
-                <div ref={plane} className="absolute left-0 top-0" style={{ ...P3D, transformOrigin: "0 0" }}>
-                    {/* The floor: its lit window stays put; its surface (grid, weekend
-                        shading, today's column, date row) pans with the tiles, so an
-                        endless timeline slides by under a fixed light. */}
-                    {/* Hidden until the intro's zoom is over (IntroPlayer, floorAt). */}
-                    <div ref={floor} style={{ visibility: "hidden" }}>
-                        <PlayfulFloor
-                            wrapToday={(pill) => <TodayPill pulse={director.pulse}>{pill}</TodayPill>}
-                            surfaceRef={panRefs.surface}
+                <div ref={paperPlane} style={flat}>
+                    <div ref={paper} style={{ visibility: "hidden" }}>
+                        <FloorPaper cells={cells} scale={PAPER_SCALE} gridRef={panRefs.grid} />
+                    </div>
+                </div>
+                <div ref={stripsPlane} style={flat}>
+                    <div ref={strips} style={{ visibility: "hidden" }}>
+                        <FloorStrips
                             cells={cells}
+                            wrapToday={(pill) => <TodayPill pulse={director.pulse}>{pill}</TodayPill>}
+                            todayRef={panRefs.today}
+                            datesRef={panRefs.dates}
                         />
                     </div>
-                    {/* The blank sheet the intro zooms in, over the floor. */}
-                    {opening && blankSrc && <BlankSheet src={blankSrc} player={player} />}
-                    {/* Everything else on the plane, panned with it as one rigid sheet. */}
+                </div>
+                <div ref={lightPlane} style={flat}>
+                    <div ref={shade} style={{ visibility: "hidden" }}>
+                        {light && <FloorLight src={light.shade} scale={LIGHT_SCALE} />}
+                    </div>
+                    {/* The blank sheet the intro zooms in. */}
+                    {opening && light && <BlankSheet src={light.blank} player={player} />}
+                </div>
+                {/* The plan's contact shadows, panned with it. */}
+                <div ref={shadowPlane} style={flat}>
+                    <div ref={panRefs.shadows} className="absolute left-0 top-0">
+                        {TILES.map((tile, i) =>
+                            i < N0 || mountedFuture.has(i) ? <TileShadow key={tile.issue.id} tile={tile} i={i} director={director} /> : null,
+                        )}
+                    </div>
+                </div>
+                {/* Today's flash and the plan, in 3D: one rigid sheet that pans. */}
+                <div ref={plane} style={{ ...flat, ...P3D }}>
                     <div ref={panRefs.sheet} className="absolute left-0 top-0" style={P3D}>
                         <TodayFlash pulse={director.pulse} />
                         {TILES.map((tile, i) =>
@@ -1107,7 +1175,8 @@ export default function TimelineSection() {
     const panLiveRef = useRef(false)
     const onScrolled = (px: number) => {
         if (px > 0) player.start()
-        const live = px >= geo.current.from - PAN_AHEAD_VH * geo.current.vh
+        const ahead = geo.current.from - px
+        const live = panLiveRef.current ? ahead <= PAN_KEEP_VH * geo.current.vh : ahead <= PAN_AHEAD_VH * geo.current.vh
         if (live !== panLiveRef.current) {
             panLiveRef.current = live
             setPanLive(live)
@@ -1146,7 +1215,10 @@ export default function TimelineSection() {
     // timelines exist, so nothing runs per scroll frame. Rebuilt on resize.
     // Exit progress u (exitOf): 0 at the start of the exit, 1 at the release,
     // and on beyond it. None of it with reduced motion.
-    const surfaceRef = useRef<HTMLDivElement>(null)
+    const gridRef = useRef<HTMLDivElement>(null)
+    const todayRef = useRef<HTMLDivElement>(null)
+    const datesRef = useRef<HTMLDivElement>(null)
+    const shadowsRef = useRef<HTMLDivElement>(null)
     const sheetRef = useRef<HTMLDivElement>(null)
     const fadeRef = useRef<HTMLDivElement>(null)
     const grainRef = useRef<HTMLDivElement>(null)
@@ -1181,21 +1253,40 @@ export default function TimelineSection() {
         ], { H, viewport: vh * 100 })
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [reduce, geoV])
-    // The drift pans the floor's surface and the plan. It is only attached
-    // around the exit (from PAN_AHEAD_VH before it): an animated surface is a
-    // layer of its own, which splits the floor into window, mask and surface
-    // layers — three of the floor's size instead of one. Before the exit the
-    // pan is zero, so nothing changes on screen.
+    // The drift pans the floor and the plan. The floor's background repeats
+    // every week, so it only shifts by under a week and jumps back each time
+    // a week has gone by (FLOOR_PERIOD) — the same picture as sliding on, but
+    // the same pixels throughout: a fast swipe through the exit never has
+    // the browser draw new floor. Today's column, the date row and the plan
+    // pan all the way. Attached around the exit only (PAN_AHEAD_VH /
+    // PAN_KEEP_VH); before it the pan is zero, so nothing changes on screen.
     useIsoLayoutEffect(() => {
         const sec = sectionRef.current
-        const surface = surfaceRef.current
-        const sheet = sheetRef.current
-        if (reduce || !panLive || !sec || !surface || !sheet || geoV === 0) return
+        const els = [gridRef.current, todayRef.current, datesRef.current, sheetRef.current, shadowsRef.current]
+        if (reduce || !panLive || !sec || els.some((e) => !e) || geoV === 0) return
+        const [grid, today, dates, sheet, shadows] = els as HTMLElement[]
         const { H, vh, from } = geo.current
-        const pan = (px: number) => ({ transform: `translateX(${-PAN_TOTAL * drift(Math.max(0, exitOf(px)))}px)` })
+        const panAt = (px: number) => PAN_TOTAL * drift(Math.max(0, exitOf(px)))
+        const pan = (px: number, s = 1) => ({ transform: `translateX(${-panAt(px) * s}px)` })
+        // Where the pan passes each whole week (bisection: it only grows).
+        const jumps: number[] = []
+        for (let m = 1; m * FLOOR_PERIOD <= panAt(H); m++) {
+            let lo = from, hi = H
+            for (let k = 0; k < 40; k++) {
+                const mid = (lo + hi) / 2
+                if (panAt(mid) < m * FLOOR_PERIOD) lo = mid
+                else hi = mid
+            }
+            jumps.push(hi)
+        }
+        const weeksBy = (px: number) => jumps.filter((j) => j <= px).length
+        const wrapped = (px: number) => ({ transform: `translateX(${-(panAt(px) - weeksBy(px) * FLOOR_PERIOD) * PAPER_SCALE}px)` })
         return bakeScrub(sec, [
-            { el: surface, from, to: H, samples: 90, at: pan },
-            { el: sheet, from, to: H, samples: 90, at: pan },
+            { el: grid, from, to: H, samples: 90, at: wrapped, jumps },
+            { el: today, from, to: H, samples: 90, at: (px) => pan(px) },
+            { el: dates, from, to: H, samples: 90, at: (px) => pan(px) },
+            { el: sheet, from, to: H, samples: 90, at: (px) => pan(px) },
+            { el: shadows, from, to: H, samples: 90, at: (px) => pan(px, SHADOW_SCALE) },
         ], { H, viewport: vh * 100 })
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [reduce, geoV, panLive])
@@ -1217,7 +1308,7 @@ export default function TimelineSection() {
                     that edge is only ever page colour: a scaled or fractional-pixel
                     edge can't blend a bright row into a seam as the stage rises. */}
                 <div className="absolute inset-x-0 top-0 bottom-[3px] overflow-hidden">
-                    <Stage player={player} opening={opening} director={director} futureN={futureN} panRefs={{ surface: surfaceRef, sheet: sheetRef }} triggersRef={triggersRef} lite={lite} />
+                    <Stage player={player} opening={opening} director={director} futureN={futureN} panRefs={{ grid: gridRef, today: todayRef, dates: datesRef, sheet: sheetRef, shadows: shadowsRef }} triggersRef={triggersRef} lite={lite} />
                 </div>
                 <div
                     ref={fadeRef}

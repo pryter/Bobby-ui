@@ -1,10 +1,9 @@
 "use client"
 
-import type { ReactNode, Ref } from "react"
-import { motion, type MotionStyle } from "framer-motion"
+import type { CSSProperties, ReactNode, Ref } from "react"
 import {
     ColHeader, MonthCell, WeekCell,
-    CELL, GRID_BG_IMAGE, GRID_LINE, HEADER_H, MONTH_ROW_H, NOW, PAST_PAD_DAYS, WEEK_ROW_H, WORKSPACE_HEADER_H,
+    CELL, GRID_LINE, HEADER_H, MONTH_ROW_H, NOW, PAST_PAD_DAYS, WEEK_ROW_H, WORKSPACE_HEADER_H,
     addDays, brickBox, groupColumns, mix, monthKey, tileCols, weekStartMs,
     type DemoIssue,
 } from "./timeline"
@@ -236,9 +235,6 @@ export const PB_FRAME = { x: -PAN.x, y: -(WORKSPACE_HEADER_H + PAN.y), w: PB_FRA
 /** The floor, in cells (lattice cols × rows); the date row runs DATE_ROW wide. */
 export const FLOOR = { c0: -30, c1: 66, r0: -28, r1: 16 } // ≈ 4400 × 2000 px; its mask is clear past this
 export const DATE_ROW = { c0: -10, c1: 180 } // ~190 days: today − 13 … + 177, enough for the exit's pan
-/** How far right the floor's surface runs past its (fixed) lit window, in cells,
- *  so a pan of up to ~115 cells still shows fresh floor coming in from the right. */
-export const FLOOR_SURFACE_C1 = 186
 /** Clear floor between the date row and lane 0 on the endless floor (one lane). */
 export const DATE_GAP = PB_CELL
 /** Where the plan sits: days −3…+32, lanes 0…7 (centre, lattice px). */
@@ -293,6 +289,7 @@ function DateTiers({ c0, c1, wrapToday }: { c0: number; c1: number; wrapToday?: 
 
 const mod = (a: number, n: number) => ((a % n) + n) % n
 const WEEKEND_SHADE = "rgba(17,24,39,0.022)"
+const GRID_DOT = "rgba(17,24,39,0.05)" // = GRID_BG_IMAGE's dots
 
 /** A part of the floor, in whole cells. */
 export type FloorCells = { c0: number; c1: number; r0: number; r1: number }
@@ -304,8 +301,7 @@ export const FLOOR_BOX = boxOf(FLOOR)
 
 /** The lit area, in lattice px: a radial falloff around the plan (sides, far
  *  end) — opaque to 34%, half at 62%, gone at its edge — intersected with a
- *  fade before the floor's near edge. The floor's mask; also the shape of the
- *  blank sheet (floorSheetImage). */
+ *  fade before the floor's near edge. */
 const LIT = {
     cx: PB_PLAN.x,
     cy: PB_PLAN.y,
@@ -316,22 +312,26 @@ const LIT = {
 }
 
 /**
- * The floor with nothing on it — its paper in the lit shape — as a small
- * image (`pxPerCell` px a cell) to show at FLOOR_BOX. Browsers composite an
- * image at its own size and let the GPU scale it, so it can zoom across the
- * screen for next to nothing, where the real floor would be rasterised at
- * every new scale. Its edges are soft gradients, so the low resolution
- * doesn't show. Client only (canvas).
+ * The lit area as a small image (`pxPerCell` px a cell) to lay over
+ * FLOOR_BOX: `lit` is `color` in the lit shape (the intro's blank sheet, in
+ * the floor's paper); `shade` is `color` everywhere the light isn't (the
+ * floor's falloff, in the page's colour, over a floor drawn edge to edge —
+ * the same picture as masking the floor over the page). Soft gradients
+ * only, so it can be drawn small (FloorLight). Client only (canvas).
  */
-export function floorSheetImage(paper: string, pxPerCell = 4): string {
+export function floorLightImage(color: string, kind: "lit" | "shade", pxPerCell = 6): string {
     const q = pxPerCell / PB_CELL
     const W = Math.round(FLOOR_BOX.w * q)
     const H = Math.round(FLOOR_BOX.h * q)
-    const canvas = document.createElement("canvas")
-    canvas.width = W
-    canvas.height = H
-    const ctx = canvas.getContext("2d")!
-    ctx.fillStyle = paper
+    const make = () => {
+        const c = document.createElement("canvas")
+        c.width = W
+        c.height = H
+        return [c, c.getContext("2d")!] as const
+    }
+    // The light: opaque where lit, clear where not.
+    const [light, ctx] = make()
+    ctx.fillStyle = "#000"
     ctx.fillRect(0, 0, W, H)
     ctx.globalCompositeOperation = "destination-in"
     // The radial falloff: a circle squashed to the ellipse.
@@ -351,92 +351,114 @@ export function floorSheetImage(paper: string, pxPerCell = 4): string {
     n.addColorStop(1, "rgba(0,0,0,0)")
     ctx.fillStyle = n
     ctx.fillRect(0, 0, W, H)
-    return canvas.toDataURL("image/png")
+    // The colour, kept where lit or where not.
+    const [out, o] = make()
+    o.fillStyle = color
+    o.fillRect(0, 0, W, H)
+    o.globalCompositeOperation = kind === "lit" ? "destination-in" : "destination-out"
+    o.drawImage(light, 0, 0)
+    return out.toDataURL("image/png")
 }
 
+// The floor is drawn in parts, each at its own resolution: inside a tilted 3D
+// scene mobile Safari rasterises every layer whole, at the device's full
+// resolution, however small it looks — so a layer costs its drawn area. Each
+// part is laid out `scale` times its lattice size and shown in a plane whose
+// camera makes up the difference (the timeline section's stage):
+//   • FloorPaper — the paper and its grid, faint enough to draw at half size;
+//   • FloorStrips — today's column and the date row, sharp (full size);
+//   • FloorLight — a soft image: the falloff, or the intro's blank sheet.
+
+/** The floor's background repeats every week — lines every cell, the
+ *  weekend pair every 7, the paper's dots every half cell — so a pan of any
+ *  length can be played as a shift of under a week that wraps. */
+export const FLOOR_PERIOD = 7 * PB_CELL
+const DOT = PB_CELL / 2
+
 /**
- * The panel's grid carried on in every direction: paper, cell lines (repeating
- * gradients, aligned with the panel's lattice to the pixel), weekend shading,
- * today's column running into the distance and the date row, one lane clear
- * above lane 0 (DATE_GAP), from DATE_ROW.c0 to c1.
- *
- * Two layers: a fixed WINDOW at FLOOR_BOX carrying the static mask — a lit area
- * around the plan falling off into the dark, so there is no visible edge — and
- * inside it the SURFACE, which runs on far to the right (FLOOR_SURFACE_C1) and
- * can be panned (`surfaceStyle`, or `surfaceRef` for an animation) while the lit area stays
- * put: an endless timeline sliding by. Holds no 3D children.
- *
- * `cells` draws only that part of the window (what a camera can see) — the
- * same floor, lit the same way, with less of it to rasterise; the window
- * clips the surface to it.
+ * The panel's paper carried on in every direction: cell lines (repeating
+ * gradients, aligned with the panel's lattice), weekend shading and the
+ * paper's dots, inside a fixed window at `cells` (what a camera can see; it
+ * clips). The paper (`gridRef`) is one week wider than the window: a pan
+ * only ever needs to shift it by under a week (FLOOR_PERIOD) and jump back,
+ * which looks the same as sliding on for ever and never needs new pixels.
  */
-export function PlayfulFloor({
-    wrapToday, surfaceStyle, surfaceRef, cells = FLOOR,
-}: {
-    wrapToday?: (pill: ReactNode) => ReactNode
-    surfaceStyle?: MotionStyle
-    surfaceRef?: Ref<HTMLDivElement>
-    cells?: FloorCells
-}) {
+export function FloorPaper({ cells = FLOOR, scale = 1, gridRef }: { cells?: FloorCells; scale?: number; gridRef?: Ref<HTMLDivElement> }) {
     const cell = PB_CELL
     const { x: x0, y: y0, w, h } = boxOf(cells)
-    const surfaceW = (FLOOR_SURFACE_C1 - cells.c0) * cell
+    const z = (v: number) => v * scale
     // Background tiles anchored to the lattice: lines on whole cells, the
     // weekend pair starting on a Saturday, and the paper's dots where the
     // panel's paper starts (its board area's top-left).
     const satX = mod(PB_TODAY_COL * cell - x0 - (((new Date(NOW).getUTCDay() + 1) % 7) * cell), 7 * cell)
-    const dots = { x: mod(PB_FRAME.x - x0, 22), y: mod(PB_FRAME.y + WORKSPACE_HEADER_H - y0, 22) }
-    const lines = `linear-gradient(to right, ${GRID_LINE} 1px, transparent 1px), linear-gradient(to bottom, ${GRID_LINE} 1px, transparent 1px)`
-    const weekend = `linear-gradient(to right, ${WEEKEND_SHADE} ${2 * cell}px, transparent ${2 * cell}px)`
-    // The lit area (LIT), placed on the lattice, so a part of the floor is lit
-    // just as the whole of it.
-    const [[s0, a0], [s1, a1], [s2, a2]] = LIT.stops
-    const mask =
-        `radial-gradient(ellipse ${LIT.rx}px ${LIT.ry}px at ${LIT.cx - x0}px ${LIT.cy - y0}px, rgba(0,0,0,${a0}) ${s0 * 100}%, rgba(0,0,0,${a1}) ${s1 * 100}%, rgba(0,0,0,${a2}) ${s2 * 100}%), ` +
-        `linear-gradient(to bottom, #000 ${LIT.near[0] - y0}px, transparent ${LIT.near[1] - y0}px)`
-    const strip = { left: DATE_ROW.c0 * cell - x0, top: -(HEADER_H + 1) - DATE_GAP - y0, width: (DATE_ROW.c1 - DATE_ROW.c0 + 1) * cell }
-
+    const dots = { x: mod(PB_FRAME.x - x0, DOT), y: mod(PB_FRAME.y + WORKSPACE_HEADER_H - y0, DOT) }
+    const lines = `linear-gradient(to right, ${GRID_LINE} ${z(1)}px, transparent ${z(1)}px), linear-gradient(to bottom, ${GRID_LINE} ${z(1)}px, transparent ${z(1)}px)`
+    const weekend = `linear-gradient(to right, ${WEEKEND_SHADE} ${z(2 * cell)}px, transparent ${z(2 * cell)}px)`
+    const dot = `radial-gradient(circle at ${z(1)}px ${z(1)}px, ${GRID_DOT} ${z(1.4)}px, transparent 0)`
     return (
-        <div
-            className="ucelot-app pointer-events-none absolute select-none overflow-hidden"
-            style={{
-                left: x0,
-                top: y0,
-                width: w,
-                height: h,
-                maskImage: mask,
-                WebkitMaskImage: mask,
-                maskComposite: "intersect",
-                WebkitMaskComposite: "source-in",
-                maskRepeat: "no-repeat",
-                WebkitMaskRepeat: "no-repeat",
-            }}
-        >
-            <motion.div
-                ref={surfaceRef}
+        <div className="ucelot-app pointer-events-none absolute select-none overflow-hidden" style={{ left: z(x0), top: z(y0), width: z(w), height: z(h) }}>
+            <div
+                ref={gridRef}
                 className="absolute left-0 top-0"
                 style={{
-                    width: surfaceW,
-                    height: h,
+                    width: z(w + FLOOR_PERIOD),
+                    height: z(h),
                     backgroundColor: "var(--c-shell)",
-                    backgroundImage: `${lines}, ${weekend}, ${GRID_BG_IMAGE}`,
-                    backgroundSize: `${cell}px ${cell}px, ${cell}px ${cell}px, ${7 * cell}px 100%, 22px 22px`,
-                    backgroundPosition: `0 0, 0 0, ${satX}px 0, ${dots.x}px ${dots.y}px`,
-                    ...surfaceStyle,
+                    backgroundImage: `${lines}, ${weekend}, ${dot}`,
+                    backgroundSize: `${z(cell)}px ${z(cell)}px, ${z(cell)}px ${z(cell)}px, ${z(7 * cell)}px 100%, ${z(DOT)}px ${z(DOT)}px`,
+                    backgroundPosition: `0 0, 0 0, ${z(satX)}px 0, ${z(dots.x)}px ${z(dots.y)}px`,
                 }}
-            >
-                {/* Today's column, into the distance. */}
-                <div className="absolute top-0" style={{ left: PB_TODAY_COL * cell - x0, width: cell, height: h, background: mix("--c-primary", 9) }} />
-                {/* The date row, painted on the plane above lane 0. */}
-                <div
-                    className="absolute overflow-hidden border-b border-[color:var(--c-border)]"
-                    style={{ ...strip, height: HEADER_H + 1, background: mix("--c-surface", 85) }}
-                >
-                    <div className="relative" style={{ height: HEADER_H, transform: `translateX(${-DATE_ROW.c0 * cell}px)` }}>
-                        <DateTiers c0={DATE_ROW.c0} c1={DATE_ROW.c1} wrapToday={wrapToday} />
-                    </div>
-                </div>
-            </motion.div>
+            />
         </div>
+    )
+}
+
+/**
+ * Today's column running into the distance and the date row (one lane clear
+ * above lane 0, DATE_GAP, from DATE_ROW.c0 to c1), in the same window as the
+ * paper, at full size. Both pan all the way (`todayRef`, `datesRef`).
+ */
+export function FloorStrips({
+    cells = FLOOR, wrapToday, todayRef, datesRef,
+}: {
+    cells?: FloorCells
+    wrapToday?: (pill: ReactNode) => ReactNode
+    todayRef?: Ref<HTMLDivElement>
+    datesRef?: Ref<HTMLDivElement>
+}) {
+    const cell = PB_CELL
+    const { x: x0, y: y0, w, h } = boxOf(cells)
+    const strip = { left: DATE_ROW.c0 * cell - x0, top: -(HEADER_H + 1) - DATE_GAP - y0, width: (DATE_ROW.c1 - DATE_ROW.c0 + 1) * cell }
+    return (
+        <div className="ucelot-app pointer-events-none absolute select-none overflow-hidden" style={{ left: x0, top: y0, width: w, height: h }}>
+            <div ref={todayRef} className="absolute top-0" style={{ left: PB_TODAY_COL * cell - x0, width: cell, height: h, background: mix("--c-primary", 9) }} />
+            <div
+                ref={datesRef}
+                className="absolute overflow-hidden border-b border-[color:var(--c-border)]"
+                style={{ ...strip, height: HEADER_H + 1, background: mix("--c-surface", 85) }}
+            >
+                {/* Offset with `left`, not a transform: inside the 3D scene a
+                    transform would make this 8,000 px strip a layer of its own. */}
+                <div className="relative" style={{ height: HEADER_H, left: -DATE_ROW.c0 * cell }}>
+                    <DateTiers c0={DATE_ROW.c0} c1={DATE_ROW.c1} wrapToday={wrapToday} />
+                </div>
+            </div>
+        </div>
+    )
+}
+
+/** A floorLightImage laid over FLOOR_BOX, `scale` times its size. */
+export function FloorLight({ src, scale = 1, imgRef, style }: { src: string; scale?: number; imgRef?: Ref<HTMLImageElement>; style?: CSSProperties }) {
+    return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+            ref={imgRef}
+            src={src}
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="pointer-events-none absolute max-w-none select-none"
+            style={{ left: FLOOR_BOX.x * scale, top: FLOOR_BOX.y * scale, width: FLOOR_BOX.w * scale, height: FLOOR_BOX.h * scale, ...style }}
+        />
     )
 }

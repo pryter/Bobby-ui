@@ -21,6 +21,9 @@ export type ScrubTrack = {
   from: number
   to: number
   samples: number
+  /** Positions where the styles jump (a wrapping pattern): `at` is sampled
+   *  just before and just after each, at the same keyframe offset. */
+  jumps?: number[]
 }
 
 type ViewTimelineCtor = new (options: { subject: Element; axis: "block" | "inline" }) => AnimationTimeline
@@ -35,11 +38,16 @@ export function bakeScrub(section: HTMLElement, tracks: ScrubTrack[], geo: { H: 
   const timeline = VT ? new VT({ subject: section, axis: "block" }) : null
 
   const anims = tracks.map((t) => {
-    const frames: Keyframe[] = [{ ...t.at(t.from), offset: 0 }]
+    const pts: { px: number; kf: Keyframe }[] = []
     for (let k = 0; k <= t.samples; k++) {
       const px = t.from + ((t.to - t.from) * k) / t.samples
-      frames.push({ ...t.at(px), offset: offset(px) })
+      pts.push({ px, kf: t.at(px) })
     }
+    const eps = 1e-3
+    for (const j of t.jumps ?? []) pts.push({ px: j, kf: t.at(j - eps) }, { px: j, kf: t.at(j + eps) })
+    pts.sort((a, b) => a.px - b.px) // stable: a jump's before stays ahead of its after
+    const frames: Keyframe[] = [{ ...t.at(t.from), offset: 0 }]
+    for (const p of pts) frames.push({ ...p.kf, offset: offset(p.px) })
     frames.push({ ...t.at(t.to), offset: 1 })
     return timeline
       ? t.el.animate(frames, { timeline, fill: "both", easing: "linear" })
