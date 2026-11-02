@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { ArrowLeftIcon, ArrowRightIcon } from "@heroicons/react/20/solid"
 import { notFound } from "next/navigation"
 import { getAllDocs, getDoc } from "@/lib/docs"
 
@@ -43,7 +44,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
             href={`/docs/${prev.slug}`}
             className="group flex-1 p-4 rounded-xl border border-black/[0.08] dark:border-white/[0.08] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors"
           >
-            <div className="text-xs text-gray-500 mb-1">← Previous</div>
+            <div className="mb-1 flex items-center gap-1 text-xs text-gray-500"><ArrowLeftIcon className="h-3.5 w-3.5" aria-hidden /> Previous</div>
             <div className="font-semibold text-black dark:text-white group-hover:text-primary transition-colors">
               {prev.title}
             </div>
@@ -54,7 +55,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
             href={`/docs/${next.slug}`}
             className="group flex-1 p-4 rounded-xl border border-black/[0.08] dark:border-white/[0.08] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors text-right"
           >
-            <div className="text-xs text-gray-500 mb-1">Next →</div>
+            <div className="mb-1 flex items-center justify-end gap-1 text-xs text-gray-500">Next <ArrowRightIcon className="h-3.5 w-3.5" aria-hidden /></div>
             <div className="font-semibold text-black dark:text-white group-hover:text-primary transition-colors">
               {next.title}
             </div>

@@ -1,6 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
+import { ArrowRightIcon } from "@heroicons/react/20/solid"
 import PixelMotif, { type MotifMode } from "@/components/PixelMotif"
 
 // ─── Research ─────────────────────────────────────────────────────────────────
@@ -119,7 +120,7 @@ export default function Research() {
               <p className={`relative mt-4 max-w-[30ch] text-[15px] leading-relaxed ${a.sub}`}>{a.line}</p>
               <span className={`relative mt-6 inline-flex items-center gap-1.5 text-sm font-semibold ${a.text}`}>
                 Read more
-                <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+                <ArrowRightIcon className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" aria-hidden />
               </span>
             </motion.a>
           ))}

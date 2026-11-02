@@ -435,7 +435,7 @@ export default function LandingPage() {
                          transition-all hover:scale-105 active:scale-95 shadow-lg"
               style={{ background: "rgb(var(--primary-400))" }}
             >
-              Try Ucelot ↗
+              Try Ucelot
             </a>
             <a
               href="/docs"

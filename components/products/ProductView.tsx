@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { ArrowLeftIcon, ArrowRightIcon } from "@heroicons/react/20/solid"
 import { motion } from "framer-motion"
 import Navbar from "@/components/Navbar"
 import SiteFooter from "@/components/SiteFooter"
@@ -39,7 +40,7 @@ function CTA({ link, primary }: { link: ProductLink; primary?: boolean }) {
       }
       style={primary ? { background: "rgb(var(--primary-400))" } : undefined}
     >
-      {link.label} {link.external ? "↗" : "→"}
+      {link.label}
     </a>
   )
 }
@@ -59,9 +60,9 @@ export default function ProductView({ slug }: { slug: string }) {
           <motion.div {...fadeUp(0)}>
             <Link
               href="/#products"
-              className="text-sm font-medium text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+              className="inline-flex items-center gap-1 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             >
-              ← All products
+              <ArrowLeftIcon className="h-4 w-4" aria-hidden /> All products
             </Link>
           </motion.div>
 
@@ -223,8 +224,8 @@ export default function ProductView({ slug }: { slug: string }) {
                         <StatusBadge status={p.status} />
                       </div>
                       <p className="mt-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400">{p.tagline}</p>
-                      <span className="mt-auto pt-4 text-sm font-semibold text-gray-900 transition-colors group-hover:text-primary-600 dark:text-white dark:group-hover:text-primary">
-                        Explore →
+                      <span className="mt-auto inline-flex items-center gap-1 pt-4 text-sm font-semibold text-gray-900 transition-colors group-hover:text-primary-600 dark:text-white dark:group-hover:text-primary">
+                        Explore <ArrowRightIcon className="h-4 w-4" aria-hidden />
                       </span>
                     </div>
                   </Link>

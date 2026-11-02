@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { ArrowRightIcon } from "@heroicons/react/20/solid"
 import { getDocTree, getDoc, type DocMeta, type DocNode } from "@/lib/docs"
 
 export const metadata = {
@@ -34,7 +35,7 @@ function DocCard({ doc }: { doc: DocMeta }) {
           {doc.description}
         </div>
       )}
-      <span className="absolute top-5 right-5 text-gray-400 group-hover:text-primary transition-colors">→</span>
+      <ArrowRightIcon className="absolute top-5 right-5 h-4 w-4 text-gray-400 group-hover:text-primary transition-colors" aria-hidden />
     </Link>
   )
 }

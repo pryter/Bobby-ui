@@ -16,7 +16,7 @@ export default function SiteFooter() {
           <a href="/#research" className="hover:text-gray-900 dark:hover:text-white">Research</a>
           <a href="/#products" className="hover:text-gray-900 dark:hover:text-white">Products</a>
           <a href="/docs" className="hover:text-gray-900 dark:hover:text-white">Docs</a>
-          <a href={UCELOT_URL} target="_blank" rel="noopener noreferrer" className="hover:text-gray-900 dark:hover:text-white">Ucelot ↗</a>
+          <a href={UCELOT_URL} target="_blank" rel="noopener noreferrer" className="hover:text-gray-900 dark:hover:text-white">Ucelot</a>
         </nav>
         <p className="text-xs text-gray-400 dark:text-gray-600">© 2026 Bobby. All rights reserved.</p>
       </div>
